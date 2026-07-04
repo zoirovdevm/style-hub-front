@@ -1,0 +1,63 @@
+export const PRODUCT_FIELDS_STR = `
+  fragment ProductFields on Product {
+    id
+    title
+    titleRu
+    slug
+    description
+    descriptionRu
+    sku
+    price
+    oldPrice
+    discountPercent
+    stock
+    sizes
+    colors
+    images
+    variants { id size color stock }
+    isFeatured
+    rating
+    reviewsCount
+    viewCount
+    soldCount
+    createdAt
+    category { id name nameRu slug }
+    brand { id name slug }
+  }
+`;
+
+export const GET_PRODUCTS_STR = `
+  ${PRODUCT_FIELDS_STR}
+  query GetProducts($filter: ProductFilterInput!) {
+    products(filter: $filter) {
+      total
+      list { ...ProductFields }
+    }
+  }
+`;
+
+export const GET_PRODUCT_STR = `
+  ${PRODUCT_FIELDS_STR}
+  query GetProduct($slug: String!) {
+    product(slug: $slug) { ...ProductFields }
+  }
+`;
+
+export const GET_BEST_SELLERS_STR = `
+  ${PRODUCT_FIELDS_STR}
+  query GetBestSellers($limit: Float) {
+    bestSellers(limit: $limit) { ...ProductFields }
+  }
+`;
+
+export const GET_CATEGORIES_STR = `
+  query GetCategories {
+    categories { id name nameRu slug description image }
+  }
+`;
+
+export const GET_BRANDS_STR = `
+  query GetBrands {
+    brands { id name slug logo }
+  }
+`;

@@ -1,0 +1,124 @@
+'use client';
+
+import Link from 'next/link';
+import Image from 'next/image';
+import { useQuery } from '@apollo/client';
+import { Package } from 'lucide-react';
+import { GET_MY_ORDERS } from '@/lib/graphql/queries';
+import { useAuthStore } from '@/lib/store/auth-store';
+import { formatPrice, formatDate } from '@/lib/utils/format';
+import { OrderStatusBadge } from '@/components/ui/OrderStatusBadge';
+import { Reveal } from '@/components/ui/Reveal';
+import type { Locale } from '@/i18n/config';
+import uzDict from '@/i18n/dictionaries/uz.json';
+import ruDict from '@/i18n/dictionaries/ru.json';
+
+export default function OrdersPage({ params }: { params: { locale: Locale } }) {
+  const { locale } = params;
+  const dict = locale === 'ru' ? ruDict : uzDict;
+  const user = useAuthStore((s) => s.user);
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+
+  // network-only so a status the admin just changed always shows up here,
+  // instead of a possibly-stale cached copy from an earlier visit.
+  const { data, loading } = useQuery(GET_MY_ORDERS, { skip: !user, fetchPolicy: 'network-only' });
+  const orders = data?.myOrders ?? [];
+
+  if (!user) {
+    return (
+      <div className="container-app flex flex-col items-center py-32 text-center">
+        <Package size={40} className="text-ink-900/20" />
+        <Link href={`/${locale}/login`} className="btn-primary mt-6">
+          {dict.nav.login}
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container-app py-12">
+      <Reveal>
+        <h1 className="section-title">{dict.orders.title}</h1>
+      </Reveal>
+
+      {!loading && orders.length === 0 && (
+        <div className="mt-16 flex flex-col items-center py-20 text-center">
+          <Package size={40} className="text-ink-900/20" />
+          <p className="mt-4 text-sm text-ink-900/50">{dict.orders.empty}</p>
+          <Link href={`/${locale}/shop`} className="btn-primary mt-6">
+            {dict.cart.continueShopping}
+          </Link>
+        </div>
+      )}
+
+      <div className="mt-10 space-y-4">
+        {orders.map((order: any, i: number) => (
+          <Reveal key={order.id} delay={i * 0.05}>
+            <div className="card-surface p-6">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs text-ink-900/40">{dict.orders.orderNumber}</p>
+                  <p className="font-mono text-sm font-bold">{order.orderNumber}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`rounded-full px-3 py-1 text-xs font-bold ${
+                      order.paymentStatus === 'PAID'
+                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+                        : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
+                    }`}
+                  >
+                    {order.paymentStatus === 'PAID' ? dict.admin.paid : dict.admin.unpaid}
+                  </span>
+                  <OrderStatusBadge status={order.status} dict={dict} />
+                </div>
+              </div>
+
+              <div className="mt-4 space-y-3 border-t border-ink-900/10 pt-4">
+                {order.items.map((item: any) => {
+                  const cover = item.product?.images?.[0]
+                    ? `${apiUrl}${item.product.images[0]}`
+                    : '/placeholder-product.svg';
+                  const inner = (
+                    <>
+                      <div className="relative h-16 w-14 shrink-0 overflow-hidden rounded-lg bg-ink-900/5">
+                        <Image src={cover} alt={item.title} fill className="object-cover" unoptimized />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold dark:text-cream">{item.title}</p>
+                        {(item.size || item.color) && (
+                          <p className="text-xs text-ink-900/50">{[item.size, item.color].filter(Boolean).join(' · ')}</p>
+                        )}
+                        <p className="text-xs text-ink-900/50">{item.quantity} × {formatPrice(item.price, locale)}</p>
+                      </div>
+                    </>
+                  );
+                  return item.product?.slug ? (
+                    <Link
+                      key={item.id}
+                      href={`/${locale}/product/${item.product.slug}`}
+                      className="flex items-center gap-3 hover:opacity-80"
+                    >
+                      {inner}
+                    </Link>
+                  ) : (
+                    <div key={item.id} className="flex items-center gap-3">
+                      {inner}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-ink-900/10 pt-4 text-sm">
+                <span className="text-ink-900/50">
+                  {formatDate(order.createdAt, locale)} · {order.items.length} {dict.orders.items}
+                </span>
+                <span className="text-base font-bold">{formatPrice(order.totalAmount, locale)}</span>
+              </div>
+            </div>
+          </Reveal>
+        ))}
+      </div>
+    </div>
+  );
+}
