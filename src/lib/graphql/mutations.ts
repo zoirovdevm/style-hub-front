@@ -3,6 +3,14 @@ import { gql } from '@apollo/client';
 export const REGISTER = gql`
   mutation Register($input: RegisterInput!) {
     register(input: $input) {
+      email
+    }
+  }
+`;
+
+export const VERIFY_EMAIL = gql`
+  mutation VerifyEmail($input: VerifyEmailInput!) {
+    verifyEmail(input: $input) {
       accessToken
       refreshToken
       user {
@@ -13,6 +21,12 @@ export const REGISTER = gql`
         role
       }
     }
+  }
+`;
+
+export const RESEND_VERIFICATION_CODE = gql`
+  mutation ResendVerificationCode($email: String!) {
+    resendVerificationCode(email: $email)
   }
 `;
 

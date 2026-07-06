@@ -7,7 +7,6 @@ import { useForm } from 'react-hook-form';
 import { useMutation } from '@apollo/client';
 import { motion } from 'framer-motion';
 import { REGISTER } from '@/lib/graphql/mutations';
-import { useAuthStore } from '@/lib/store/auth-store';
 import type { Locale } from '@/i18n/config';
 import uzDict from '@/i18n/dictionaries/uz.json';
 import ruDict from '@/i18n/dictionaries/ru.json';
@@ -24,7 +23,6 @@ export default function RegisterPage({ params }: { params: { locale: Locale } })
   const { locale } = params;
   const dict = locale === 'ru' ? ruDict : uzDict;
   const router = useRouter();
-  const setSession = useAuthStore((s) => s.setSession);
   const [error, setError] = useState<string | null>(null);
 
   const [registerUser, { loading }] = useMutation(REGISTER);
@@ -38,8 +36,7 @@ export default function RegisterPage({ params }: { params: { locale: Locale } })
     setError(null);
     try {
       const { data } = await registerUser({ variables: { input: values } });
-      setSession(data.register);
-      router.push(`/${locale}`);
+      router.push(`/${locale}/verify-email?email=${encodeURIComponent(data.register.email)}`);
     } catch (e: any) {
       setError(e.message ?? 'Ro‘yxatdan o‘tishda xatolik');
     }

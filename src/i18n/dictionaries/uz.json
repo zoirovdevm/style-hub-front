@@ -126,7 +126,15 @@
     "noAccount": "Hisobingiz yo'qmi?",
     "haveAccount": "Hisobingiz bormi?",
     "createOne": "Ro'yxatdan o'ting",
-    "signIn": "Kiring"
+    "signIn": "Kiring",
+    "verifyTitle": "Emailni tasdiqlang",
+    "verifySubtitle": "Kod yuborildi:",
+    "verifyMissingEmail": "Email topilmadi. Avval ro'yxatdan o'ting.",
+    "codeLabel": "6 xonali kod",
+    "codeInvalidLength": "Kod 6 ta raqamdan iborat bo'lishi kerak",
+    "verifyButton": "Tasdiqlash",
+    "resendButton": "Kodni qayta yuborish",
+    "codeResent": "Kod qayta yuborildi ✓"
   },
   "profile": {
     "title": "Profil",

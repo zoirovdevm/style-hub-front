@@ -38,6 +38,14 @@ export default function LoginPage({ params }: { params: { locale: Locale } }) {
       setSession(data.login);
       router.push(data.login.user.role === 'ADMIN' ? `/${locale}/admin` : `/${locale}`);
     } catch (e: any) {
+      // Backend throws this exact message when the account was registered
+      // but the email code was never confirmed — send them to finish that
+      // step instead of just showing a generic error.
+      const isUnverified = e?.graphQLErrors?.[0]?.message === 'EMAIL_NOT_VERIFIED';
+      if (isUnverified) {
+        router.push(`/${locale}/verify-email?email=${encodeURIComponent(values.email)}`);
+        return;
+      }
       setError(e.message ?? 'Login xato');
     }
   }

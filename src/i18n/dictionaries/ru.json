@@ -126,7 +126,15 @@
     "noAccount": "Нет аккаунта?",
     "haveAccount": "Уже есть аккаунт?",
     "createOne": "Зарегистрируйтесь",
-    "signIn": "Войдите"
+    "signIn": "Войдите",
+    "verifyTitle": "Подтвердите email",
+    "verifySubtitle": "Код отправлен на:",
+    "verifyMissingEmail": "Email не найден. Сначала зарегистрируйтесь.",
+    "codeLabel": "6-значный код",
+    "codeInvalidLength": "Код должен состоять из 6 цифр",
+    "verifyButton": "Подтвердить",
+    "resendButton": "Отправить код повторно",
+    "codeResent": "Код отправлен повторно ✓"
   },
   "profile": {
     "title": "Профиль",
