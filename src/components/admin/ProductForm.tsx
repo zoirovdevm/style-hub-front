@@ -238,7 +238,10 @@ export function ProductForm({
       discountPercent: values.discountPercent || undefined,
       // Only send per-variant stock when the product actually has size/color
       // options — otherwise keep the plain "stock" number the admin typed.
-      variants: hasVariantGrid ? values.variants : undefined,
+      // (An empty array, not undefined: ProductFormValues.variants isn't
+      // optional, and the backend already treats an empty/missing variants
+      // list the same way — falls back to the plain `stock` number.)
+      variants: hasVariantGrid ? values.variants : [],
       stock: hasVariantGrid ? totalVariantStock : values.stock,
     });
   }
