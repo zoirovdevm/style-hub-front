@@ -8,6 +8,7 @@ import { useMutation } from '@apollo/client';
 import { motion } from 'framer-motion';
 import { LOGIN } from '@/lib/graphql/mutations';
 import { useAuthStore } from '@/lib/store/auth-store';
+import { getFriendlyErrorMessage } from '@/lib/utils/graphql-error';
 import type { Locale } from '@/i18n/config';
 import uzDict from '@/i18n/dictionaries/uz.json';
 import ruDict from '@/i18n/dictionaries/ru.json';
@@ -39,14 +40,18 @@ export default function LoginPage({ params }: { params: { locale: Locale } }) {
       router.push(data.login.user.role === 'ADMIN' ? `/${locale}/admin` : `/${locale}`);
     } catch (e: any) {
       // Backend throws this exact message when the account was registered
-      // but the email code was never confirmed — send them to finish that
-      // step instead of just showing a generic error.
-      const isUnverified = e?.graphQLErrors?.[0]?.message === 'EMAIL_NOT_VERIFIED';
+      // but the SMS/email code was never confirmed — send them to finish
+      // that step instead of just showing a generic error. Using
+      // `.includes()` (not `===`) because NestJS/Apollo sometimes wrap the
+      // original message inside a longer string depending on how the
+      // exception got serialized.
+      const allMessages = [e?.message, ...(e?.graphQLErrors?.map((g: any) => g?.message) ?? [])].filter(Boolean).join(' ');
+      const isUnverified = allMessages.includes('PHONE_NOT_VERIFIED');
       if (isUnverified) {
         router.push(`/${locale}/verify-email?email=${encodeURIComponent(values.email)}`);
         return;
       }
-      setError(e.message ?? 'Login xato');
+      setError(getFriendlyErrorMessage(e));
     }
   }
 

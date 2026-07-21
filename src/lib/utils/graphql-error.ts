@@ -26,6 +26,8 @@ export function getFriendlyErrorMessage(error: unknown): string {
       return 'Sizda bu amalni bajarish uchun ruxsat yo‘q. Qaytadan tizimga kiring.';
     }
     if (lower.includes('bad request')) return "Ma'lumotlarda xatolik bor. Barcha (*) maydonlarni to'g'ri to'ldirganingizni tekshiring.";
+    if (lower.includes('phone_not_verified')) return "Telefon raqamingiz hali tasdiqlanmagan. Tasdiqlash sahifasiga o'ting.";
+    if (lower.includes('email_not_verified')) return "Hisobingiz hali tasdiqlanmagan. Tasdiqlash sahifasiga o'ting.";
 
     return String(raw);
   }

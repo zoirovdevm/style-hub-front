@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { useMutation, useQuery } from '@apollo/client';
@@ -93,8 +93,18 @@ export default function CheckoutPage({ params }: { params: { locale: Locale } })
     setTimeout(() => setCopied(false), 2000);
   }
 
+  // Redirecting here must happen in an effect, not directly in the render
+  // body — calling router.push() synchronously during render can run while
+  // Next.js is statically prerendering this page (no browser `location`
+  // global exists then), which throws "ReferenceError: location is not
+  // defined" and fails `next build`.
+  useEffect(() => {
+    if (!user) {
+      router.push(`/${locale}/login`);
+    }
+  }, [user, locale, router]);
+
   if (!user) {
-    router.push(`/${locale}/login`);
     return null;
   }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { useMutation } from '@apollo/client';
@@ -16,12 +16,27 @@ interface CodeForm {
   code: string;
 }
 
+// useSearchParams() opts the calling component out of static prerendering
+// unless it's wrapped in <Suspense> — without this wrapper `next build` fails
+// with "useSearchParams() should be wrapped in a suspense boundary".
 export default function VerifyEmailPage({ params }: { params: { locale: Locale } }) {
+  return (
+    <Suspense fallback={null}>
+      <VerifyEmailInner params={params} />
+    </Suspense>
+  );
+}
+
+function VerifyEmailInner({ params }: { params: { locale: Locale } }) {
   const { locale } = params;
   const dict = locale === 'ru' ? ruDict : uzDict;
   const router = useRouter();
   const searchParams = useSearchParams();
   const email = searchParams.get('email') ?? '';
+  // Only present when arriving from the register page — a login redirect
+  // (account exists but was never verified) only has the email on hand, so
+  // this falls back to a generic "your phone" label in that case.
+  const phone = searchParams.get('phone') ?? '';
   const setSession = useAuthStore((s) => s.setSession);
 
   const [error, setError] = useState<string | null>(null);
@@ -87,7 +102,7 @@ export default function VerifyEmailPage({ params }: { params: { locale: Locale }
       >
         <h1 className="font-display text-2xl font-medium">{dict.auth.verifyTitle}</h1>
         <p className="mt-2 text-sm text-ink-900/60">
-          {dict.auth.verifySubtitle} <span className="font-semibold">{email}</span>
+          {dict.auth.verifySubtitle} <span className="font-semibold">{[phone, email].filter(Boolean).join(' / ') || dict.auth.verifyYourPhone}</span>
         </p>
 
         <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-4">
