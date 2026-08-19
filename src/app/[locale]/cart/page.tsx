@@ -31,7 +31,6 @@ export default function CartPage({ params }: { params: { locale: Locale } }) {
   const { locale } = params;
   const dict = locale === 'ru' ? ruDict : uzDict;
   const user = useAuthStore((s) => s.user);
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const { data, loading } = useQuery(GET_MY_CART, { skip: !user });
@@ -63,6 +62,17 @@ export default function CartPage({ params }: { params: { locale: Locale } }) {
     }
   }
 
+  // First load only (query is skipped entirely while logged out, so `loading`
+  // stays false and this never fires for guests) — show a spinner instead of
+  // a half-rendered/empty cart while the request is still in flight.
+  if (user && loading && !data) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-ink-900/10 border-t-ink-950" />
+      </div>
+    );
+  }
+
   if (!user || (!loading && items.length === 0)) {
     return (
       <div className="container-app flex flex-col items-center py-32 text-center">
@@ -92,7 +102,7 @@ export default function CartPage({ params }: { params: { locale: Locale } }) {
       <div className="mt-10 grid gap-10 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
           {items.map((item: any) => {
-            const cover = item.product.images?.[0] ? `${apiUrl}${item.product.images[0]}` : '/placeholder-product.svg';
+            const cover = item.product.images?.[0] || '/placeholder-product.svg';
             const title = locale === 'ru' && item.product.titleRu ? item.product.titleRu : item.product.title;
             return (
               <Reveal key={item.id}>

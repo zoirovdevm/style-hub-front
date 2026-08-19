@@ -2,29 +2,58 @@
 
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { useMutation, useQuery } from '@apollo/client';
 import { Mail, MapPin, Phone, Send } from 'lucide-react';
 import { Reveal } from '@/components/ui/Reveal';
+import { GET_SITE_SETTINGS } from '@/lib/graphql/queries';
+import { SEND_CONTACT_MESSAGE } from '@/lib/graphql/mutations';
 import type { Locale } from '@/i18n/config';
 import uzDict from '@/i18n/dictionaries/uz.json';
 import ruDict from '@/i18n/dictionaries/ru.json';
 
 interface ContactForm {
   name: string;
-  email: string;
+  contact: string;
   message: string;
 }
+
+// Original hardcoded values — used until an admin sets real ones from the
+// admin panel (Sozlamalar → Kontakt ma'lumotlari), so nothing breaks before
+// that's ever been filled in.
+const DEFAULT_ADDRESS = "Jizzax shahar, Madaniyat mahallasi, Ogahiy ko'chasi, 2-uy";
+const DEFAULT_PHONE = '+998 (97) 521-31-30';
+const DEFAULT_TELEGRAM = '@MZ0526';
+const DEFAULT_EMAIL = 'hello@wardrobe.uz';
 
 export default function ContactPage({ params }: { params: { locale: Locale } }) {
   const { locale } = params;
   const dict = locale === 'ru' ? ruDict : uzDict;
   const [sent, setSent] = useState(false);
+  const [sendError, setSendError] = useState(false);
+
+  const { data } = useQuery(GET_SITE_SETTINGS);
+  const settings = data?.siteSettings;
+  const address = settings?.contactAddress || DEFAULT_ADDRESS;
+  const phone = settings?.contactPhone || DEFAULT_PHONE;
+  const telegram = settings?.contactTelegram || DEFAULT_TELEGRAM;
+  const email = settings?.contactEmail || DEFAULT_EMAIL;
+  const phoneHref = `tel:${phone.replace(/[^\d+]/g, '')}`;
+  const telegramHref = `https://t.me/${telegram.replace(/^@/, '')}`;
+
+  const [sendContactMessage, { loading: sending }] = useMutation(SEND_CONTACT_MESSAGE);
 
   const { register, handleSubmit, reset } = useForm<ContactForm>();
 
-  function onSubmit() {
-    setSent(true);
-    reset();
-    setTimeout(() => setSent(false), 3000);
+  async function onSubmit(values: ContactForm) {
+    setSendError(false);
+    try {
+      await sendContactMessage({ variables: { input: values } });
+      setSent(true);
+      reset();
+      setTimeout(() => setSent(false), 4000);
+    } catch {
+      setSendError(true);
+    }
   }
 
   return (
@@ -37,10 +66,10 @@ export default function ContactPage({ params }: { params: { locale: Locale } }) 
       <div className="mt-12 grid gap-10 lg:grid-cols-3">
         <Reveal delay={0.1} className="space-y-6">
           {[
-            { icon: MapPin, label: "Jizzax shahar, Madaniyat mahallasi, Ogahiy ko'chasi, 2-uy", href: undefined },
-            { icon: Phone, label: '+998 (97) 521-31-30', href: 'tel:+998975213130' },
-            { icon: Send, label: '@MZ0526 (Telegram)', href: 'https://t.me/MZ0526' },
-            { icon: Mail, label: 'hello@stylehub.uz', href: 'mailto:hello@stylehub.uz' },
+            { icon: MapPin, label: address, href: undefined },
+            { icon: Phone, label: phone, href: phoneHref },
+            { icon: Send, label: `${telegram} (Telegram)`, href: telegramHref },
+            { icon: Mail, label: email, href: `mailto:${email}` },
           ].map((item) =>
             item.href ? (
               <a
@@ -75,9 +104,8 @@ export default function ContactPage({ params }: { params: { locale: Locale } }) 
                 className="rounded-xl border border-ink-900/15 px-4 py-3 text-sm outline-none focus:border-ink-950"
               />
               <input
-                {...register('email', { required: true })}
-                type="email"
-                placeholder={dict.auth.email}
+                {...register('contact', { required: true })}
+                placeholder={dict.contact.contactPlaceholder}
                 className="rounded-xl border border-ink-900/15 px-4 py-3 text-sm outline-none focus:border-ink-950"
               />
             </div>
@@ -87,10 +115,11 @@ export default function ContactPage({ params }: { params: { locale: Locale } }) 
               placeholder={dict.contact.message}
               className="w-full rounded-xl border border-ink-900/15 px-4 py-3 text-sm outline-none focus:border-ink-950"
             />
-            <button type="submit" className="btn-primary">
-              {dict.contact.send}
+            <button type="submit" disabled={sending} className="btn-primary disabled:opacity-50">
+              {sending ? dict.contact.sending : dict.contact.send}
             </button>
-            {sent && <p className="text-xs font-semibold text-emerald-600">✓ Xabar yuborildi</p>}
+            {sent && <p className="text-xs font-semibold text-emerald-600">{dict.contact.sentSuccess}</p>}
+            {sendError && <p className="text-xs font-semibold text-red-500">{dict.contact.sendError}</p>}
           </form>
         </Reveal>
       </div>

@@ -1,7 +1,6 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
 :root {
   --font-display: 'Playfair Display', serif;
   --font-sans: 'Inter', sans-serif;
@@ -72,4 +71,54 @@ body {
 }
 .dark [class*='border-ink-900'] {
   border-color: rgba(247, 245, 242, 0.12) !important;
+}
+
+/*
+ * Same safety net as above, but for form fields. Text inputs/textareas
+ * across the site (admin forms, checkout, profile, login/register, ~40+
+ * occurrences) are written as just `border border-ink-900/15 px-4 py-3 ...`
+ * with no background class at all — in light mode that's fine (the
+ * browser's default white field background matches the light theme), but
+ * in dark mode that same default stays white, turning every field into a
+ * bright white box against the dark page (e.g. "Do'kon qo'shish" input in
+ * the admin panel). This gives bare `<input>`/`<textarea>`/`<select>`
+ * elements a dark surface + light text whenever `.dark` is active on
+ * <html>, without needing to hand-edit every field.
+ *
+ * Excluded via `:not([class*="bg-"])`: fields that already set their own
+ * background on purpose (e.g. the disabled/read-only email field on the
+ * profile page, styled with `bg-ink-900/5`) — those keep their intentional
+ * styling instead of being forced dark too.
+ */
+.dark input:not([class*='bg-']),
+.dark textarea:not([class*='bg-']),
+.dark select:not([class*='bg-']) {
+  background-color: #1a1a1f !important;
+  color: #f7f5f2 !important;
+}
+.dark input:not([class*='bg-'])::placeholder,
+.dark textarea:not([class*='bg-'])::placeholder {
+  color: rgba(247, 245, 242, 0.35) !important;
+}
+
+/*
+ * Adaptive navbar contrast (see src/lib/hooks/use-navbar-contrast.ts).
+ * Header.tsx and MobileBottomNav.tsx toggle a `navbar-on-dark` class on
+ * themselves when JS detects they're currently floating over a section
+ * tagged data-navbar-contrast="dark" (right now just the homepage hero) —
+ * this is the LIGHT-theme case where most of the page is light (dark text
+ * reads fine) but that one section is unconditionally dark. Same override
+ * pattern as the `.dark [class*="text-ink-900"]` rule above, just scoped
+ * to `.navbar-on-dark` instead of `.dark`, so every text-ink-900/
+ * text-ink-950/border-ink-900 utility already written throughout the
+ * navbars just flips to light without editing each one individually.
+ * (In DARK theme this class is harmless even if also applied — the `.dark`
+ * rule above already forces the same light color, so there's no conflict.)
+ */
+.navbar-on-dark [class*='text-ink-900']:not([class*='bg-gold']),
+.navbar-on-dark [class*='text-ink-950']:not([class*='bg-gold']) {
+  color: #f7f5f2 !important;
+}
+.navbar-on-dark [class*='border-ink-900'] {
+  border-color: rgba(247, 245, 242, 0.2) !important;
 }

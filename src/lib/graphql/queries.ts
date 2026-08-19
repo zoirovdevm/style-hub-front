@@ -96,6 +96,104 @@ export const GET_BRANDS = gql`
   }
 `;
 
+// Magazinlar ro'yxati — backend'da faqat ADMIN roliga ochiq, shuning uchun
+// bu so'rov faqat admin panel sahifalarida ishlatiladi.
+export const GET_STORES = gql`
+  query GetStores {
+    stores {
+      id
+      name
+      slug
+    }
+  }
+`;
+
+// Magazinlar ro'yxati sahifasidagi kartochkalar uchun — har bir magazin
+// o'z raqamlari bilan (faqat admin).
+export const GET_STORES_STATS = gql`
+  query GetStoresStats {
+    storesStats {
+      id
+      name
+      slug
+      totalProducts
+      totalStock
+      totalSold
+      revenue
+      commissionPercent
+      myShare
+      lowStockCount
+    }
+  }
+`;
+
+// Bitta magazinning ichki sahifasi: statistika + tovarlari (faqat admin).
+export const GET_STORE_OVERVIEW = gql`
+  query GetStoreOverview($id: ID!) {
+    storeOverview(id: $id) {
+      stats {
+        id
+        name
+        slug
+        accessCode
+        sellers
+        totalProducts
+        totalStock
+        totalSold
+        revenue
+        commissionPercent
+        myShare
+        lowStockCount
+      }
+      products {
+        id
+        title
+        slug
+        price
+        stock
+        soldCount
+        images
+        createdAt
+        category {
+          id
+          name
+        }
+      }
+    }
+  }
+`;
+
+// Admin tovarlar jadvali uchun — public "products" so'rovidan ataylab
+// ajratilgan "productsAdmin" ishlatiladi (backendda @Roles(ADMIN) bilan
+// qo'riqlangan): u store (magazin) maydonini HAM, yashirilgan
+// (isActive=false) tovarlarni HAM qaytaradi — masalan magazin o'chirilganda
+// avtomatik yashiringan tovarlarni admin shu yerda ko'rib, xohlasa butunlay
+// o'chirishi (hardDeleteProduct) mumkin. Public sahifalar buni ishlatmaydi,
+// shuning uchun na magazin nomi, na yashirilgan tovarlar xaridorlarga hech
+// qayerda ko'rinmaydi.
+export const GET_PRODUCTS_ADMIN = gql`
+  query GetProductsAdmin($filter: ProductFilterInput!) {
+    productsAdmin(filter: $filter) {
+      total
+      list {
+        id
+        title
+        price
+        stock
+        isActive
+        category {
+          id
+          name
+        }
+        store {
+          id
+          name
+        }
+      }
+    }
+  }
+`;
+
 export const GET_ME = gql`
   query Me {
     me {
@@ -105,6 +203,7 @@ export const GET_ME = gql`
       lastName
       phone
       avatar
+      address
       role
       createdAt
     }
@@ -203,6 +302,59 @@ export const GET_ALL_ORDERS = gql`
   }
 `;
 
+export const GET_USERS = gql`
+  query Users($filter: UsersFilterInput!) {
+    users(filter: $filter) {
+      total
+      list {
+        id
+        email
+        phone
+        firstName
+        lastName
+        address
+        role
+        isActive
+        lastSeenAt
+        createdAt
+        ordersCount
+      }
+    }
+  }
+`;
+
+export const GET_REVIEWS = gql`
+  query GetReviews($productId: ID!) {
+    reviews(productId: $productId) {
+      id
+      rating
+      comment
+      image
+      createdAt
+      user {
+        id
+        firstName
+        lastName
+        avatar
+      }
+    }
+  }
+`;
+
+export const GET_SITE_SETTINGS = gql`
+  query SiteSettings {
+    siteSettings {
+      id
+      heroImage
+      contactAddress
+      contactPhone
+      contactTelegram
+      contactEmail
+      updatedAt
+    }
+  }
+`;
+
 export const GET_ADMIN_STATS = gql`
   ${PRODUCT_FIELDS}
   query AdminStats {
@@ -218,6 +370,7 @@ export const GET_ADMIN_STATS = gql`
       cancelledOrders
       revenueTotal
       revenueToday
+      revenueThisMonth
       bestSellers {
         ...ProductFields
       }

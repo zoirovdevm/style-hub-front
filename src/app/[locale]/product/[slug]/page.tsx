@@ -6,6 +6,7 @@ import { serverFetchGraphQL } from '@/lib/graphql/server-fetch';
 import { GET_PRODUCT_STR, GET_PRODUCTS_STR } from '@/lib/graphql/server-queries';
 import { ProductGallery } from '@/components/product/ProductGallery';
 import { ProductActions } from '@/components/product/ProductActions';
+import { ProductReviews } from '@/components/product/ProductReviews';
 import { ProductCard, type ProductCardData } from '@/components/ui/ProductCard';
 import { Reveal } from '@/components/ui/Reveal';
 import { formatPrice } from '@/lib/utils/format';
@@ -93,8 +94,20 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
             </div>
 
             <p className="mt-2 text-xs text-ink-900/50">
-              {product.stock > 0 ? dict.product.inStock : dict.product.outOfStock} · {product.reviewsCount}{' '}
-              {dict.product.reviews}
+              {product.stock > 0 ? (
+                <>
+                  {dict.product.inStock}
+                  {' · '}
+                  {product.stock} {dict.product.stockLeft}
+                  {product.stock <= 5 && (
+                    <span className="ml-1.5 font-bold text-red-500">{dict.product.lastPieces}</span>
+                  )}
+                </>
+              ) : (
+                dict.product.outOfStock
+              )}
+              {' · '}
+              {product.reviewsCount} {dict.product.reviews}
             </p>
 
             {description && <p className="mt-6 text-sm leading-relaxed text-ink-900/70">{description}</p>}
@@ -127,6 +140,8 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
         </Reveal>
       </div>
 
+      <ProductReviews productId={product.id} locale={locale} dict={dict} />
+
       {similar.length > 0 && (
         <section className="mt-24">
           <Reveal>
@@ -135,7 +150,7 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
           <div className="mt-8 grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
             {similar.map((p, i) => (
               <Reveal key={p.id} delay={i * 0.06}>
-                <ProductCard product={p} locale={locale} />
+                <ProductCard product={p} locale={locale} dict={dict} />
               </Reveal>
             ))}
           </div>

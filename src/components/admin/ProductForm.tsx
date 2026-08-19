@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useQuery } from '@apollo/client';
 import { UploadCloud } from 'lucide-react';
-import { GET_CATEGORIES, GET_BRANDS } from '@/lib/graphql/queries';
+import { GET_CATEGORIES, GET_BRANDS, GET_STORES } from '@/lib/graphql/queries';
 import { useAuthStore } from '@/lib/store/auth-store';
 import type { Dictionary } from '@/i18n/get-dictionary';
 
@@ -30,6 +30,7 @@ export interface ProductFormValues {
   variants: VariantValue[];
   categoryId: string;
   brandId?: string;
+  storeId?: string;
   isFeatured?: boolean;
 }
 
@@ -42,7 +43,11 @@ const SHOE_SIZE_OPTIONS = ['36', '37', '38', '39', '40', '41', '42', '43', '44',
 function isFootwearCategory(cat?: { name?: string; nameRu?: string; slug?: string }): boolean {
   if (!cat) return false;
   const haystack = `${cat.name ?? ''} ${cat.nameRu ?? ''} ${cat.slug ?? ''}`.toLowerCase();
-  return /shoe|poyabzal|обув/.test(haystack);
+  // Covers however the admin might have named a footwear category, in
+  // either language: "Krossovka"/"кроссовки" (sneakers), "poyabzal"/"обувь"
+  // (footwear, generic), "tufli"/"туфли" (shoes), "botinka"/"ботинки"
+  // (boots), "sandal"/"сандалии", "sapog"/"сапоги".
+  return /shoe|poyabzal|обув|krossov|кроссов|tufli|туфли|botin|ботин|sneaker|sandal|сандал|sapog|сапог/.test(haystack);
 }
 
 // Common ready-made swatches so the admin can add a color in one click
@@ -82,6 +87,7 @@ export function ProductForm({
 }) {
   const { data: categoriesData } = useQuery(GET_CATEGORIES);
   const { data: brandsData } = useQuery(GET_BRANDS);
+  const { data: storesData } = useQuery(GET_STORES);
 
   const {
     register,
@@ -181,8 +187,9 @@ export function ProductForm({
       const formData = new FormData();
       formData.append('file', file);
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
-      const res = await fetch(`${apiUrl}/upload/product-image`, {
+      // Relative — next.config.js rewrites /upload/* through to the
+      // backend, so this works on localhost and a tunnel URL unchanged.
+      const res = await fetch('/upload/product-image', {
         method: 'POST',
         headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
         body: formData,
@@ -234,6 +241,7 @@ export function ProductForm({
     onSubmit({
       ...values,
       brandId: values.brandId || undefined,
+      storeId: values.storeId || undefined,
       oldPrice: values.oldPrice || undefined,
       discountPercent: values.discountPercent || undefined,
       // Only send per-variant stock when the product actually has size/color
@@ -627,6 +635,23 @@ export function ProductForm({
               ))}
             </select>
             <p className="mt-1 text-xs text-ink-900/40">{dict.admin.optionalField}</p>
+          </div>
+
+          {/* Magazin (tashqi do'kon) — faqat admin ko'radi, saytda chiqmaydi */}
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-ink-900/60">{dict.admin.storeLabel}</label>
+            <select
+              {...register('storeId')}
+              className="w-full rounded-xl border border-ink-900/15 px-4 py-3 text-sm outline-none focus:border-ink-950"
+            >
+              <option value="">{dict.admin.noneOption}</option>
+              {storesData?.stores?.map((s: any) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-ink-900/40">{dict.admin.storeHint}</p>
           </div>
 
           <label className="flex items-center gap-2 text-sm">

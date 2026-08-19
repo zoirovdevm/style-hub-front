@@ -1,9 +1,10 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter, Playfair_Display } from 'next/font/google';
 import '../globals.css';
 import { Providers } from '@/components/providers/Providers';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
+import { MobileBottomNav } from '@/components/layout/MobileBottomNav';
 import { locales, type Locale } from '@/i18n/config';
 import { getDictionary } from '@/i18n/get-dictionary';
 
@@ -14,6 +15,18 @@ export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
 }
 
+// Explicit, in case an embedding webview (e.g. Telegram's in-app browser)
+// ignores Next.js's implicit default and falls back to a desktop-width
+// virtual viewport (~980-1024px) scaled down to fit the screen — that's
+// what makes everything look tiny/cramped and can even make `lg:`-gated
+// desktop-only elements (like the header's Login button) show up on a
+// phone, since the browser genuinely believes it has 1024px of width.
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+};
+
 export async function generateMetadata({
   params,
 }: {
@@ -22,15 +35,19 @@ export async function generateMetadata({
   const dict = await getDictionary(params.locale);
   return {
     title: {
-      default: `StyleHub — ${dict.home.heroTitle}`,
-      template: '%s — StyleHub',
+      default: `Wardrobe — ${dict.home.heroTitle}`,
+      template: '%s — Wardrobe',
     },
     description: dict.home.heroSubtitle,
+    icons: {
+      icon: '/logo.svg',
+      shortcut: '/logo.svg',
+    },
     alternates: {
       languages: { uz: '/uz', ru: '/ru' },
     },
     openGraph: {
-      title: `StyleHub — ${dict.home.heroTitle}`,
+      title: `Wardrobe — ${dict.home.heroTitle}`,
       description: dict.home.heroSubtitle,
       type: 'website',
     },
@@ -61,8 +78,27 @@ export default async function LocaleLayout({
       <body>
         <Providers>
           <Header locale={params.locale} dict={dict} />
-          <main className="min-h-[70vh]">{children}</main>
+          {/* Header is `fixed`, not `sticky` — it floats over the page
+              instead of reserving its own space in the flow (that's what
+              lets its top gap show real page content, e.g. the homepage
+              hero, blurred through instead of a mismatched plain
+              background — see Header.tsx). Since fixed elements don't push
+              content down on their own, this padding replaces that lost
+              space, sized to match the header's own gap + pill height
+              exactly (pt-3 + h-14 = 68px on mobile, pt-4 + h-[68px] = 84px
+              from sm: up). The homepage hero cancels this out with a
+              matching negative margin so its background still reaches the
+              very top of the page — see page.tsx. */}
+          <main className="min-h-[70vh] pt-[68px] sm:pt-[84px]">{children}</main>
           <Footer locale={params.locale} dict={dict} />
+          {/* Clears the fixed MobileBottomNav below on small screens so the
+              end of the Footer isn't hidden behind it; not needed on lg+
+              where that nav is hidden. Taller than the nav's own height
+              because the nav now floats with its own bottom margin (plus
+              the iPhone home-indicator safe area on notched devices)
+              instead of sitting flush against the bottom edge. */}
+          <div className="h-28 lg:hidden" />
+          <MobileBottomNav locale={params.locale} dict={dict} />
         </Providers>
       </body>
     </html>

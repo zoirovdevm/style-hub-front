@@ -27,19 +27,38 @@ interface CheckoutForm {
 // placement and could be reused elsewhere.
 const PAYMENT_CARD_NUMBER = '4073 4200 2305 8815';
 const PAYMENT_CARD_HOLDER = 'Muhammadjon Zoirov';
-const TELEGRAM_USERNAME = 'MZ0526';
+
+// `placedOrder` below is plain component state, so it's normally lost the
+// moment this component remounts — e.g. a locale switch, or (very commonly
+// on mobile) the browser discarding this background tab while the buyer is
+// away in the Telegram app and reloading it when they come back. Mirroring
+// it here lets a fresh mount restore the payment-confirmation screen instead
+// of silently dropping the buyer back onto a blank checkout form.
+const PLACED_ORDER_STORAGE_KEY = 'checkout:lastPlacedOrder';
+// Falls back to the admin's personal account if the bot isn't configured
+// yet (NEXT_PUBLIC_TELEGRAM_BOT_USERNAME empty in .env.local) — otherwise
+// deep-links straight into the bot with ?start=order_<id>, so the bot can
+// bind the buyer's chat to this exact order automatically.
+const TELEGRAM_BOT_USERNAME = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || '';
+const TELEGRAM_FALLBACK_USERNAME = 'MZ0526';
 
 export default function CheckoutPage({ params }: { params: { locale: Locale } }) {
   const { locale } = params;
   const dict = locale === 'ru' ? ruDict : uzDict;
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
+  // zustand's persist middleware reads localStorage asynchronously — right
+  // after a fresh mount `user` is still `null` for one tick even when a
+  // valid session exists. Gating the login-redirect effect on this (instead
+  // of just `!user`) stops a still-logged-in buyer from being bounced to
+  // /login the instant this page remounts.
+  const hasHydrated = useAuthStore((s) => s.hasHydrated);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [placedOrder, setPlacedOrder] = useState<{ orderNumber: string } | null>(null);
+  const [placedOrder, setPlacedOrder] = useState<{ id: string; orderNumber: string; totalAmount: number } | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const { data } = useQuery(GET_MY_CART, { skip: !user });
+  const { data, loading: cartLoading } = useQuery(GET_MY_CART, { skip: !user });
   const items = data?.myCart ?? [];
   const subtotal = items.reduce((sum: number, i: any) => sum + Number(i.product.price) * i.quantity, 0);
 
@@ -54,7 +73,7 @@ export default function CheckoutPage({ params }: { params: { locale: Locale } })
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<CheckoutForm>();
+  } = useForm<CheckoutForm>({ defaultValues: { phone: '+998 ' } });
 
   // Real Click/Payme merchant credentials aren't set up yet, so online
   // payment selection is hidden — every order goes through as "to be
@@ -79,13 +98,44 @@ export default function CheckoutPage({ params }: { params: { locale: Locale } })
       // Stay on this page and show the payment card + Telegram instructions
       // instead of redirecting straight to /orders — the buyer needs those
       // details to actually send the payment.
-      setPlacedOrder({ orderNumber: orderData?.createOrder?.orderNumber ?? '' });
+      const order = {
+        id: orderData?.createOrder?.id ?? '',
+        orderNumber: orderData?.createOrder?.orderNumber ?? '',
+        totalAmount: orderData?.createOrder?.totalAmount ?? 0,
+      };
+      setPlacedOrder(order);
+      try {
+        sessionStorage.setItem(PLACED_ORDER_STORAGE_KEY, JSON.stringify(order));
+      } catch {
+        // sessionStorage can throw in some privacy modes — safe to ignore.
+      }
     } catch (e: any) {
       setError(e.message ?? 'Xatolik yuz berdi');
     } finally {
       setSubmitting(false);
     }
   }
+
+  // Restore the payment-confirmation screen after a remount (see the
+  // `PLACED_ORDER_STORAGE_KEY` note above). Only restores while the cart is
+  // confirmed empty — that's the state right after a real order was placed.
+  // If the buyer has since added new items (a genuinely new checkout), the
+  // cart won't be empty, so we drop the stale entry and show the form
+  // instead of re-showing a finished order's payment details.
+  useEffect(() => {
+    if (placedOrder || cartLoading) return;
+    try {
+      const raw = sessionStorage.getItem(PLACED_ORDER_STORAGE_KEY);
+      if (!raw) return;
+      if (items.length === 0) {
+        setPlacedOrder(JSON.parse(raw));
+      } else {
+        sessionStorage.removeItem(PLACED_ORDER_STORAGE_KEY);
+      }
+    } catch {
+      // sessionStorage can throw in some privacy modes — safe to ignore.
+    }
+  }, [cartLoading, items.length, placedOrder]);
 
   function copyCardNumber() {
     navigator.clipboard.writeText(PAYMENT_CARD_NUMBER.replace(/\s/g, ''));
@@ -99,14 +149,51 @@ export default function CheckoutPage({ params }: { params: { locale: Locale } })
   // global exists then), which throws "ReferenceError: location is not
   // defined" and fails `next build`.
   useEffect(() => {
-    if (!user) {
+    if (hasHydrated && !user) {
       router.push(`/${locale}/login`);
     }
-  }, [user, locale, router]);
+  }, [user, hasHydrated, locale, router]);
+
+  // While the session is still rehydrating from storage we don't yet know
+  // whether the buyer is logged in — showing the same loading spinner as the
+  // cart-loading case below avoids a false "not logged in" flash/redirect.
+  if (!hasHydrated) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-ink-900/10 border-t-ink-950" />
+      </div>
+    );
+  }
 
   if (!user) {
     return null;
   }
+
+  // First load only — without this the order summary briefly showed "0
+  // items" / an empty list and a clickable-looking submit button before the
+  // cart had actually loaded.
+  if (cartLoading && !data) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-ink-900/10 border-t-ink-950" />
+      </div>
+    );
+  }
+
+  // With the bot configured, `?start=order_<id>` deep-links straight into
+  // it — the bot then knows exactly which order this chat belongs to the
+  // moment the buyer opens it (see TelegramService.bot.start() on the
+  // backend), so screenshots get matched automatically with no manual
+  // order-number typing needed. Falls back to the old pre-filled-text link
+  // to the admin's personal account if the bot isn't set up yet.
+  const telegramHref = TELEGRAM_BOT_USERNAME
+    ? `https://t.me/${TELEGRAM_BOT_USERNAME}?start=order_${placedOrder?.id ?? ''}`
+    : (() => {
+        const telegramText = placedOrder
+          ? `${dict.orders.orderNumber}: ${placedOrder.orderNumber}\n${dict.orders.total}: ${formatPrice(placedOrder.totalAmount, locale)}\n${dict.checkout.telegramReceiptMessage}`
+          : '';
+        return `https://t.me/${TELEGRAM_FALLBACK_USERNAME}?text=${encodeURIComponent(telegramText)}`;
+      })();
 
   if (placedOrder) {
     return (
@@ -132,7 +219,7 @@ export default function CheckoutPage({ params }: { params: { locale: Locale } })
                 {dict.checkout.cardHolder}: <span className="font-semibold">{PAYMENT_CARD_HOLDER}</span>
               </p>
               <a
-                href={`https://t.me/${TELEGRAM_USERNAME}`}
+                href={telegramHref}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn-primary flex w-full items-center justify-center gap-2"
@@ -142,7 +229,17 @@ export default function CheckoutPage({ params }: { params: { locale: Locale } })
               </a>
             </div>
 
-            <button onClick={() => router.push(`/${locale}/orders`)} className="btn-outline w-full">
+            <button
+              onClick={() => {
+                try {
+                  sessionStorage.removeItem(PLACED_ORDER_STORAGE_KEY);
+                } catch {
+                  // sessionStorage can throw in some privacy modes — safe to ignore.
+                }
+                router.push(`/${locale}/orders`);
+              }}
+              className="btn-outline w-full"
+            >
               {dict.checkout.goToOrders}
             </button>
           </div>

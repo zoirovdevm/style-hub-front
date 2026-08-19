@@ -3,8 +3,12 @@ import { setContext } from '@apollo/client/link/context';
 import { onError } from '@apollo/client/link/error';
 import { useAuthStore } from '../store/auth-store';
 
+// Relative by default — resolves against whatever host the browser is
+// currently on (localhost:3000 or a tunnel URL), and next.config.js
+// rewrites that path through to the real backend. NEXT_PUBLIC_GRAPHQL_URL
+// can still override this for a genuinely separate-domain deployment.
 const httpLink = new HttpLink({
-  uri: process.env.NEXT_PUBLIC_GRAPHQL_URL ?? 'http://localhost:4000/graphql',
+  uri: process.env.NEXT_PUBLIC_GRAPHQL_URL || '/graphql',
 });
 
 const authLink = setContext((_, { headers }) => {

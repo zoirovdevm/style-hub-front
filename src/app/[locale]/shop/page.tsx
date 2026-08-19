@@ -70,7 +70,7 @@ export default async function ShopPage({ params, searchParams }: ShopPageProps) 
             <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 xl:grid-cols-4">
               {products.map((product, i) => (
                 <Reveal key={product.id} delay={Math.min(i * 0.04, 0.3)}>
-                  <ProductCard product={product} locale={locale} />
+                  <ProductCard product={product} locale={locale} dict={dict} />
                 </Reveal>
               ))}
             </div>

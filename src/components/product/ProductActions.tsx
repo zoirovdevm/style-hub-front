@@ -130,7 +130,7 @@ export function ProductActions({ productId, sizes, colors, stock, variants = [],
     <div className="space-y-6">
       {sizes.length > 0 && (
         <div>
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink-900/50">{dict.product.size}</p>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink-900/50 dark:text-cream/50">{dict.product.size}</p>
           <div className="flex flex-wrap gap-2">
             {sizes.map((s) => {
               const available = isSizeAvailable(s);
@@ -142,10 +142,16 @@ export function ProductActions({ productId, sizes, colors, stock, variants = [],
                   title={!available ? dict.product.outOfStock : undefined}
                   className={`h-10 min-w-10 rounded-lg border px-3 text-sm font-semibold transition-colors ${
                     !available
-                      ? 'cursor-not-allowed border-ink-900/10 text-ink-900/30 line-through'
+                      ? 'cursor-not-allowed border-ink-900/15 text-ink-900/30 line-through dark:border-cream/15 dark:text-cream/35'
                       : size === s
-                        ? 'border-ink-950 bg-ink-950 text-cream'
-                        : 'border-ink-900/15 hover:border-ink-950'
+                        // Selected state is inverted per theme (dark pill on
+                        // light bg, light pill on dark bg) so it always
+                        // stands out — previously this stayed
+                        // border-ink-950/bg-ink-950 even in dark mode, which
+                        // is nearly the same color as the page background
+                        // there, making the selection invisible.
+                        ? 'border-ink-950 bg-ink-950 text-cream dark:border-cream dark:bg-cream dark:text-ink-950'
+                        : 'border-ink-900/15 hover:border-ink-950 dark:border-cream/20 dark:text-cream dark:hover:border-cream'
                   }`}
                 >
                   {s}
@@ -158,7 +164,7 @@ export function ProductActions({ productId, sizes, colors, stock, variants = [],
 
       {colors.length > 0 && (
         <div>
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink-900/50">{dict.product.color}</p>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink-900/50 dark:text-cream/50">{dict.product.color}</p>
           <div className="flex flex-wrap gap-2">
             {colors.map((c) => {
               const available = isColorAvailable(c, size);
@@ -170,10 +176,10 @@ export function ProductActions({ productId, sizes, colors, stock, variants = [],
                   title={!available ? dict.product.outOfStock : undefined}
                   className={`rounded-full border px-4 py-2 text-xs font-semibold transition-colors ${
                     !available
-                      ? 'cursor-not-allowed border-ink-900/10 text-ink-900/30 line-through'
+                      ? 'cursor-not-allowed border-ink-900/15 text-ink-900/30 line-through dark:border-cream/15 dark:text-cream/35'
                       : color === c
-                        ? 'border-ink-950 bg-ink-950 text-cream'
-                        : 'border-ink-900/15 hover:border-ink-950'
+                        ? 'border-ink-950 bg-ink-950 text-cream dark:border-cream dark:bg-cream dark:text-ink-950'
+                        : 'border-ink-900/15 hover:border-ink-950 dark:border-cream/20 dark:text-cream dark:hover:border-cream'
                   }`}
                 >
                   {c}
@@ -185,19 +191,36 @@ export function ProductActions({ productId, sizes, colors, stock, variants = [],
       )}
 
       <div>
-        <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink-900/50">{dict.product.quantity}</p>
-        <div className="flex w-fit items-center gap-4 rounded-full border border-ink-900/15 px-4 py-2">
-          <button onClick={() => setQuantity((q) => Math.max(1, q - 1))} aria-label="minus">
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink-900/50 dark:text-cream/50">{dict.product.quantity}</p>
+        <div className="flex w-fit items-center gap-4 rounded-full border border-ink-900/15 px-4 py-2 dark:border-cream/20">
+          <button onClick={() => setQuantity((q) => Math.max(1, q - 1))} aria-label="minus" className="dark:text-cream">
             <Minus size={14} />
           </button>
-          <span className="w-6 text-center text-sm font-semibold">{quantity}</span>
+          <span className="w-6 text-center text-sm font-semibold dark:text-cream">{quantity}</span>
           <button
             onClick={() => setQuantity((q) => Math.min(selectedVariantStock ?? stock, q + 1))}
             aria-label="plus"
+            className="dark:text-cream"
           >
             <Plus size={14} />
           </button>
         </div>
+
+        {/* Exact remaining stock for the currently selected size+color combo
+            — mirrors the "N dona qoldi" pattern shoppers expect from Uzum
+            Market. Only shown once the product actually has variant data
+            (older/simple products without sizes-colors just show nothing
+            here and rely on the overall outOfStock state). */}
+        {hasVariants && selectedVariantStock !== null && selectedVariantStock > 0 && (
+          <p
+            className={`mt-2 text-xs font-semibold ${
+              selectedVariantStock <= 5 ? 'text-red-500' : 'text-ink-900/50 dark:text-cream/50'
+            }`}
+          >
+            {selectedVariantStock <= 5 && `${dict.product.lastPieces} `}
+            {selectedVariantStock} {dict.product.stockLeft}
+          </p>
+        )}
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row">

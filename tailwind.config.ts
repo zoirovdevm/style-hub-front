@@ -13,10 +13,18 @@ const config: Config = {
           700: '#26262d',
         },
         cream: '#f7f5f2',
+        // Was a warm gold (#d8b969/#c9a24f/#a9843a) — the site's one accent
+        // color, used everywhere from CTA buttons and badges to star
+        // ratings and the hero glow. Recolored to neutral gray at the same
+        // relative lightness as each original shade (400 lightest, 600
+        // darkest), so every existing `bg-gold-500`/`text-gold-400`/etc.
+        // across the whole codebase renders gray now with NO other files
+        // touched — the class names ("gold") stay the same, only the color
+        // they point to changed, for a black-and-white/monochrome look.
         gold: {
-          400: '#d8b969',
-          500: '#c9a24f',
-          600: '#a9843a',
+          400: '#d4d4d4',
+          500: '#a8a8a8',
+          600: '#787878',
         },
       },
       fontFamily: {

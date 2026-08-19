@@ -11,7 +11,15 @@ import type { Locale } from '@/i18n/config';
 import uzDict from '@/i18n/dictionaries/uz.json';
 import ruDict from '@/i18n/dictionaries/ru.json';
 
-export default function NewProductPage({ params }: { params: { locale: Locale } }) {
+export default function NewProductPage({
+  params,
+  searchParams,
+}: {
+  params: { locale: Locale };
+  // Magazin sahifasidagi "Mahsulot qo'shish" tugmasi ?store=<id> bilan
+  // keladi — forma o'sha magazin oldindan tanlangan holda ochiladi.
+  searchParams?: { store?: string };
+}) {
   const { locale } = params;
   const dict = locale === 'ru' ? ruDict : uzDict;
   const router = useRouter();
@@ -25,7 +33,14 @@ export default function NewProductPage({ params }: { params: { locale: Locale } 
     setErrorMessage(null);
     try {
       await createProduct({ variables: { input: values } });
-      router.push(`/${locale}/admin/products`);
+      // Magazin sahifasidan kelgan bo'lsa — o'sha magazinga qaytamiz
+      // (yangi tovar darhol ro'yxatda ko'rinadi), aks holda umumiy
+      // tovarlar ro'yxatiga.
+      router.push(
+        searchParams?.store
+          ? `/${locale}/admin/stores/${searchParams.store}`
+          : `/${locale}/admin/products`,
+      );
     } catch (error) {
       // Show a friendly Uzbek message instead of letting the raw
       // ApolloError crash the whole page with Next.js's error overlay.
@@ -46,7 +61,12 @@ export default function NewProductPage({ params }: { params: { locale: Locale } 
         </div>
       )}
 
-      <ProductForm dict={dict} onSubmit={handleSubmit} submitting={submitting} />
+      <ProductForm
+        dict={dict}
+        defaultValues={searchParams?.store ? { storeId: searchParams.store } : undefined}
+        onSubmit={handleSubmit}
+        submitting={submitting}
+      />
     </div>
   );
 }

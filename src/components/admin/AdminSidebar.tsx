@@ -2,12 +2,22 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, ShoppingBag, ClipboardList, Tag, LogOut } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, ClipboardList, Tag, Store, Users, Settings, LogOut, X } from 'lucide-react';
 import { useAuthStore } from '@/lib/store/auth-store';
 import type { Dictionary } from '@/i18n/get-dictionary';
 import type { Locale } from '@/i18n/config';
 
-export function AdminSidebar({ locale, dict }: { locale: Locale; dict: Dictionary }) {
+interface AdminSidebarProps {
+  locale: Locale;
+  dict: Dictionary;
+  // Controls the mobile off-canvas drawer only — on `lg+` screens the
+  // sidebar is always visible regardless of these (see the `lg:translate-x-0
+  // lg:static` overrides below), so open/onClose have no effect on desktop.
+  open: boolean;
+  onClose: () => void;
+}
+
+export function AdminSidebar({ locale, dict, open, onClose }: AdminSidebarProps) {
   const pathname = usePathname();
   const clearSession = useAuthStore((s) => s.clearSession);
 
@@ -16,45 +26,66 @@ export function AdminSidebar({ locale, dict }: { locale: Locale; dict: Dictionar
     { href: `/${locale}/admin/products`, label: dict.admin.products, icon: ShoppingBag },
     { href: `/${locale}/admin/orders`, label: dict.admin.orders, icon: ClipboardList },
     { href: `/${locale}/admin/categories`, label: dict.admin.categories, icon: Tag },
+    { href: `/${locale}/admin/stores`, label: dict.admin.stores, icon: Store },
+    { href: `/${locale}/admin/users`, label: dict.admin.users, icon: Users },
+    { href: `/${locale}/admin/settings`, label: dict.admin.settings, icon: Settings },
   ];
 
   return (
-    <aside className="flex h-full w-64 shrink-0 flex-col border-r border-ink-900/5 bg-ink-950 text-cream">
-      <div className="px-6 py-8">
-        <Link href={`/${locale}`} className="font-display text-xl font-semibold">
-          Style<span className="text-gold-400">Hub</span>
-          <span className="ml-2 text-xs font-normal text-cream/40">Admin</span>
-        </Link>
-      </div>
+    <>
+      {/* Backdrop — tapping outside the drawer closes it, mobile only */}
+      {open && <div onClick={onClose} className="fixed inset-0 z-40 bg-black/50 lg:hidden" />}
 
-      <nav className="flex-1 space-y-1 px-3">
-        {links.map((link) => {
-          const active = link.exact ? pathname === link.href : pathname.startsWith(link.href);
-          return (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors ${
-                active ? 'bg-gold-500 text-ink-950' : 'text-cream/60 hover:bg-cream/5 hover:text-cream'
-              }`}
-            >
-              <link.icon size={17} />
-              {link.label}
-            </Link>
-          );
-        })}
-      </nav>
-
-      <button
-        onClick={() => {
-          clearSession();
-          window.location.href = `/${locale}`;
-        }}
-        className="m-3 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-cream/60 hover:bg-cream/5 hover:text-cream"
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 flex h-full w-64 shrink-0 flex-col border-r border-ink-900/5 bg-ink-950 text-cream transition-transform duration-200 ease-out lg:static lg:z-auto lg:translate-x-0 ${
+          open ? 'translate-x-0' : '-translate-x-full'
+        }`}
       >
-        <LogOut size={17} />
-        {dict.nav.logout}
-      </button>
-    </aside>
+        <div className="flex items-center justify-between px-6 py-8">
+          <Link href={`/${locale}`} className="flex items-baseline gap-2" onClick={onClose}>
+            <span
+              className="font-display text-base font-semibold uppercase"
+              style={{ letterSpacing: '0.18em' }}
+            >
+              Wardrobe
+            </span>
+            <span className="text-xs font-normal text-cream/40">Admin</span>
+          </Link>
+          <button onClick={onClose} className="text-cream/60 hover:text-cream lg:hidden">
+            <X size={20} />
+          </button>
+        </div>
+
+        <nav className="flex-1 space-y-1 px-3">
+          {links.map((link) => {
+            const active = link.exact ? pathname === link.href : pathname.startsWith(link.href);
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={onClose}
+                className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors ${
+                  active ? 'bg-gold-500 text-ink-950' : 'text-cream/60 hover:bg-cream/5 hover:text-cream'
+                }`}
+              >
+                <link.icon size={17} />
+                {link.label}
+              </Link>
+            );
+          })}
+        </nav>
+
+        <button
+          onClick={() => {
+            clearSession();
+            window.location.href = `/${locale}`;
+          }}
+          className="m-3 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-cream/60 hover:bg-cream/5 hover:text-cream"
+        >
+          <LogOut size={17} />
+          {dict.nav.logout}
+        </button>
+      </aside>
+    </>
   );
 }

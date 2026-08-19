@@ -9,6 +9,7 @@ import { motion } from 'framer-motion';
 import { LOGIN } from '@/lib/graphql/mutations';
 import { useAuthStore } from '@/lib/store/auth-store';
 import { getFriendlyErrorMessage } from '@/lib/utils/graphql-error';
+import { PasswordInput } from '@/components/ui/PasswordInput';
 import type { Locale } from '@/i18n/config';
 import uzDict from '@/i18n/dictionaries/uz.json';
 import ruDict from '@/i18n/dictionaries/ru.json';
@@ -76,12 +77,13 @@ export default function LoginPage({ params }: { params: { locale: Locale } }) {
             {errors.email && <p className="mt-1 text-xs text-red-500">Majburiy maydon</p>}
           </div>
           <div>
-            <label className="mb-1.5 block text-xs font-semibold text-ink-900/60">{dict.auth.password}</label>
-            <input
-              type="password"
-              {...register('password', { required: true })}
-              className="w-full rounded-xl border border-ink-900/15 px-4 py-3 text-sm outline-none focus:border-ink-950"
-            />
+            <div className="mb-1.5 flex items-center justify-between">
+              <label className="block text-xs font-semibold text-ink-900/60">{dict.auth.password}</label>
+              <Link href={`/${locale}/forgot-password`} className="text-xs font-semibold text-ink-900/50 underline hover:text-ink-950">
+                {dict.auth.forgotPassword}
+              </Link>
+            </div>
+            <PasswordInput {...register('password', { required: true })} />
             {errors.password && <p className="mt-1 text-xs text-red-500">Majburiy maydon</p>}
           </div>
 

@@ -17,11 +17,16 @@ export default function OrdersPage({ params }: { params: { locale: Locale } }) {
   const { locale } = params;
   const dict = locale === 'ru' ? ruDict : uzDict;
   const user = useAuthStore((s) => s.user);
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
   // network-only so a status the admin just changed always shows up here,
-  // instead of a possibly-stale cached copy from an earlier visit.
-  const { data, loading } = useQuery(GET_MY_ORDERS, { skip: !user, fetchPolicy: 'network-only' });
+  // instead of a possibly-stale cached copy from an earlier visit. Polling
+  // means the buyer sees "To'landi" the moment admin confirms payment,
+  // without needing to manually reload the page.
+  const { data, loading } = useQuery(GET_MY_ORDERS, {
+    skip: !user,
+    fetchPolicy: 'network-only',
+    pollInterval: 5000,
+  });
   const orders = data?.myOrders ?? [];
 
   if (!user) {
@@ -31,6 +36,16 @@ export default function OrdersPage({ params }: { params: { locale: Locale } }) {
         <Link href={`/${locale}/login`} className="btn-primary mt-6">
           {dict.nav.login}
         </Link>
+      </div>
+    );
+  }
+
+  // First load only — the 5s poll keeps flipping `loading` true afterward,
+  // but the order list already has data by then so this won't re-fire.
+  if (loading && !data) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-ink-900/10 border-t-ink-950" />
       </div>
     );
   }
@@ -76,9 +91,7 @@ export default function OrdersPage({ params }: { params: { locale: Locale } }) {
 
               <div className="mt-4 space-y-3 border-t border-ink-900/10 pt-4">
                 {order.items.map((item: any) => {
-                  const cover = item.product?.images?.[0]
-                    ? `${apiUrl}${item.product.images[0]}`
-                    : '/placeholder-product.svg';
+                  const cover = item.product?.images?.[0] || '/placeholder-product.svg';
                   const inner = (
                     <>
                       <div className="relative h-16 w-14 shrink-0 overflow-hidden rounded-lg bg-ink-900/5">

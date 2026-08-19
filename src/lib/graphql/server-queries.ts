@@ -61,3 +61,9 @@ export const GET_BRANDS_STR = `
     brands { id name slug logo }
   }
 `;
+
+export const GET_SITE_SETTINGS_STR = `
+  query SiteSettings {
+    siteSettings { heroImage contactAddress contactPhone contactTelegram contactEmail }
+  }
+`;

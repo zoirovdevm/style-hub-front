@@ -46,6 +46,7 @@ export default function EditProductPage({ params }: { params: { locale: Locale; 
             isFeatured
             categoryId
             brandId
+            storeId
           }
         }
       }
@@ -108,6 +109,7 @@ export default function EditProductPage({ params }: { params: { locale: Locale; 
           variants: (product.variants ?? []).map((v: any) => ({ size: v.size, color: v.color, stock: v.stock })),
           categoryId: product.categoryId,
           brandId: product.brandId,
+          storeId: product.storeId,
           isFeatured: product.isFeatured,
         }}
         onSubmit={handleSubmit}

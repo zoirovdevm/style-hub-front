@@ -12,8 +12,11 @@ export function Footer({ locale, dict }: { locale: Locale; dict: Dictionary }) {
     <footer className="border-t border-ink-900/5 bg-ink-950 text-cream">
       <div className="container-app grid gap-10 py-16 sm:grid-cols-2 lg:grid-cols-4">
         <div>
-          <div className="font-display text-2xl font-semibold">
-            Style<span className="text-gold-400">Hub</span>
+          <div
+            className="font-display text-xl font-semibold uppercase"
+            style={{ letterSpacing: '0.25em' }}
+          >
+            Wardrobe
           </div>
           <p className="mt-4 max-w-xs text-sm text-cream/60">{dict.home.heroSubtitle}</p>
           <div className="mt-6 flex gap-3">
@@ -65,7 +68,7 @@ export function Footer({ locale, dict }: { locale: Locale; dict: Dictionary }) {
       </div>
 
       <div className="border-t border-cream/10 py-6 text-center text-xs text-cream/40">
-        © {year} StyleHub — {dict.footer.rights}.
+        © {year} Wardrobe — {dict.footer.rights}.
       </div>
     </footer>
   );

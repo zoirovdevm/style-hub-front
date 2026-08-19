@@ -34,6 +34,16 @@ export default function WishlistPage({ params }: { params: { locale: Locale } })
     );
   }
 
+  // First load only — avoids the empty grid that used to flash for a moment
+  // between "logged in" and "wishlist data arrived".
+  if (loading && !data) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-ink-900/10 border-t-ink-950" />
+      </div>
+    );
+  }
+
   return (
     <div className="container-app py-12">
       <Reveal>
@@ -53,7 +63,7 @@ export default function WishlistPage({ params }: { params: { locale: Locale } })
       <div className="mt-10 grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
         {items.map((item: any, i: number) => (
           <Reveal key={item.id} delay={i * 0.05} className="relative">
-            <ProductCard product={item.product} locale={locale} />
+            <ProductCard product={item.product} locale={locale} dict={dict as any} />
             <button
               onClick={() => removeItem({ variables: { id: item.id } })}
               className="mt-2 w-full rounded-full border border-ink-900/10 py-2 text-xs font-semibold text-ink-900/60 hover:border-ink-950 hover:text-ink-950"

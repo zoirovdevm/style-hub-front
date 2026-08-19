@@ -1,6 +1,6 @@
 import { getDictionary } from '@/i18n/get-dictionary';
 import type { Locale } from '@/i18n/config';
-import { AdminSidebar } from '@/components/admin/AdminSidebar';
+import { AdminShell } from '@/components/admin/AdminShell';
 import { AdminGuard } from '@/components/admin/AdminGuard';
 
 export default async function AdminLayout({
@@ -14,10 +14,9 @@ export default async function AdminLayout({
 
   return (
     <AdminGuard locale={params.locale}>
-      <div className="flex min-h-screen bg-cream dark:bg-ink-950">
-        <AdminSidebar locale={params.locale} dict={dict} />
-        <div className="flex-1 overflow-x-hidden px-6 py-8 sm:px-10">{children}</div>
-      </div>
+      <AdminShell locale={params.locale} dict={dict}>
+        {children}
+      </AdminShell>
     </AdminGuard>
   );
 }

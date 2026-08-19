@@ -31,6 +31,31 @@ export const RESEND_VERIFICATION_CODE = gql`
   }
 `;
 
+export const REQUEST_PASSWORD_RESET = gql`
+  mutation RequestPasswordReset($input: RequestPasswordResetInput!) {
+    requestPasswordReset(input: $input) {
+      email
+      phone
+    }
+  }
+`;
+
+export const RESET_PASSWORD = gql`
+  mutation ResetPassword($input: ResetPasswordInput!) {
+    resetPassword(input: $input) {
+      accessToken
+      refreshToken
+      user {
+        id
+        email
+        firstName
+        lastName
+        role
+      }
+    }
+  }
+`;
+
 export const LOGIN = gql`
   mutation Login($input: LoginInput!) {
     login(input: $input) {
@@ -55,6 +80,7 @@ export const UPDATE_PROFILE = gql`
       lastName
       phone
       avatar
+      address
     }
   }
 `;
@@ -146,10 +172,29 @@ export const REMOVE_PRODUCT = gql`
   }
 `;
 
+// Bazadan butunlay o'chirish — faqat allaqachon yashirilgan tovar uchun
+// (admin/products sahifasida shunday cheklangan).
+export const HARD_DELETE_PRODUCT = gql`
+  mutation HardDeleteProduct($id: ID!) {
+    hardDeleteProduct(id: $id)
+  }
+`;
+
 export const CREATE_CATEGORY = gql`
   mutation CreateCategory($input: CreateCategoryInput!) {
     createCategory(input: $input) {
       id
+      slug
+    }
+  }
+`;
+
+export const UPDATE_CATEGORY = gql`
+  mutation UpdateCategory($id: ID!, $input: UpdateCategoryInput!) {
+    updateCategory(id: $id, input: $input) {
+      id
+      name
+      nameRu
       slug
     }
   }
@@ -164,12 +209,122 @@ export const CREATE_BRAND = gql`
   }
 `;
 
+export const CREATE_STORE = gql`
+  mutation CreateStore($input: CreateStoreInput!) {
+    createStore(input: $input) {
+      id
+      slug
+    }
+  }
+`;
+
+// Hozircha faqat komissiya foizini (commissionPercent) o'zgartirish uchun
+// ishlatiladi — magazin ichki sahifasidagi "Mening ulushim" kartochkasi.
+export const UPDATE_STORE = gql`
+  mutation UpdateStore($id: ID!, $input: UpdateStoreInput!) {
+    updateStore(id: $id, input: $input) {
+      id
+      commissionPercent
+    }
+  }
+`;
+
+export const REMOVE_STORE = gql`
+  mutation RemoveStore($id: ID!) {
+    removeStore(id: $id)
+  }
+`;
+
+export const REGENERATE_STORE_CODE = gql`
+  mutation RegenerateStoreCode($id: ID!) {
+    regenerateStoreCode(id: $id)
+  }
+`;
+
+export const REVOKE_STORE_SELLERS = gql`
+  mutation RevokeStoreSellers($id: ID!) {
+    revokeStoreSellers(id: $id)
+  }
+`;
+
 export const UPDATE_ORDER_STATUS = gql`
   mutation UpdateOrderStatus($input: UpdateOrderStatusInput!) {
     updateOrderStatus(input: $input) {
       id
       status
     }
+  }
+`;
+
+export const SET_USER_ACTIVE = gql`
+  mutation SetUserActive($id: ID!, $isActive: Boolean!) {
+    setUserActive(id: $id, isActive: $isActive) {
+      id
+      isActive
+    }
+  }
+`;
+
+export const CLEAR_ALL_DATA = gql`
+  mutation ClearAllData {
+    clearAllData
+  }
+`;
+
+// Mahsulotlarga tegmaydi — faqat buyurtma/to'lov/savat/sevimlilar ro'yxati
+// o'chadi.
+export const CLEAR_ORDERS_DATA = gql`
+  mutation ClearOrdersData {
+    clearOrdersData
+  }
+`;
+
+export const UPDATE_SITE_SETTINGS = gql`
+  mutation UpdateSiteSettings($input: UpdateSiteSettingsInput!) {
+    updateSiteSettings(input: $input) {
+      id
+      heroImage
+      contactAddress
+      contactPhone
+      contactTelegram
+      contactEmail
+      updatedAt
+    }
+  }
+`;
+
+export const CREATE_REVIEW = gql`
+  mutation CreateReview($input: CreateReviewInput!) {
+    createReview(input: $input) {
+      id
+      rating
+      comment
+      image
+      createdAt
+      user {
+        id
+        firstName
+        lastName
+        avatar
+      }
+    }
+  }
+`;
+
+// Backend already restricts this to admins only (@Roles(Role.ADMIN) in
+// review.resolver.ts) — a non-admin's call is rejected server-side even if
+// someone tampered with the frontend, so the `user?.role === 'ADMIN'` check
+// that hides/shows the delete button in ProductReviews.tsx is just UX, not
+// the actual security boundary.
+export const DELETE_REVIEW = gql`
+  mutation DeleteReview($id: ID!) {
+    deleteReview(id: $id)
+  }
+`;
+
+export const SEND_CONTACT_MESSAGE = gql`
+  mutation SendContactMessage($input: ContactMessageInput!) {
+    sendContactMessage(input: $input)
   }
 `;
 

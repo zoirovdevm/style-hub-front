@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form';
 import { useMutation } from '@apollo/client';
 import { motion } from 'framer-motion';
 import { REGISTER } from '@/lib/graphql/mutations';
+import { PasswordInput } from '@/components/ui/PasswordInput';
 import type { Locale } from '@/i18n/config';
 import uzDict from '@/i18n/dictionaries/uz.json';
 import ruDict from '@/i18n/dictionaries/ru.json';
@@ -30,7 +31,7 @@ export default function RegisterPage({ params }: { params: { locale: Locale } })
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<RegisterForm>();
+  } = useForm<RegisterForm>({ defaultValues: { phone: '+998 ' } });
 
   async function onSubmit(values: RegisterForm) {
     setError(null);
@@ -92,11 +93,7 @@ export default function RegisterPage({ params }: { params: { locale: Locale } })
 
           <div>
             <label className="mb-1.5 block text-xs font-semibold text-ink-900/60">{dict.auth.password}</label>
-            <input
-              type="password"
-              {...register('password', { required: true, minLength: 6 })}
-              className="w-full rounded-xl border border-ink-900/15 px-4 py-3 text-sm outline-none focus:border-ink-950"
-            />
+            <PasswordInput {...register('password', { required: true, minLength: 6 })} />
             {errors.password && <p className="mt-1 text-xs text-red-500">Kamida 6 belgi</p>}
           </div>
 

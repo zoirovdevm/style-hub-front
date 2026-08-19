@@ -1,4 +1,18 @@
-const GRAPHQL_URL = process.env.NEXT_PUBLIC_GRAPHQL_URL ?? 'http://localhost:4000/graphql';
+// Deliberately NOT `NEXT_PUBLIC_GRAPHQL_URL` — this file only ever runs on
+// the Next.js server (inside React Server Components), which lives on the
+// exact same machine as the NestJS backend. When a Cloudflare quick tunnel
+// is in use, NEXT_PUBLIC_GRAPHQL_URL points at the public
+// https://xxx.trycloudflare.com address so the *browser* (possibly a phone
+// on a different network) can reach the backend — but using that same
+// public URL here sent every server-rendered page's data fetch (Home, Shop,
+// Categories, Product) on a pointless round trip out to Cloudflare's edge
+// network and back down through the tunnel, instead of just calling
+// localhost directly. That extra hop was the main cause of "sahifalar
+// asta ochilyapti" (pages loading slowly) when navigating between
+// sections. GRAPHQL_INTERNAL_URL (no NEXT_PUBLIC_ prefix, so it's never
+// sent to the browser) lets server-side fetches always go straight to
+// localhost, tunnel or no tunnel.
+const GRAPHQL_URL = process.env.GRAPHQL_INTERNAL_URL ?? 'http://localhost:4000/graphql';
 
 /**
  * Server-side GraphQL fetch used inside React Server Components so

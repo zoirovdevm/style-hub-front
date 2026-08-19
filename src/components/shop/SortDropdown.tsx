@@ -27,7 +27,7 @@ export function SortDropdown({ dict }: { dict: Dictionary }) {
     <select
       value={currentSort}
       onChange={(e) => handleChange(e.target.value)}
-      className="rounded-full border border-ink-900/15 bg-white px-4 py-2 text-xs font-semibold outline-none focus:border-ink-950 dark:border-cream/15 dark:bg-ink-800"
+      className="rounded-full border border-ink-900/15 bg-white px-4 py-2 text-xs font-semibold text-ink-950 outline-none focus:border-ink-950 dark:border-cream/15 dark:bg-ink-800 dark:text-cream"
     >
       {options.map((opt) => (
         <option key={opt.value} value={opt.value}>

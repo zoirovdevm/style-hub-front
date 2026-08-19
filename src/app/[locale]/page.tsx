@@ -4,7 +4,7 @@ import { ArrowRight, Truck, ShieldCheck, RotateCcw, Sparkles } from 'lucide-reac
 import { getDictionary } from '@/i18n/get-dictionary';
 import type { Locale } from '@/i18n/config';
 import { serverFetchGraphQL } from '@/lib/graphql/server-fetch';
-import { GET_BEST_SELLERS_STR, GET_CATEGORIES_STR } from '@/lib/graphql/server-queries';
+import { GET_BEST_SELLERS_STR, GET_CATEGORIES_STR, GET_SITE_SETTINGS_STR } from '@/lib/graphql/server-queries';
 import { ProductCard, type ProductCardData } from '@/components/ui/ProductCard';
 import { Reveal } from '@/components/ui/Reveal';
 
@@ -14,20 +14,46 @@ export default async function HomePage({ params }: { params: { locale: Locale } 
   const { locale } = params;
   const dict = await getDictionary(locale);
 
-  const [bestSellersData, categoriesData] = await Promise.all([
+  const [bestSellersData, categoriesData, siteSettingsData] = await Promise.all([
     serverFetchGraphQL<{ bestSellers: ProductCardData[] }>(GET_BEST_SELLERS_STR, { limit: 8 }).catch(() => ({
       bestSellers: [],
     })),
     serverFetchGraphQL<{ categories: any[] }>(GET_CATEGORIES_STR, undefined, 0).catch(() => ({ categories: [] })),
+    // revalidate: 0 — an admin swapping the banner image should show up on
+    // the next request, not wait out a stale cached page.
+    serverFetchGraphQL<{ siteSettings: { heroImage?: string } }>(GET_SITE_SETTINGS_STR, undefined, 0).catch(() => ({
+      siteSettings: {},
+    })),
   ]);
 
   const bestSellers = bestSellersData.bestSellers ?? [];
   const categories = categoriesData.categories ?? [];
+  // Relative path — it only ever ends up as an <img src> the browser
+  // resolves, so it works via localhost or a tunnel URL without needing
+  // NEXT_PUBLIC_API_URL (next.config.js rewrites /uploads/* to the backend).
+  const heroImage = siteSettingsData.siteSettings?.heroImage || '/placeholder-product.svg';
 
   return (
     <div>
       {/* HERO */}
-      <section className="relative overflow-hidden bg-ink-950 text-cream">
+      {/* -mt-[68px]/pt-[68px] (and the sm: pair) cancel out <main>'s new
+          top padding exactly, then re-add the same amount as the section's
+          OWN padding — net effect: the visible content below is positioned
+          exactly like before, but this section's dark background now
+          extends all the way to the very top of the page, behind the
+          floating (fixed) header, instead of stopping where <main> used to
+          start. That's what lets the header's glass actually show the hero
+          blurred through it instead of a plain mismatched background.
+          data-navbar-contrast="dark" flags this section for
+          useNavbarContrast (see Header.tsx) — it's unconditionally dark
+          (bg-ink-950, no dark: pairing) even in light theme, so the
+          floating header needs to know to switch to light text/icons
+          while it's floating over this specific section, even though the
+          rest of a light-theme page normally calls for dark text. */}
+      <section
+        data-navbar-contrast="dark"
+        className="relative -mt-[68px] overflow-hidden bg-ink-950 pt-[68px] text-cream sm:-mt-[84px] sm:pt-[84px]"
+      >
         <div className="pointer-events-none absolute -left-24 top-10 h-72 w-72 rounded-full bg-gold-500/20 blur-3xl animate-float" />
         <div className="pointer-events-none absolute -right-16 bottom-0 h-96 w-96 rounded-full bg-gold-400/10 blur-3xl animate-float" />
 
@@ -77,6 +103,34 @@ export default async function HomePage({ params }: { params: { locale: Locale } 
         </div>
       </section>
 
+      {/* BEST SELLERS — shown before the category grid, per request: product
+          cards should be the first thing shoppers see below the fold, with
+          "shop by category" browsing further down as a secondary option. */}
+      <section className="bg-white py-20 dark:bg-ink-950">
+        <div className="container-app">
+          <div className="flex items-end justify-between">
+            <Reveal>
+              <h2 className="section-title">{dict.home.bestSellers}</h2>
+            </Reveal>
+            <Link href={`/${locale}/shop`} className="hidden text-sm font-semibold text-ink-900/60 hover:text-ink-950 sm:flex items-center gap-1">
+              {dict.home.shopNow} <ArrowRight size={14} />
+            </Link>
+          </div>
+
+          {bestSellers.length === 0 ? (
+            <p className="mt-10 text-sm text-ink-900/50">{dict.product.noResults}</p>
+          ) : (
+            <div className="mt-10 grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-5">
+              {bestSellers.map((product, i) => (
+                <Reveal key={product.id} delay={i * 0.05}>
+                  <ProductCard product={product} locale={locale} dict={dict} />
+                </Reveal>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
       {/* CATEGORIES */}
       {categories.length > 0 && (
         <section className="py-20">
@@ -105,38 +159,12 @@ export default async function HomePage({ params }: { params: { locale: Locale } 
         </section>
       )}
 
-      {/* BEST SELLERS */}
-      <section className="bg-white py-20 dark:bg-ink-950">
-        <div className="container-app">
-          <div className="flex items-end justify-between">
-            <Reveal>
-              <h2 className="section-title">{dict.home.bestSellers}</h2>
-            </Reveal>
-            <Link href={`/${locale}/shop`} className="hidden text-sm font-semibold text-ink-900/60 hover:text-ink-950 sm:flex items-center gap-1">
-              {dict.home.shopNow} <ArrowRight size={14} />
-            </Link>
-          </div>
-
-          {bestSellers.length === 0 ? (
-            <p className="mt-10 text-sm text-ink-900/50">{dict.product.noResults}</p>
-          ) : (
-            <div className="mt-10 grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
-              {bestSellers.map((product, i) => (
-                <Reveal key={product.id} delay={i * 0.05}>
-                  <ProductCard product={product} locale={locale} />
-                </Reveal>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
-
       {/* BANNER */}
       <section className="relative overflow-hidden bg-cream py-20 dark:bg-ink-800">
         <div className="container-app grid items-center gap-10 lg:grid-cols-2">
           <Reveal>
             <div className="relative aspect-[4/3] overflow-hidden rounded-3xl bg-ink-900/5">
-              <Image src="/placeholder-product.svg" alt="StyleHub" fill className="object-cover" />
+              <Image src={heroImage} alt="Wardrobe" fill className="object-cover" />
             </div>
           </Reveal>
           <Reveal delay={0.15}>

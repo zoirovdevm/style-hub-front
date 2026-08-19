@@ -1,12 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Heart, ShoppingBag, User2 } from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import { Heart, ShoppingBag, User2 } from 'lucide-react';
 import { useQuery } from '@apollo/client';
 import { GET_MY_CART, GET_MY_WISHLIST } from '@/lib/graphql/queries';
 import { useAuthStore } from '@/lib/store/auth-store';
+import { useNavbarContrast } from '@/lib/hooks/use-navbar-contrast';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { ThemeToggle } from './ThemeToggle';
 import type { Locale } from '@/i18n/config';
@@ -17,16 +17,27 @@ interface HeaderProps {
   dict: Dictionary;
 }
 
+// On mobile, MobileBottomNav (Home/Shop/Cart/Wishlist/Profile) already
+// covers primary navigation, and the Profile page carries the secondary
+// stuff (language, theme, admin link, logout) — so this header no longer
+// needs its own hamburger/dropdown menu on small screens. Everything below
+// that's `lg:`-gated only shows once there's room for the full desktop nav.
 export function Header({ locale, dict }: HeaderProps) {
-  const [mobileOpen, setMobileOpen] = useState(false);
   const user = useAuthStore((s) => s.user);
   const clearSession = useAuthStore((s) => s.clearSession);
+  const pathname = usePathname();
 
   const { data: cartData } = useQuery(GET_MY_CART, { skip: !user, fetchPolicy: 'cache-first' });
   const { data: wishlistData } = useQuery(GET_MY_WISHLIST, { skip: !user, fetchPolicy: 'cache-first' });
 
   const cartCount = cartData?.myCart?.reduce((sum: number, i: any) => sum + i.quantity, 0) ?? 0;
   const wishlistCount = wishlistData?.myWishlist?.length ?? 0;
+
+  // Probe near the vertical middle of the pill's own band (roughly 30-40px
+  // from the very top, comfortably inside both the mobile h-14+pt-3 and
+  // desktop h-[68px]+pt-4 sizes) — see use-navbar-contrast.ts for why this
+  // is needed at all (light theme + an unconditionally-dark hero).
+  const overDark = useNavbarContrast(() => 40);
 
   const navLinks = [
     { href: `/${locale}`, label: dict.nav.home },
@@ -36,35 +47,77 @@ export function Header({ locale, dict }: HeaderProps) {
     { href: `/${locale}/contact`, label: dict.nav.contact },
   ];
 
+  // Home ("/uz") must match exactly — every other route also starts with
+  // "/uz", so a prefix check there would keep Home permanently highlighted.
+  // Every other link matches its own page and anything nested under it
+  // (e.g. "/uz/shop/some-product" still highlights "Shop").
+  function isActiveLink(href: string) {
+    if (href === `/${locale}`) return pathname === href;
+    return pathname === href || (pathname?.startsWith(`${href}/`) ?? false);
+  }
+
   return (
-    <header className="sticky top-0 z-50 border-b border-ink-900/5 bg-cream/80 backdrop-blur-md dark:border-cream/5 dark:bg-ink-950/80">
-      <div className="container-app flex h-20 items-center justify-between">
-        <Link href={`/${locale}`} className="font-display text-2xl font-semibold tracking-tight dark:text-cream">
-          Style<span className="text-gold-500">Hub</span>
+    // `fixed` (not `sticky`) — this floats the pill ON TOP of the page
+    // instead of reserving its own space in the document flow. That
+    // matters because with `sticky`, the pt-3/pt-4 gap above the pill was
+    // still part of the *header's own box*, so it showed the plain <body>
+    // background — visibly wrong on the homepage, where a solid-dark hero
+    // (bg-ink-950, always dark regardless of theme) starts right below:
+    // the gap looked like a mismatched light strip glued above the bar.
+    // With `fixed`, that gap instead shows whatever's actually at the top
+    // of the page underneath (the hero's own dark background, blurred
+    // through the glass), which is what real "floating over content" looks
+    // like. See layout.tsx (<main> padding) and page.tsx (hero's negative
+    // margin) for the other half of this — since a fixed header no longer
+    // pushes page content down on its own, something else has to.
+    <header className="fixed inset-x-0 top-0 z-50 pt-3 sm:pt-4">
+      <div className="container-app">
+        <div
+          className={`flex h-14 items-center justify-between gap-2 rounded-full border px-4 backdrop-blur-2xl backdrop-saturate-200 transition-colors duration-300 sm:h-[68px] sm:px-6 dark:border-white/10 dark:bg-white/10 dark:shadow-[0_8px_30px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.1)] ${
+            overDark
+              ? 'navbar-on-dark border-white/15 bg-[rgba(30,30,30,0.35)] shadow-[0_8px_30px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.15)]'
+              : 'border-black/10 bg-white/45 shadow-[0_8px_30px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.5)]'
+          }`}
+        >
+        <Link
+          href={`/${locale}`}
+          className="min-w-0 shrink-0 truncate font-display text-base font-semibold uppercase text-ink-950 dark:text-cream sm:text-xl"
+          style={{ letterSpacing: '0.2em' }}
+        >
+          Wardrobe
         </Link>
 
         <nav className="hidden items-center gap-8 lg:flex">
-          {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="text-sm font-medium text-ink-900/70 transition-colors hover:text-ink-950 dark:text-cream/70 dark:hover:text-cream"
-            >
-              {link.label}
-            </Link>
-          ))}
+          {navLinks.map((link) => {
+            const active = isActiveLink(link.href);
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                aria-current={active ? 'page' : undefined}
+                className={`relative py-1 text-sm font-medium transition-colors ${
+                  active
+                    ? 'font-semibold text-ink-950 dark:text-cream'
+                    : 'text-ink-900/70 hover:text-ink-950 dark:text-cream/70 dark:hover:text-cream'
+                }`}
+              >
+                {link.label}
+                {active && (
+                  <span className="absolute inset-x-0 -bottom-1 h-0.5 rounded-full bg-gold-500" />
+                )}
+              </Link>
+            );
+          })}
         </nav>
 
-        <div className="flex items-center gap-3">
-          <div className="hidden sm:block">
-            <LanguageSwitcher locale={locale} />
-          </div>
+        <div className="flex shrink-0 items-center gap-2 sm:gap-4">
+          <LanguageSwitcher locale={locale} />
 
           <ThemeToggle label={{ light: dict.admin.themeToggleLight, dark: dict.admin.themeToggleDark }} />
 
           <Link
             href={`/${locale}/wishlist`}
-            className="relative rounded-full p-2 text-ink-900 transition-colors hover:bg-ink-900/5 dark:text-cream dark:hover:bg-cream/10"
+            className="relative hidden rounded-full p-2 text-ink-900 transition-colors hover:bg-ink-900/5 lg:block dark:text-cream dark:hover:bg-cream/10"
             aria-label={dict.nav.wishlist}
           >
             <Heart size={20} />
@@ -77,7 +130,7 @@ export function Header({ locale, dict }: HeaderProps) {
 
           <Link
             href={`/${locale}/cart`}
-            className="relative rounded-full p-2 text-ink-900 transition-colors hover:bg-ink-900/5 dark:text-cream dark:hover:bg-cream/10"
+            className="relative hidden rounded-full p-2 text-ink-900 transition-colors hover:bg-ink-900/5 lg:block dark:text-cream dark:hover:bg-cream/10"
             aria-label={dict.nav.cart}
           >
             <ShoppingBag size={20} />
@@ -88,78 +141,44 @@ export function Header({ locale, dict }: HeaderProps) {
             )}
           </Link>
 
-          {user ? (
-            <div className="hidden items-center gap-2 sm:flex">
-              {user.role === 'ADMIN' && (
-                <Link href={`/${locale}/admin`} className="btn-outline !px-4 !py-2 text-xs">
-                  {dict.nav.admin}
-                </Link>
-              )}
-              <Link
-                href={`/${locale}/profile`}
-                className="flex items-center gap-2 rounded-full p-2 text-ink-900 transition-colors hover:bg-ink-900/5 dark:text-cream dark:hover:bg-cream/10"
-              >
-                <User2 size={20} />
+          {/* Always renders a "Profil" link now, logged in or not — there
+              used to be a separate "Kirish" (Login) button here for guests,
+              gated the same `hidden lg:*` way as everything else in this
+              row. On most phones that's invisible like it should be, but
+              some in-app browsers (Telegram's built-in one, confirmed by a
+              screenshot) misreport their viewport width as desktop-sized,
+              which fools the `lg:` breakpoint into showing ONLY that one
+              button on an actual phone screen — the other lg-gated items
+              (nav links, wishlist/cart icons) stayed correctly hidden,
+              which is what made it so visually broken/inconsistent.
+              Removing the separate Login button removes the whole failure
+              mode instead of fighting unreliable viewport detection. Guests
+              tapping "Profil" land on the profile page, which already shows
+              its own "please log in" prompt with a real Login button when
+              there's no user (see profile/page.tsx) — nothing is actually
+              unreachable. */}
+          <div className="hidden items-center gap-2 lg:flex">
+            {user?.role === 'ADMIN' && (
+              <Link href={`/${locale}/admin`} className="btn-outline !px-4 !py-2 text-xs">
+                {dict.nav.admin}
               </Link>
+            )}
+            <Link
+              href={`/${locale}/profile`}
+              className="flex items-center gap-1.5 rounded-full py-2 pl-2 pr-3 text-ink-900 transition-colors hover:bg-ink-900/5 dark:text-cream dark:hover:bg-cream/10"
+            >
+              <User2 size={20} />
+              <span className="text-xs font-semibold">{dict.nav.profile}</span>
+            </Link>
+            {user && (
               <button onClick={clearSession} className="text-xs font-semibold text-ink-900/60 hover:text-ink-950 dark:text-cream/60 dark:hover:text-cream">
                 {dict.nav.logout}
               </button>
-            </div>
-          ) : (
-            <Link href={`/${locale}/login`} className="btn-primary hidden !px-5 !py-2.5 text-xs sm:inline-flex">
-              {dict.nav.login}
-            </Link>
-          )}
-
-          <button
-            className="rounded-full p-2 text-ink-900 hover:bg-ink-900/5 dark:text-cream dark:hover:bg-cream/10 lg:hidden"
-            onClick={() => setMobileOpen((v) => !v)}
-            aria-label="Menu"
-          >
-            {mobileOpen ? <X size={22} /> : <Menu size={22} />}
-          </button>
+            )}
+          </div>
+        </div>
         </div>
       </div>
-
-      <AnimatePresence>
-        {mobileOpen && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25 }}
-            className="overflow-hidden border-t border-ink-900/5 bg-cream lg:hidden dark:border-cream/5 dark:bg-ink-950"
-          >
-            <div className="container-app flex flex-col gap-4 py-6">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={() => setMobileOpen(false)}
-                  className="text-base font-medium dark:text-cream"
-                >
-                  {link.label}
-                </Link>
-              ))}
-              <div className="flex items-center justify-between pt-2">
-                <div className="flex items-center gap-2">
-                  <LanguageSwitcher locale={locale} />
-                  <ThemeToggle label={{ light: dict.admin.themeToggleLight, dark: dict.admin.themeToggleDark }} />
-                </div>
-                {user ? (
-                  <button onClick={clearSession} className="text-sm font-semibold dark:text-cream">
-                    {dict.nav.logout}
-                  </button>
-                ) : (
-                  <Link href={`/${locale}/login`} className="btn-primary !px-5 !py-2.5 text-xs">
-                    {dict.nav.login}
-                  </Link>
-                )}
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </header>
   );
 }

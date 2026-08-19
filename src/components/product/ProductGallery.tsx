@@ -5,11 +5,12 @@ import Image from 'next/image';
 import { AnimatePresence, motion } from 'framer-motion';
 
 export function ProductGallery({ images, title }: { images: string[]; title: string }) {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+  // Relative paths — next.config.js rewrites /uploads/* through to the
+  // backend, so this works on localhost and a tunnel URL without changes.
   const list = images.length ? images : ['/placeholder-product.svg'];
   const [active, setActive] = useState(0);
 
-  const src = list[active].startsWith('/placeholder') ? list[active] : `${apiUrl}${list[active]}`;
+  const src = list[active];
 
   return (
     <div className="flex flex-col-reverse gap-4 sm:flex-row">
@@ -24,7 +25,7 @@ export function ProductGallery({ images, title }: { images: string[]; title: str
               }`}
             >
               <Image
-                src={img.startsWith('/placeholder') ? img : `${apiUrl}${img}`}
+                src={img}
                 alt={`${title} ${i + 1}`}
                 fill
                 className="object-cover"
