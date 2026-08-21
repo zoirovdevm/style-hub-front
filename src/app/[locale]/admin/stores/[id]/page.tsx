@@ -213,7 +213,7 @@ export default function AdminStoreDetailPage({ params }: { params: { locale: Loc
         <StatCard label={dict.admin.products} value={stats.totalProducts} icon={ShoppingBag} />
         <StatCard label={dict.admin.storeTotalStock} value={stats.totalStock} icon={Package} accent="#2b4a7a" />
         <StatCard label={dict.admin.unitsSold} value={stats.totalSold} icon={TrendingUp} accent="#3a6b45" />
-        <StatCard label={dict.admin.revenueTotal} value={formatPrice(stats.revenue, locale)} icon={Banknote} accent="#6c6c6c" />
+        <StatCard label={dict.admin.revenueTotal} value={formatPrice(stats.revenue, locale)} icon={Banknote} accent="#059669" />
         <StatCard
           label={`${dict.admin.myShare} (${stats.commissionPercent}%)`}
           value={formatPrice(stats.myShare, locale)}

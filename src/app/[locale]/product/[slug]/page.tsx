@@ -64,6 +64,16 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
   const description = locale === 'ru' && product.descriptionRu ? product.descriptionRu : product.description;
   const hasDiscount = product.oldPrice && product.oldPrice > product.price;
 
+  // Total stock across every size/color combination, not just the overall
+  // `stock` field (which some products don't keep in sync with their real
+  // variant rows). Falls back to `stock` for older/simple products that
+  // have no variant data at all.
+  const productVariants: { size: string; color: string; stock: number }[] = product.variants ?? [];
+  const totalStock =
+    productVariants.length > 0
+      ? productVariants.reduce((sum: number, v: { stock: number }) => sum + (v.stock ?? 0), 0)
+      : product.stock;
+
   return (
     <div className="container-app py-12">
       <div className="grid gap-12 lg:grid-cols-2">
@@ -93,14 +103,18 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
               )}
             </div>
 
-            <p className="mt-2 text-xs text-ink-900/50">
-              {product.stock > 0 ? (
+            <p className="mt-2 text-xs text-ink-900/50 dark:text-cream/50">
+              {totalStock > 0 ? (
                 <>
-                  {dict.product.inStock}
-                  {' · '}
-                  {product.stock} {dict.product.stockLeft}
-                  {product.stock <= 5 && (
-                    <span className="ml-1.5 font-bold text-red-500">{dict.product.lastPieces}</span>
+                  {dict.product.totalInStock}
+                  {' '}
+                  {totalStock} {dict.product.stockLeft}
+                  {/* Neutral black/white instead of red per request — the
+                      color no longer carries the "urgent" signal here,
+                      that now lives in the amber per-variant message below
+                      the size/color pickers. */}
+                  {totalStock <= 5 && (
+                    <span className="ml-1.5 font-bold text-ink-950 dark:text-cream">{dict.product.lastPieces}</span>
                   )}
                 </>
               ) : (

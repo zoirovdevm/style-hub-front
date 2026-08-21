@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQuery } from '@apollo/client';
-import { AlertCircle, Heart, Minus, Plus } from 'lucide-react';
+import { AlertCircle, Heart, Minus, Plus, ShoppingBag } from 'lucide-react';
 import { ADD_TO_CART, TOGGLE_WISHLIST } from '@/lib/graphql/mutations';
 import { GET_MY_CART, GET_MY_WISHLIST } from '@/lib/graphql/queries';
 import { useAuthStore } from '@/lib/store/auth-store';
@@ -70,6 +70,23 @@ export function ProductActions({ productId, sizes, colors, stock, variants = [],
 
   const selectedVariantStock = stockFor(size, color);
   const selectedComboOutOfStock = hasVariants && selectedVariantStock !== null && selectedVariantStock <= 0;
+
+  // "M razmer, ko'k rang — 5 dona mavjud" / "... — faqat 2 dona qoldi" for
+  // the currently selected size+color combo, built from real variant stock
+  // (never a hardcoded number) and reactive to size/color changes since it
+  // reads `size`/`color`/`selectedVariantStock` directly on every render.
+  function variantStockMessage(): string | null {
+    if (!hasVariants || selectedVariantStock === null || selectedVariantStock <= 0) return null;
+    const descriptorParts: string[] = [];
+    if (hasSizeDim && size) descriptorParts.push(`${size} ${dict.product.variantSizeWord}`);
+    if (hasColorDim && color) descriptorParts.push(`${color.toLowerCase()} ${dict.product.variantColorWord}`);
+    const descriptor = descriptorParts.join(', ');
+    const isLow = selectedVariantStock <= 5;
+    const status = isLow
+      ? `${dict.product.variantOnlyLeft} ${selectedVariantStock} ${dict.product.stockLeft}`
+      : `${selectedVariantStock} ${dict.product.variantAvailable}`;
+    return descriptor ? `${descriptor} — ${status}` : status;
+  }
 
   // If the shopper picks a size that makes the currently-selected color
   // unavailable (e.g. "M / Qora" is sold out), jump to a color that still
@@ -206,19 +223,24 @@ export function ProductActions({ productId, sizes, colors, stock, variants = [],
           </button>
         </div>
 
-        {/* Exact remaining stock for the currently selected size+color combo
-            — mirrors the "N dona qoldi" pattern shoppers expect from Uzum
-            Market. Only shown once the product actually has variant data
-            (older/simple products without sizes-colors just show nothing
-            here and rely on the overall outOfStock state). */}
-        {hasVariants && selectedVariantStock !== null && selectedVariantStock > 0 && (
+        {/* Exact remaining stock for the currently selected size+color combo,
+            spelled out with the size/color themselves — "M razmer, ko'k
+            rang — 5 dona mavjud" — so it reads as a real answer to "is
+            THIS variant in stock", not just a bare number. Amber for <=5
+            left, consistent with the low-stock color used everywhere else
+            (ProductCard, quick-buy modal). Only shown once the product
+            actually has variant data; recalculates on every size/color
+            change since it's derived straight from `size`/`color`/
+            `selectedVariantStock`, never a hardcoded number. */}
+        {variantStockMessage() && (
           <p
             className={`mt-2 text-xs font-semibold ${
-              selectedVariantStock <= 5 ? 'text-red-500' : 'text-ink-900/50 dark:text-cream/50'
+              selectedVariantStock !== null && selectedVariantStock <= 5
+                ? 'text-amber-600 dark:text-amber-400'
+                : 'text-ink-900/50 dark:text-cream/50'
             }`}
           >
-            {selectedVariantStock <= 5 && `${dict.product.lastPieces} `}
-            {selectedVariantStock} {dict.product.stockLeft}
+            {variantStockMessage()}
           </p>
         )}
       </div>
@@ -229,7 +251,17 @@ export function ProductActions({ productId, sizes, colors, stock, variants = [],
           disabled={outOfStock || addingToCart}
           className="btn-outline flex-1 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {outOfStock ? dict.product.outOfStock : dict.product.addToCart}
+          {/* Same ShoppingBag icon as the quick-buy button/modal now use,
+              per request — every "add to cart" button site-wide gets it
+              before the label instead of text alone. */}
+          {outOfStock ? (
+            dict.product.outOfStock
+          ) : (
+            <>
+              <ShoppingBag size={16} />
+              {dict.product.addToCart}
+            </>
+          )}
         </button>
         <button
           onClick={handleBuyNow}
@@ -244,10 +276,12 @@ export function ProductActions({ productId, sizes, colors, stock, variants = [],
               if (togglingWishlist) return;
               toggleWishlist({ variables: { productId } });
             }}
+            // Neutral black/white surrounding at rest — no more green accent
+            // here — and red (filled) once liked, per request.
             className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full border transition-colors ${
               isWishlisted
-                ? 'border-gold-500 bg-gold-500 text-ink-950'
-                : 'border-ink-900/15 hover:border-gold-500 hover:text-gold-500'
+                ? 'border-red-500 bg-red-500 text-white'
+                : 'border-ink-900/15 text-ink-900 hover:border-ink-950 dark:border-cream/20 dark:text-cream dark:hover:border-cream'
             }`}
             aria-label={isWishlisted ? dict.product.removeFromWishlist : dict.product.addToWishlist}
           >

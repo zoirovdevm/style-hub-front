@@ -341,6 +341,14 @@ export const GET_REVIEWS = gql`
   }
 `;
 
+// Only called for logged-in users (skip: !user) — decides whether to show
+// the "write a review" form or a "purchase this first" message.
+export const CAN_REVIEW_PRODUCT = gql`
+  query CanReviewProduct($productId: ID!) {
+    canReviewProduct(productId: $productId)
+  }
+`;
+
 export const GET_SITE_SETTINGS = gql`
   query SiteSettings {
     siteSettings {

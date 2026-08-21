@@ -22,7 +22,7 @@ export function LanguageSwitcher({ locale }: { locale: Locale }) {
           onClick={() => switchTo(l)}
           className={`rounded-full px-2 py-1 uppercase transition-colors sm:px-3 sm:py-1.5 ${
             l === locale
-              ? 'bg-ink-950 text-cream dark:bg-cream dark:text-ink-950'
+              ? 'bg-gold-500 text-ink-950'
               : 'text-ink-900/60 hover:text-ink-950 dark:text-cream/60 dark:hover:text-cream'
           }`}
           aria-label={localeNames[l]}

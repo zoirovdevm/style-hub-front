@@ -1,37 +1,70 @@
 import Link from 'next/link';
-import Image from 'next/image';
-import { ArrowRight, Truck, ShieldCheck, RotateCcw, Sparkles } from 'lucide-react';
+import { ArrowRight, Truck, ShieldCheck, CheckCircle2, CreditCard } from 'lucide-react';
 import { getDictionary } from '@/i18n/get-dictionary';
 import type { Locale } from '@/i18n/config';
 import { serverFetchGraphQL } from '@/lib/graphql/server-fetch';
-import { GET_BEST_SELLERS_STR, GET_CATEGORIES_STR, GET_SITE_SETTINGS_STR } from '@/lib/graphql/server-queries';
+import { GET_BEST_SELLERS_STR, GET_CATEGORIES_STR } from '@/lib/graphql/server-queries';
 import { ProductCard, type ProductCardData } from '@/components/ui/ProductCard';
 import { Reveal } from '@/components/ui/Reveal';
+import { CategoryCarousel } from '@/components/ui/CategoryCarousel';
 
-const WHY_ICONS = [Sparkles, Truck, RotateCcw, ShieldCheck];
+type HomeCategory = {
+  id: string;
+  name: string;
+  nameRu?: string | null;
+  slug: string;
+  description?: string | null;
+};
+
+// Each "why us" card gets its own icon + accent color (matching the four
+// items in the dictionary, in order: originals / delivery / trust /
+// payment) — a soft tinted square in light mode, the same hue at low
+// opacity on a dark card in dark mode, so the row reads as four distinct
+// colors instead of one repeated brand tone.
+const WHY_ITEMS = [
+  { icon: CheckCircle2, ring: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400' },
+  { icon: Truck, ring: 'bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400' },
+  { icon: ShieldCheck, ring: 'bg-violet-50 text-violet-600 dark:bg-violet-500/10 dark:text-violet-400' },
+  { icon: CreditCard, ring: 'bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400' },
+];
 
 export default async function HomePage({ params }: { params: { locale: Locale } }) {
   const { locale } = params;
   const dict = await getDictionary(locale);
 
-  const [bestSellersData, categoriesData, siteSettingsData] = await Promise.all([
+  // Categories section is back on the home page (previously removed) — this
+  // time as the BANNER section's content, replacing the old static
+  // image+text pair with an auto-scrolling carousel of category cards. The
+  // GET_SITE_SETTINGS_STR/heroImage fetch that only fed that static image is
+  // gone since nothing renders it anymore; GET_CATEGORIES_STR (the same
+  // query the /categories page already uses) takes its place.
+  const [bestSellersData, categoriesData] = await Promise.all([
     serverFetchGraphQL<{ bestSellers: ProductCardData[] }>(GET_BEST_SELLERS_STR, { limit: 8 }).catch(() => ({
       bestSellers: [],
     })),
-    serverFetchGraphQL<{ categories: any[] }>(GET_CATEGORIES_STR, undefined, 0).catch(() => ({ categories: [] })),
-    // revalidate: 0 — an admin swapping the banner image should show up on
-    // the next request, not wait out a stale cached page.
-    serverFetchGraphQL<{ siteSettings: { heroImage?: string } }>(GET_SITE_SETTINGS_STR, undefined, 0).catch(() => ({
-      siteSettings: {},
+    // revalidate: 0 — a newly added/renamed category should show up in the
+    // carousel on the next request, not wait out a stale cached page.
+    serverFetchGraphQL<{ categories: HomeCategory[] }>(GET_CATEGORIES_STR, undefined, 0).catch(() => ({
+      categories: [],
     })),
   ]);
 
   const bestSellers = bestSellersData.bestSellers ?? [];
   const categories = categoriesData.categories ?? [];
-  // Relative path — it only ever ends up as an <img src> the browser
-  // resolves, so it works via localhost or a tunnel URL without needing
-  // NEXT_PUBLIC_API_URL (next.config.js rewrites /uploads/* to the backend).
-  const heroImage = siteSettingsData.siteSettings?.heroImage || '/placeholder-product.svg';
+
+  // Splits the hero heading around its one highlighted word so only that
+  // word can get its own color/italic styling — the dictionary string
+  // itself stays plain text (no embedded HTML), this just locates
+  // "премиум"/"premium" within it at render time. Falls back to rendering
+  // the whole heading unstyled if the word isn't found for some reason
+  // (e.g. a future translation edit removes it) rather than crashing.
+  const heroTitleHighlightWord = locale === 'ru' ? 'премиум' : 'premium';
+  const heroTitleSplitIndex = dict.home.heroTitle.indexOf(heroTitleHighlightWord);
+  const heroTitleBefore =
+    heroTitleSplitIndex >= 0 ? dict.home.heroTitle.slice(0, heroTitleSplitIndex) : dict.home.heroTitle;
+  const heroTitleHighlight = heroTitleSplitIndex >= 0 ? heroTitleHighlightWord : '';
+  const heroTitleAfter =
+    heroTitleSplitIndex >= 0 ? dict.home.heroTitle.slice(heroTitleSplitIndex + heroTitleHighlightWord.length) : '';
 
   return (
     <div>
@@ -39,45 +72,102 @@ export default async function HomePage({ params }: { params: { locale: Locale } 
       {/* -mt-[68px]/pt-[68px] (and the sm: pair) cancel out <main>'s new
           top padding exactly, then re-add the same amount as the section's
           OWN padding — net effect: the visible content below is positioned
-          exactly like before, but this section's dark background now
-          extends all the way to the very top of the page, behind the
-          floating (fixed) header, instead of stopping where <main> used to
-          start. That's what lets the header's glass actually show the hero
+          exactly like before, but this section's background now extends
+          all the way to the very top of the page, behind the floating
+          (fixed) header, instead of stopping where <main> used to start.
+          That's what lets the header's glass actually show this section
           blurred through it instead of a plain mismatched background.
-          data-navbar-contrast="dark" flags this section for
-          useNavbarContrast (see Header.tsx) — it's unconditionally dark
-          (bg-ink-950, no dark: pairing) even in light theme, so the
-          floating header needs to know to switch to light text/icons
-          while it's floating over this specific section, even though the
-          rest of a light-theme page normally calls for dark text. */}
-      <section
-        data-navbar-contrast="dark"
-        className="relative -mt-[68px] overflow-hidden bg-ink-950 pt-[68px] text-cream sm:-mt-[84px] sm:pt-[84px]"
-      >
-        <div className="pointer-events-none absolute -left-24 top-10 h-72 w-72 rounded-full bg-gold-500/20 blur-3xl animate-float" />
-        <div className="pointer-events-none absolute -right-16 bottom-0 h-96 w-96 rounded-full bg-gold-400/10 blur-3xl animate-float" />
+          This section used to be unconditionally dark (bg-ink-950, no
+          dark: pairing) even in light theme — deliberately, so it always
+          had presence — but per request it now follows the site's normal
+          light/dark theme like everything else (white+ink text in light
+          mode, the old dark+cream look preserved for dark mode), so no
+          `data-navbar-contrast` flag is needed anymore either: the header
+          can just use its normal light-theme styling here since the
+          background underneath it now actually matches. */}
+      <section className="relative -mt-[68px] overflow-hidden bg-white pt-[68px] text-ink-950 dark:bg-ink-950 dark:text-cream sm:-mt-[84px] sm:pt-[84px]">
+        {/* Very faint edge-to-edge base tint, so the far corners/edges
+            aren't completely bare — kept much lighter than the blobs below
+            so the glow still reads as concentrated toward the center/text,
+            not uniform. */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background: 'linear-gradient(135deg, rgba(16,185,129,0.05) 0%, rgba(5,150,105,0.03) 100%)',
+          }}
+        />
+        {/* Five soft, dimmer, larger glows spread across the WHOLE section
+            — not just clustered behind the text anymore, but also over the
+            open space to the right and the top/bottom margins — each a
+            different size so they read as an organic, overlapping cluster
+            rather than one shape. Opacity is deliberately low (10-14%,
+            down from the previous 20-25%) since the request was to reduce
+            brightness; the two nearer the visual center of the hero are a
+            couple points stronger than the ones nearer the edges, which is
+            what keeps the edges feeling more subtle without a hard cutoff.
+            Each one drifts on its own slow, independent loop (different
+            animate-float-slow duration/delay set inline) for an ambient
+            feel instead of everything bouncing in unison. */}
+        <div
+          className="pointer-events-none absolute left-[6%] top-[42%] h-[38rem] w-[38rem] -translate-y-1/2 rounded-full bg-gold-500/14 blur-[130px] animate-float-slow"
+          style={{ animationDuration: '22s' }}
+        />
+        <div
+          className="pointer-events-none absolute right-[10%] top-[35%] h-[40rem] w-[40rem] -translate-y-1/2 rounded-full bg-gold-400/12 blur-[150px] animate-float-slow"
+          style={{ animationDuration: '28s', animationDelay: '-6s' }}
+        />
+        <div
+          className="pointer-events-none absolute left-[38%] top-[4%] h-[26rem] w-[26rem] rounded-full bg-gold-500/10 blur-[110px] animate-float-slow"
+          style={{ animationDuration: '25s', animationDelay: '-11s' }}
+        />
+        <div
+          className="pointer-events-none absolute right-[18%] bottom-[2%] h-[30rem] w-[30rem] rounded-full bg-gold-600/10 blur-[130px] animate-float-slow"
+          style={{ animationDuration: '32s', animationDelay: '-16s' }}
+        />
+        <div
+          className="pointer-events-none absolute left-[16%] bottom-[6%] h-[20rem] w-[20rem] rounded-full bg-gold-400/9 blur-[100px] animate-float-slow"
+          style={{ animationDuration: '19s', animationDelay: '-3s' }}
+        />
 
         <div className="container-app relative flex min-h-[640px] flex-col justify-center py-24">
+          {/* Long accent line above the eyebrow text — left-aligned with
+              the text block (same starting edge as everything below it)
+              and wide enough to read as a divider across the content area,
+              fading out toward the right rather than ending abruptly. */}
           <Reveal>
-            <p className="mb-4 text-xs font-semibold uppercase tracking-[0.3em] text-gold-400">
+            <div className="mb-6 h-px w-full max-w-md bg-gradient-to-r from-gold-500 via-gold-500/40 to-transparent" />
+          </Reveal>
+          <Reveal delay={0.05}>
+            <p className="mb-4 text-xs font-semibold uppercase tracking-[0.3em] text-gold-600 dark:text-gold-400">
               {dict.home.heroEyebrow}
             </p>
           </Reveal>
           <Reveal delay={0.1}>
             <h1 className="max-w-2xl font-display text-5xl font-medium leading-tight sm:text-6xl lg:text-7xl">
-              {dict.home.heroTitle}
+              {/* Only the one highlighted word ("премиум"/"premium") gets
+                  the exact accent green + italic treatment — everything
+                  else in the heading keeps its normal color, per request. */}
+              {heroTitleBefore}
+              {heroTitleHighlight && (
+                <em className="italic" style={{ color: '#10b981' }}>
+                  {heroTitleHighlight}
+                </em>
+              )}
+              {heroTitleAfter}
             </h1>
           </Reveal>
           <Reveal delay={0.2}>
-            <p className="mt-6 max-w-lg text-base text-cream/70">{dict.home.heroSubtitle}</p>
+            <p className="mt-6 max-w-lg text-base text-ink-900/60 dark:text-cream/70">{dict.home.heroSubtitle}</p>
           </Reveal>
           <Reveal delay={0.3}>
             <div className="mt-10 flex flex-wrap gap-4">
-              <Link href={`/${locale}/shop`} className="btn-primary !bg-gold-500 !text-ink-950 hover:!bg-cream">
+              {/* .btn-primary now IS the green gradient by default (see
+                  globals.css) — no per-page override needed here anymore. */}
+              <Link href={`/${locale}/shop`} className="btn-primary">
                 {dict.home.shopNow}
                 <ArrowRight size={16} />
               </Link>
-              <Link href={`/${locale}/categories`} className="btn-outline !border-cream/20 !text-cream hover:!bg-cream hover:!text-ink-950">
+              <Link href={`/${locale}/categories`} className="btn-outline">
                 {dict.home.exploreCategories}
               </Link>
             </div>
@@ -86,17 +176,21 @@ export default async function HomePage({ params }: { params: { locale: Locale } 
       </section>
 
       {/* WHY US */}
-      <section className="border-b border-ink-900/5 bg-white py-14 dark:border-cream/5 dark:bg-ink-950">
-        <div className="container-app grid grid-cols-2 gap-8 lg:grid-cols-4">
+      <section className="relative overflow-hidden border-b border-ink-900/5 bg-gradient-to-b from-emerald-50/60 via-white to-white py-16 dark:border-cream/5 dark:from-ink-950 dark:via-ink-950 dark:to-ink-950">
+        <div className="container-app grid grid-cols-2 gap-5 lg:grid-cols-4">
           {dict.home.whyUsItems.map((item, i) => {
-            const Icon = WHY_ICONS[i % WHY_ICONS.length];
+            const { icon: Icon, ring } = WHY_ITEMS[i % WHY_ITEMS.length];
             return (
-              <Reveal key={item.title} delay={i * 0.08} className="flex flex-col items-start gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-ink-950 text-gold-400 dark:bg-cream/10">
-                  <Icon size={18} />
+              <Reveal key={item.title} delay={i * 0.08}>
+                <div className="flex h-full flex-col items-start gap-4 rounded-2xl border border-ink-900/8 bg-white p-6 transition-transform hover:-translate-y-1 dark:border-cream/10 dark:bg-ink-900/60">
+                  <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${ring}`}>
+                    <Icon size={22} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-ink-950 dark:text-cream">{item.title}</h3>
+                    <p className="mt-1.5 text-sm leading-relaxed text-ink-900/55 dark:text-cream/55">{item.desc}</p>
+                  </div>
                 </div>
-                <h3 className="text-sm font-semibold dark:text-cream">{item.title}</h3>
-                <p className="text-xs text-ink-900/50">{item.desc}</p>
               </Reveal>
             );
           })}
@@ -112,8 +206,15 @@ export default async function HomePage({ params }: { params: { locale: Locale } 
             <Reveal>
               <h2 className="section-title">{dict.home.bestSellers}</h2>
             </Reveal>
-            <Link href={`/${locale}/shop`} className="hidden text-sm font-semibold text-ink-900/60 hover:text-ink-950 sm:flex items-center gap-1">
-              {dict.home.shopNow} <ArrowRight size={14} />
+            {/* Site's green accent instead of plain gray, with a hover
+                effect: the text deepens and the arrow nudges right —
+                per request. */}
+            <Link
+              href={`/${locale}/shop`}
+              className="group hidden items-center gap-1 text-sm font-semibold text-gold-600 transition-colors duration-300 hover:text-gold-700 dark:text-gold-400 dark:hover:text-gold-300 sm:flex"
+            >
+              {dict.home.shopNow}
+              <ArrowRight size={14} className="transition-transform duration-300 group-hover:translate-x-1" />
             </Link>
           </div>
 
@@ -131,51 +232,61 @@ export default async function HomePage({ params }: { params: { locale: Locale } 
         </div>
       </section>
 
-      {/* CATEGORIES */}
-      {categories.length > 0 && (
-        <section className="py-20">
-          <div className="container-app">
-            <Reveal>
-              <h2 className="section-title">{dict.home.shopByCategory}</h2>
-            </Reveal>
-            <div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-              {categories.map((cat, i) => (
-                <Reveal key={cat.id} delay={i * 0.05}>
-                  <Link
-                    href={`/${locale}/shop?category=${cat.slug}`}
-                    className="group flex flex-col items-center gap-3 rounded-2xl border border-ink-900/5 bg-white p-5 text-center shadow-soft transition-transform hover:-translate-y-1 dark:border-cream/10 dark:bg-ink-800"
-                  >
-                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-cream text-lg font-display font-semibold text-ink-950 transition-colors group-hover:bg-gold-500">
-                      {(locale === 'ru' && cat.nameRu ? cat.nameRu : cat.name)?.charAt(0)}
-                    </div>
-                    <span className="text-xs font-semibold dark:text-cream">
-                      {locale === 'ru' && cat.nameRu ? cat.nameRu : cat.name}
-                    </span>
-                  </Link>
-                </Reveal>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
       {/* BANNER */}
-      <section className="relative overflow-hidden bg-cream py-20 dark:bg-ink-800">
-        <div className="container-app grid items-center gap-10 lg:grid-cols-2">
-          <Reveal>
-            <div className="relative aspect-[4/3] overflow-hidden rounded-3xl bg-ink-900/5">
-              <Image src={heroImage} alt="Wardrobe" fill className="object-cover" />
-            </div>
-          </Reveal>
-          <Reveal delay={0.15}>
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-gold-600">{dict.home.newArrivals}</p>
-            <h2 className="mt-4 font-display text-3xl font-medium sm:text-4xl dark:text-cream">{dict.home.heroTitle}</h2>
-            <p className="mt-4 max-w-md text-sm text-ink-900/60">{dict.home.heroSubtitle}</p>
-            <Link href={`/${locale}/shop`} className="btn-primary mt-8">
-              {dict.home.shopNow}
-              <ArrowRight size={16} />
+      <section className="relative overflow-hidden bg-white py-20 dark:bg-ink-950">
+        {/* Same soft blurred-glow treatment as the hero up top. Per latest
+            request the section's own base fill is pulled close to
+            white/black (matching the hero's bg-white/dark:bg-ink-950) so the
+            glow blobs read as the dominant color signal — blobs are bigger,
+            more opaque, and more blurred than the earlier passes. */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background: 'linear-gradient(135deg, rgba(16,185,129,0.05) 0%, rgba(5,150,105,0.03) 100%)',
+          }}
+        />
+        <div
+          className="pointer-events-none absolute left-[8%] top-[10%] h-[30rem] w-[30rem] rounded-full bg-gold-500/14 blur-[150px] animate-float-slow"
+          style={{ animationDuration: '24s' }}
+        />
+        <div
+          className="pointer-events-none absolute right-[12%] bottom-[6%] h-[32rem] w-[32rem] rounded-full bg-gold-400/12 blur-[170px] animate-float-slow"
+          style={{ animationDuration: '30s', animationDelay: '-8s' }}
+        />
+        <div
+          className="pointer-events-none absolute right-[30%] top-[-4%] h-[22rem] w-[22rem] rounded-full bg-gold-600/10 blur-[140px] animate-float-slow"
+          style={{ animationDuration: '20s', animationDelay: '-13s' }}
+        />
+
+        <div className="container-app relative">
+          <div className="flex items-end justify-between">
+            <Reveal>
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-gold-600">{dict.home.newArrivals}</p>
+              <h2 className="mt-4 font-display text-3xl font-medium sm:text-4xl dark:text-cream">{dict.nav.categories}</h2>
+            </Reveal>
+            <Link
+              href={`/${locale}/categories`}
+              className="group hidden items-center gap-1 text-sm font-semibold text-gold-600 transition-colors duration-300 hover:text-gold-700 dark:text-gold-400 dark:hover:text-gold-300 sm:flex"
+            >
+              {dict.home.exploreCategories}
+              <ArrowRight size={14} className="transition-transform duration-300 group-hover:translate-x-1" />
             </Link>
-          </Reveal>
+          </div>
+        </div>
+
+        {/* Category showcase — per follow-up request this is no longer a
+            row of separate cards scrolling past each other; it's ONE big
+            box, and the categories rotate (crossfade) inside that single
+            box instead. See CategoryCarousel.tsx for the rotation itself
+            (timer-driven, since the category count is dynamic). */}
+        <div className="container-app relative mt-10">
+          {categories.length === 0 ? (
+            <p className="text-sm text-ink-900/50 dark:text-cream/50">{dict.product.noResults}</p>
+          ) : (
+            <Reveal delay={0.15}>
+              <CategoryCarousel categories={categories} locale={locale} />
+            </Reveal>
+          )}
         </div>
       </section>
     </div>

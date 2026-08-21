@@ -77,6 +77,12 @@
     "searchPlaceholder": "Qidiruv...",
     "stockLeft": "dona qoldi",
     "lastPieces": "Oxirgi donalar!",
+    "almostGone": "tugab qolmoqda",
+    "totalInStock": "Sotuvda jami",
+    "variantSizeWord": "razmer",
+    "variantColorWord": "rang",
+    "variantAvailable": "dona mavjud",
+    "variantOnlyLeft": "faqat",
     "quickBuy": "1 klikda sotib olish",
     "quickBuyClose": "Yopish",
     "quickBuySelectSize": "Iltimos, o'lchamni tanlang",
@@ -97,7 +103,10 @@
     "submitSuccess": "Rahmat! Sharhingiz qo'shildi",
     "submitError": "Xatolik yuz berdi, qayta urinib ko'ring",
     "delete": "O'chirish",
-    "deleteConfirm": "Bu sharhni o'chirishni tasdiqlaysizmi?"
+    "deleteConfirm": "Bu sharhni o'chirishni tasdiqlaysizmi?",
+    "purchaseRequired": "Sharh qoldirish uchun avval ushbu mahsulotni sotib olishingiz kerak",
+    "viewAll": "Barcha izohlar",
+    "close": "Yopish"
   },
   "cart": {
     "title": "Savatcha",
@@ -107,7 +116,11 @@
     "subtotal": "Oraliq jami",
     "checkout": "Buyurtma berish",
     "remove": "O'chirish",
-    "total": "Jami"
+    "total": "Jami",
+    "selectAll": "Hammasini tanlash",
+    "removeSelected": "Tanlanganlarni o'chirish",
+    "selectedCount": "Tanlangan tovarlar",
+    "selectItemsToCheckout": "Buyurtma berish uchun kamida bitta tovarni tanlang"
   },
   "wishlist": {
     "title": "Sevimlilar",
@@ -182,13 +195,28 @@
     "resetSubtitle": "Emailingizga/telefoningizga yuborilgan kodni va yangi parolni kiriting:",
     "newPassword": "Yangi parol",
     "resetButton": "Parolni yangilash",
-    "backToLogin": "Kirish sahifasiga qaytish"
+    "backToLogin": "Kirish sahifasiga qaytish",
+    "welcomeSubtitle": "Ro'yxatdan muvaffaqiyatli o'tdingiz",
+    "welcomeTitle": "Wardrobe saytiga xush kelibsiz!"
   },
   "profile": {
     "title": "Profil",
     "personalInfo": "Shaxsiy ma'lumotlar",
     "save": "Saqlash",
-    "myOrders": "Buyurtmalarim"
+    "myOrders": "Buyurtmalarim",
+    "ordersTab": "Buyurtmalar",
+    "infoTab": "Ma'lumotlarim",
+    "allOrders": "Barcha buyurtmalar",
+    "paidOrders": "To'langan",
+    "unpaidOrders": "To'lov qilinmagan",
+    "deliveryPoint": "Topshirish punkti",
+    "recipient": "Qabul qiluvchi",
+    "editInfo": "Ma'lumotlarni o'zgartirish",
+    "logoutAccount": "Accountdan chiqish",
+    "logoutConfirmTitle": "Hisobdan chiqmoqchimisiz?",
+    "logoutConfirmBody": "Accountdan chiqsangiz, qayta kirish uchun login va parolingizni kiritishingiz kerak bo'ladi.",
+    "cancel": "Bekor qilish",
+    "confirmLogout": "Ha, chiqish"
   },
   "contact": {
     "title": "Yordam",

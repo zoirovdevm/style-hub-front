@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useEffect, useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { useMutation, useQuery } from '@apollo/client';
 import { Copy, Send } from 'lucide-react';
@@ -42,7 +42,19 @@ const PLACED_ORDER_STORAGE_KEY = 'checkout:lastPlacedOrder';
 const TELEGRAM_BOT_USERNAME = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || '';
 const TELEGRAM_FALLBACK_USERNAME = 'MZ0526';
 
+// useSearchParams() opts the calling component out of static prerendering
+// unless it's wrapped in <Suspense> — without this wrapper `next build`
+// fails with "useSearchParams() should be wrapped in a suspense boundary"
+// (same fix already applied to the verify-email page for the same reason).
 export default function CheckoutPage({ params }: { params: { locale: Locale } }) {
+  return (
+    <Suspense fallback={null}>
+      <CheckoutPageInner params={params} />
+    </Suspense>
+  );
+}
+
+function CheckoutPageInner({ params }: { params: { locale: Locale } }) {
   const { locale } = params;
   const dict = locale === 'ru' ? ruDict : uzDict;
   const router = useRouter();
@@ -58,8 +70,22 @@ export default function CheckoutPage({ params }: { params: { locale: Locale } })
   const [placedOrder, setPlacedOrder] = useState<{ id: string; orderNumber: string; totalAmount: number } | null>(null);
   const [copied, setCopied] = useState(false);
 
+  // ?items=id1,id2 — set by the cart page when the buyer checked out only
+  // some of their cart, not the whole thing (its checkbox selection). Absent
+  // entirely (arriving from "Buy now"/1-click-buy, or /checkout with nothing
+  // selected) means "the whole cart", exactly like before this existed.
+  const searchParams = useSearchParams();
+  const itemsParam = searchParams.get('items');
+  const selectedItemIds = useMemo(
+    () => (itemsParam ? itemsParam.split(',').filter(Boolean) : null),
+    [itemsParam],
+  );
+
   const { data, loading: cartLoading } = useQuery(GET_MY_CART, { skip: !user });
-  const items = data?.myCart ?? [];
+  const allCartItems = data?.myCart ?? [];
+  const items = selectedItemIds
+    ? allCartItems.filter((i: any) => selectedItemIds.includes(i.id))
+    : allCartItems;
   const subtotal = items.reduce((sum: number, i: any) => sum + Number(i.product.price) * i.quantity, 0);
 
   // createOrder deletes the user's cart items server-side, but that doesn't
@@ -91,6 +117,9 @@ export default function CheckoutPage({ params }: { params: { locale: Locale } })
             phone: values.phone,
             note: values.note,
             paymentMethod: 'CASH',
+            // undefined (not []) when nothing was pre-selected, so the
+            // backend's own "omitted = whole cart" fallback applies.
+            itemIds: selectedItemIds ?? undefined,
           },
         },
       });

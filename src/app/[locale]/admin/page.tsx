@@ -181,9 +181,9 @@ export default function AdminDashboardPage({ params }: { params: { locale: Local
         <StatCard label={dict.admin.pendingOrders} value={stats.pendingOrders} icon={Clock} accent="#f59e0b" />
         <StatCard label={dict.admin.processingOrders} value={stats.processingOrders} icon={Truck} accent="#3b82f6" />
         <StatCard label={dict.admin.cancelledOrders} value={stats.cancelledOrders} icon={XCircle} accent="#ef4444" />
-        <StatCard label={dict.admin.revenueToday} value={formatPrice(stats.revenueToday, locale)} icon={Wallet} accent="#a8a8a8" />
+        <StatCard label={dict.admin.revenueToday} value={formatPrice(stats.revenueToday, locale)} icon={Wallet} accent="#10b981" />
         <StatCard label={dict.admin.revenueThisMonth} value={formatPrice(stats.revenueThisMonth, locale)} icon={Wallet} accent="#1f7a4d" />
-        <StatCard label={dict.admin.revenueTotal} value={formatPrice(stats.revenueTotal, locale)} icon={Wallet} accent="#6c6c6c" />
+        <StatCard label={dict.admin.revenueTotal} value={formatPrice(stats.revenueTotal, locale)} icon={Wallet} accent="#059669" />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -208,7 +208,7 @@ export default function AdminDashboardPage({ params }: { params: { locale: Local
               <XAxis dataKey="name" fontSize={12} />
               <YAxis fontSize={12} />
               <Tooltip formatter={(v: number) => formatPrice(v, locale)} />
-              <Bar dataKey="value" fill="#a8a8a8" radius={[8, 8, 0, 0]} />
+              <Bar dataKey="value" fill="#10b981" radius={[8, 8, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

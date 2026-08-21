@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Heart, ShoppingBag, User2 } from 'lucide-react';
+import { Heart, ShoppingBag, User2, LogIn } from 'lucide-react';
 import { useQuery } from '@apollo/client';
 import { GET_MY_CART, GET_MY_WISHLIST } from '@/lib/graphql/queries';
 import { useAuthStore } from '@/lib/store/auth-store';
@@ -24,7 +24,6 @@ interface HeaderProps {
 // that's `lg:`-gated only shows once there's room for the full desktop nav.
 export function Header({ locale, dict }: HeaderProps) {
   const user = useAuthStore((s) => s.user);
-  const clearSession = useAuthStore((s) => s.clearSession);
   const pathname = usePathname();
 
   const { data: cartData } = useQuery(GET_MY_CART, { skip: !user, fetchPolicy: 'cache-first' });
@@ -73,10 +72,29 @@ export function Header({ locale, dict }: HeaderProps) {
     <header className="fixed inset-x-0 top-0 z-50 pt-3 sm:pt-4">
       <div className="container-app">
         <div
-          className={`flex h-14 items-center justify-between gap-2 rounded-full border px-4 backdrop-blur-2xl backdrop-saturate-200 transition-colors duration-300 sm:h-[68px] sm:px-6 dark:border-white/10 dark:bg-white/10 dark:shadow-[0_8px_30px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.1)] ${
+          // dark:bg-white/10 used to be nearly transparent — fine over the
+          // hero's own dark background, but the moment a light/white patch
+          // (a product photo, a light card, etc.) scrolled underneath it in
+          // dark theme, the pill and the cream/white nav text both washed
+          // out together and became unreadable. A much more opaque,
+          // near-black glass (72%, per request) keeps the pill legible
+          // regardless of what's behind it. dark:backdrop-blur-[56px]
+          // overrides the shared backdrop-blur-[64px] to match (both bumped
+          // up again per follow-up "more blur" request — was 40px/24px).
+          //
+          // Per earlier follow-up request, the other two states had the
+          // exact same problem on mobile: the light-theme default
+          // (bg-white/45) let a product photo/price scrolling underneath
+          // show straight through the header pill, and the "floating over a
+          // dark hero" state (bg-[rgba(30,30,30,0.35)]) was even more
+          // see-through — in both cases the page content behind visually
+          // merged with the nav text/logo sitting on top of it. Bumped both
+          // to a much more opaque glass (85% / 78%, roughly matching the
+          // dark-theme pill's own 72% for consistency).
+          className={`flex h-14 items-center justify-between gap-2 rounded-full border px-4 backdrop-blur-[64px] backdrop-saturate-200 transition-colors duration-300 sm:h-[68px] sm:px-6 dark:border-white/10 dark:bg-[rgba(14,20,16,0.72)] dark:backdrop-blur-[56px] dark:shadow-[0_8px_30px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.1)] ${
             overDark
-              ? 'navbar-on-dark border-white/15 bg-[rgba(30,30,30,0.35)] shadow-[0_8px_30px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.15)]'
-              : 'border-black/10 bg-white/45 shadow-[0_8px_30px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.5)]'
+              ? 'navbar-on-dark border-white/15 bg-[rgba(20,20,20,0.78)] shadow-[0_8px_30px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.15)]'
+              : 'border-black/10 bg-white/85 shadow-[0_8px_30px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.5)]'
           }`}
         >
         <Link
@@ -97,7 +115,7 @@ export function Header({ locale, dict }: HeaderProps) {
                 aria-current={active ? 'page' : undefined}
                 className={`relative py-1 text-sm font-medium transition-colors ${
                   active
-                    ? 'font-semibold text-ink-950 dark:text-cream'
+                    ? 'font-semibold text-gold-600 dark:text-gold-400'
                     : 'text-ink-900/70 hover:text-ink-950 dark:text-cream/70 dark:hover:text-cream'
                 }`}
               >
@@ -117,10 +135,13 @@ export function Header({ locale, dict }: HeaderProps) {
 
           <Link
             href={`/${locale}/wishlist`}
-            className="relative hidden rounded-full p-2 text-ink-900 transition-colors hover:bg-ink-900/5 lg:block dark:text-cream dark:hover:bg-cream/10"
+            className="group relative hidden rounded-full p-2 text-ink-900 transition-colors hover:bg-ink-900/5 lg:block dark:text-cream dark:hover:bg-cream/10"
             aria-label={dict.nav.wishlist}
           >
-            <Heart size={20} />
+            {/* fill-red-500 as a CSS class (not the `fill` prop) so it only
+                kicks in on hover, previewing "add to wishlist" — same
+                treatment as the wishlist button on product cards. */}
+            <Heart size={20} className="transition-colors group-hover:fill-red-500 group-hover:stroke-red-500" />
             {wishlistCount > 0 && (
               <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-gold-500 text-[10px] font-bold text-ink-950">
                 {wishlistCount}
@@ -141,22 +162,18 @@ export function Header({ locale, dict }: HeaderProps) {
             )}
           </Link>
 
-          {/* Always renders a "Profil" link now, logged in or not — there
-              used to be a separate "Kirish" (Login) button here for guests,
-              gated the same `hidden lg:*` way as everything else in this
-              row. On most phones that's invisible like it should be, but
-              some in-app browsers (Telegram's built-in one, confirmed by a
-              screenshot) misreport their viewport width as desktop-sized,
-              which fools the `lg:` breakpoint into showing ONLY that one
-              button on an actual phone screen — the other lg-gated items
-              (nav links, wishlist/cart icons) stayed correctly hidden,
-              which is what made it so visually broken/inconsistent.
-              Removing the separate Login button removes the whole failure
-              mode instead of fighting unreliable viewport detection. Guests
-              tapping "Profil" land on the profile page, which already shows
-              its own "please log in" prompt with a real Login button when
-              there's no user (see profile/page.tsx) — nothing is actually
-              unreachable. */}
+          {/* Single link, logged in or not — its href/icon/label just switch
+              based on auth state (guest -> Login, logged in -> Profile).
+              Deliberately still ONE element (not a separate Login button
+              conditionally rendered alongside a Profile button) — an
+              earlier version had two separate buttons here and that tripped
+              a bug in some in-app browsers (Telegram's built-in one,
+              confirmed by a screenshot) that misreport their viewport width
+              as desktop-sized: it fooled the `lg:` breakpoint into showing
+              ONLY the guest button on an actual phone screen, while every
+              other lg-gated item stayed correctly hidden — visually broken
+              and inconsistent. Keeping it as one link that just changes its
+              content avoids that whole failure mode. */}
           <div className="hidden items-center gap-2 lg:flex">
             {user?.role === 'ADMIN' && (
               <Link href={`/${locale}/admin`} className="btn-outline !px-4 !py-2 text-xs">
@@ -164,17 +181,12 @@ export function Header({ locale, dict }: HeaderProps) {
               </Link>
             )}
             <Link
-              href={`/${locale}/profile`}
+              href={`/${locale}/${user ? 'profile' : 'login'}`}
               className="flex items-center gap-1.5 rounded-full py-2 pl-2 pr-3 text-ink-900 transition-colors hover:bg-ink-900/5 dark:text-cream dark:hover:bg-cream/10"
             >
-              <User2 size={20} />
-              <span className="text-xs font-semibold">{dict.nav.profile}</span>
+              {user ? <User2 size={20} /> : <LogIn size={20} />}
+              <span className="text-xs font-semibold">{user ? dict.nav.profile : dict.nav.login}</span>
             </Link>
-            {user && (
-              <button onClick={clearSession} className="text-xs font-semibold text-ink-900/60 hover:text-ink-950 dark:text-cream/60 dark:hover:text-cream">
-                {dict.nav.logout}
-              </button>
-            )}
           </div>
         </div>
         </div>

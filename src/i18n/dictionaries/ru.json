@@ -77,6 +77,12 @@
     "searchPlaceholder": "Поиск...",
     "stockLeft": "шт. осталось",
     "lastPieces": "Последние штуки!",
+    "almostGone": "заканчивается",
+    "totalInStock": "Всего в наличии",
+    "variantSizeWord": "размер",
+    "variantColorWord": "цвет",
+    "variantAvailable": "шт. в наличии",
+    "variantOnlyLeft": "только",
     "quickBuy": "Купить в 1 клик",
     "quickBuyClose": "Закрыть",
     "quickBuySelectSize": "Пожалуйста, выберите размер",
@@ -97,7 +103,10 @@
     "submitSuccess": "Спасибо! Ваш отзыв добавлен",
     "submitError": "Ошибка, попробуйте ещё раз",
     "delete": "Удалить",
-    "deleteConfirm": "Удалить этот отзыв?"
+    "deleteConfirm": "Удалить этот отзыв?",
+    "purchaseRequired": "Чтобы оставить отзыв, сначала купите этот товар",
+    "viewAll": "Все отзывы",
+    "close": "Закрыть"
   },
   "cart": {
     "title": "Корзина",
@@ -107,7 +116,11 @@
     "subtotal": "Промежуточный итог",
     "checkout": "Оформить заказ",
     "remove": "Удалить",
-    "total": "Итого"
+    "total": "Итого",
+    "selectAll": "Выбрать всё",
+    "removeSelected": "Удалить выбранные",
+    "selectedCount": "Выбрано товаров",
+    "selectItemsToCheckout": "Выберите хотя бы один товар для оформления заказа"
   },
   "wishlist": {
     "title": "Избранное",
@@ -182,13 +195,28 @@
     "resetSubtitle": "Введите код, отправленный на email/телефон, и новый пароль:",
     "newPassword": "Новый пароль",
     "resetButton": "Обновить пароль",
-    "backToLogin": "Вернуться на страницу входа"
+    "backToLogin": "Вернуться на страницу входа",
+    "welcomeSubtitle": "Регистрация прошла успешно",
+    "welcomeTitle": "Добро пожаловать на Wardrobe!"
   },
   "profile": {
     "title": "Профиль",
     "personalInfo": "Личная информация",
     "save": "Сохранить",
-    "myOrders": "Мои заказы"
+    "myOrders": "Мои заказы",
+    "ordersTab": "Заказы",
+    "infoTab": "Мои данные",
+    "allOrders": "Все заказы",
+    "paidOrders": "Оплаченные",
+    "unpaidOrders": "Неоплаченные",
+    "deliveryPoint": "Адрес доставки",
+    "recipient": "Получатель",
+    "editInfo": "Изменить данные",
+    "logoutAccount": "Выйти из аккаунта",
+    "logoutConfirmTitle": "Выйти из аккаунта?",
+    "logoutConfirmBody": "После выхода вам нужно будет снова войти с логином и паролем.",
+    "cancel": "Отмена",
+    "confirmLogout": "Да, выйти"
   },
   "contact": {
     "title": "Поддержка",

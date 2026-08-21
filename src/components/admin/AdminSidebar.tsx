@@ -1,9 +1,11 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LayoutDashboard, ShoppingBag, ClipboardList, Tag, Store, Users, Settings, LogOut, X } from 'lucide-react';
 import { useAuthStore } from '@/lib/store/auth-store';
+import { useScrollLock } from '@/lib/hooks/use-scroll-lock';
 import type { Dictionary } from '@/i18n/get-dictionary';
 import type { Locale } from '@/i18n/config';
 
@@ -20,6 +22,23 @@ interface AdminSidebarProps {
 export function AdminSidebar({ locale, dict, open, onClose }: AdminSidebarProps) {
   const pathname = usePathname();
   const clearSession = useAuthStore((s) => s.clearSession);
+
+  // Same `lg` breakpoint (1024px) the drawer's own `lg:static` styling uses.
+  // Below it, `open` really does mean "a full-screen overlay is covering the
+  // page", so scroll gets locked; at `lg` and above the sidebar is already
+  // permanently visible as part of the static layout (not an overlay), so
+  // `open` being true there (e.g. left over from resizing down from mobile)
+  // must NOT lock scroll — the admin panel would otherwise become
+  // unscrollable on desktop for no visible reason.
+  const [isDesktop, setIsDesktop] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)');
+    const update = () => setIsDesktop(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+  useScrollLock(open && !isDesktop);
 
   const links = [
     { href: `/${locale}/admin`, label: dict.admin.dashboard, icon: LayoutDashboard, exact: true },

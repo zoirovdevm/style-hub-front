@@ -4,7 +4,7 @@ import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { useMutation } from '@apollo/client';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { VERIFY_EMAIL, RESEND_VERIFICATION_CODE } from '@/lib/graphql/mutations';
 import { useAuthStore } from '@/lib/store/auth-store';
 import { getFriendlyErrorMessage } from '@/lib/utils/graphql-error';
@@ -42,6 +42,12 @@ function VerifyEmailInner({ params }: { params: { locale: Locale } }) {
   const [error, setError] = useState<string | null>(null);
   const [resendMessage, setResendMessage] = useState<string | null>(null);
   const [resendCooldown, setResendCooldown] = useState(0);
+  // Full-screen "welcome" overlay shown right after a successful
+  // verification (this is the actual moment registration completes — the
+  // session is created here, not on the register form itself). It stays up
+  // for exactly 2s; the delayed redirect below is what makes it disappear,
+  // since navigating away unmounts this whole page.
+  const [showWelcome, setShowWelcome] = useState(false);
 
   const [verifyEmail, { loading }] = useMutation(VERIFY_EMAIL);
   const [resendCode, { loading: resending }] = useMutation(RESEND_VERIFICATION_CODE);
@@ -56,7 +62,10 @@ function VerifyEmailInner({ params }: { params: { locale: Locale } }) {
     try {
       const { data } = await verifyEmail({ variables: { input: { email, code: values.code } } });
       setSession(data.verifyEmail);
-      router.push(data.verifyEmail.user.role === 'ADMIN' ? `/${locale}/admin` : `/${locale}`);
+      setShowWelcome(true);
+      setTimeout(() => {
+        router.push(data.verifyEmail.user.role === 'ADMIN' ? `/${locale}/admin` : `/${locale}`);
+      }, 2000);
     } catch (e: any) {
       setError(getFriendlyErrorMessage(e));
     }
@@ -93,7 +102,37 @@ function VerifyEmailInner({ params }: { params: { locale: Locale } }) {
   }
 
   return (
-    <div className="container-app flex min-h-[70vh] items-center justify-center py-16">
+    <>
+      {/* Full-screen welcome overlay — shown for ~2s right after a
+          successful verification, then the delayed redirect in onSubmit
+          navigates away, which unmounts this and makes it disappear. */}
+      <AnimatePresence>
+        {showWelcome && (
+          <motion.div
+            key="welcome-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.35 }}
+            className="fixed inset-0 z-[999] flex flex-col items-center justify-center gap-3 bg-white px-6 text-center dark:bg-ink-950"
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1, duration: 0.4 }}
+            >
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-gold-600 dark:text-gold-400">
+                {dict.auth.welcomeSubtitle}
+              </p>
+              <h1 className="mt-4 font-display text-3xl font-medium text-ink-950 sm:text-5xl dark:text-cream">
+                {dict.auth.welcomeTitle}
+              </h1>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="container-app flex min-h-[70vh] items-center justify-center py-16">
       <motion.div
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
@@ -135,6 +174,7 @@ function VerifyEmailInner({ params }: { params: { locale: Locale } }) {
           </button>
         </form>
       </motion.div>
-    </div>
+      </div>
+    </>
   );
 }

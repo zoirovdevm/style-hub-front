@@ -75,10 +75,23 @@ export function MobileBottomNav({ locale, dict }: MobileBottomNavProps) {
       style={{ bottom: 'calc(env(safe-area-inset-bottom) + 0.75rem)' }}
     >
       <div
-        className={`mx-auto grid max-w-md grid-cols-5 rounded-full border px-1 backdrop-blur-2xl backdrop-saturate-200 dark:border-white/10 dark:bg-white/10 dark:shadow-[0_8px_30px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.1)] ${
+        // Same fix as Header.tsx: dark:bg-white/10 was too transparent —
+        // a light patch scrolling underneath in dark theme washed out both
+        // the pill and the cream tab labels together. A more opaque,
+        // near-black glass keeps it legible no matter what's behind it.
+        //
+        // Per follow-up request, the light-theme default and "floating over
+        // a dark hero" states had the same problem on mobile — this bar
+        // sits directly over product photos/dark banners, and at 45%/35%
+        // opacity the content behind it visually merged with the tab
+        // labels. Bumped both to a much more opaque glass (85% / 78%,
+        // matching the dark-theme pill's own 72% for consistency). Blur
+        // bumped up again too per follow-up "more blur" request (was
+        // 40px/24px, same change as Header.tsx).
+        className={`mx-auto grid max-w-md grid-cols-5 rounded-full border px-1 backdrop-blur-[64px] backdrop-saturate-200 dark:border-white/10 dark:bg-[rgba(14,20,16,0.72)] dark:backdrop-blur-[56px] dark:shadow-[0_8px_30px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.1)] ${
           overDark
-            ? 'navbar-on-dark border-white/15 bg-[rgba(30,30,30,0.35)] shadow-[0_8px_30px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.15)]'
-            : 'border-black/10 bg-white/45 shadow-[0_8px_30px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.5)]'
+            ? 'navbar-on-dark border-white/15 bg-[rgba(20,20,20,0.78)] shadow-[0_8px_30px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.15)]'
+            : 'border-black/10 bg-white/85 shadow-[0_8px_30px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.5)]'
         }`}
       >
         {items.map((item) => {
@@ -89,7 +102,7 @@ export function MobileBottomNav({ locale, dict }: MobileBottomNavProps) {
               key={item.href}
               href={item.href}
               className={`relative flex flex-col items-center gap-1 py-2.5 text-[10px] font-semibold transition-colors ${
-                active ? 'text-ink-950 dark:text-cream' : 'text-ink-900/45 dark:text-cream/45'
+                active ? 'text-gold-600 dark:text-gold-400' : 'text-ink-900/45 dark:text-cream/45'
               }`}
             >
               <span className="relative">
