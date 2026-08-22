@@ -1,10 +1,33 @@
 import { gql } from '@apollo/client';
 
+export const SEND_REGISTER_OTP = gql`
+  mutation SendRegisterOtp($input: SendRegisterOtpInput!) {
+    sendRegisterOtp(input: $input)
+  }
+`;
+
+export const VERIFY_REGISTER_OTP = gql`
+  mutation VerifyRegisterOtp($input: VerifyRegisterOtpInput!) {
+    verifyRegisterOtp(input: $input)
+  }
+`;
+
+// Was `{ email, phone }` with no tokens — the phone is already verified by
+// the time this mutation runs (SEND_REGISTER_OTP + VERIFY_REGISTER_OTP
+// above), so this is now the final "create the account" call and logs the
+// buyer straight in.
 export const REGISTER = gql`
   mutation Register($input: RegisterInput!) {
     register(input: $input) {
-      email
-      phone
+      accessToken
+      refreshToken
+      user {
+        id
+        email
+        firstName
+        lastName
+        role
+      }
     }
   }
 `;
@@ -31,11 +54,14 @@ export const RESEND_VERIFICATION_CODE = gql`
   }
 `;
 
+// Was `{ email, phone }` (always both, regardless of which channel — or
+// whether an account — actually existed). Now branches into two genuinely
+// different flows (SMS code vs. emailed link), so the frontend needs to
+// know which screen to show next — `method` is all it gets.
 export const REQUEST_PASSWORD_RESET = gql`
   mutation RequestPasswordReset($input: RequestPasswordResetInput!) {
     requestPasswordReset(input: $input) {
-      email
-      phone
+      method
     }
   }
 `;

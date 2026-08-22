@@ -85,7 +85,10 @@ export function ShopFilters({ dict, categories, locale }: ShopFiltersProps) {
           <h3 className="text-sm font-bold uppercase tracking-wider text-ink-950 dark:text-cream">{dict.product.filters}</h3>
           <ChevronDown size={18} className={`text-ink-900/50 transition-transform dark:text-cream/50 lg:hidden ${expanded ? 'rotate-180' : ''}`} />
         </button>
-        <button onClick={() => router.push(pathname)} className="text-xs font-semibold text-ink-900/50 hover:text-ink-950 dark:text-cream/50 dark:hover:text-cream">
+        <button
+          onClick={() => router.push(pathname)}
+          className="text-xs font-semibold text-ink-900/50 transition-colors hover:text-red-500 dark:text-cream/50 dark:hover:text-red-400"
+        >
           {dict.product.clearFilters}
         </button>
       </div>
@@ -107,13 +110,20 @@ export function ShopFilters({ dict, categories, locale }: ShopFiltersProps) {
 
       <div>
         <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-ink-900/50 dark:text-cream/50">{dict.nav.categories}</h4>
-        <div className="flex flex-col gap-2">
+        {/* Bold-text-only used to be the only signal for which category was
+            active — easy to miss at a glance, especially scanning a list of
+            5+ items. Active rows now also get a green-tinted background and
+            left accent bar (the site's usual selected-state treatment), and
+            every row — active or not — gets a hover background so the whole
+            list reads as clickable, not just the ones that happen to be
+            links. */}
+        <div className="flex flex-col gap-1">
           <button
             onClick={() => updateParams((p) => p.delete('category'))}
-            className={`text-left text-sm ${
+            className={`rounded-lg border-l-2 px-3 py-2 text-left text-sm transition-colors ${
               !activeCategory
-                ? 'font-bold text-ink-950 dark:text-cream'
-                : 'text-ink-900/60 hover:text-ink-950 dark:text-cream/60 dark:hover:text-cream'
+                ? 'border-gold-500 bg-gold-500/10 font-bold text-gold-600 dark:text-gold-400'
+                : 'border-transparent text-ink-900/60 hover:bg-ink-900/5 hover:text-ink-950 dark:text-cream/60 dark:hover:bg-cream/5 dark:hover:text-cream'
             }`}
           >
             {dict.product.allCategories}
@@ -122,10 +132,10 @@ export function ShopFilters({ dict, categories, locale }: ShopFiltersProps) {
             <button
               key={cat.slug}
               onClick={() => updateParams((p) => p.set('category', cat.slug))}
-              className={`text-left text-sm ${
+              className={`rounded-lg border-l-2 px-3 py-2 text-left text-sm transition-colors ${
                 activeCategory === cat.slug
-                  ? 'font-bold text-ink-950 dark:text-cream'
-                  : 'text-ink-900/60 hover:text-ink-950 dark:text-cream/60 dark:hover:text-cream'
+                  ? 'border-gold-500 bg-gold-500/10 font-bold text-gold-600 dark:text-gold-400'
+                  : 'border-transparent text-ink-900/60 hover:bg-ink-900/5 hover:text-ink-950 dark:text-cream/60 dark:hover:bg-cream/5 dark:hover:text-cream'
               }`}
             >
               {locale === 'ru' && cat.nameRu ? cat.nameRu : cat.name}
@@ -143,8 +153,8 @@ export function ShopFilters({ dict, categories, locale }: ShopFiltersProps) {
               onClick={() => toggleListParam('sizes', size, activeSizes)}
               className={`h-9 min-w-9 rounded-lg border px-2 text-xs font-semibold transition-colors ${
                 activeSizes.includes(size)
-                  ? 'border-ink-950 bg-ink-950 text-cream dark:border-cream dark:bg-cream dark:text-ink-950'
-                  : 'border-ink-900/15 text-ink-900/70 hover:border-ink-950 dark:border-cream/20 dark:text-cream dark:hover:border-cream'
+                  ? 'border-gold-500 bg-gold-500 text-white'
+                  : 'border-ink-900/15 text-ink-900/70 hover:border-ink-950 hover:bg-ink-900/5 dark:border-cream/20 dark:text-cream dark:hover:border-cream dark:hover:bg-cream/5'
               }`}
             >
               {size}

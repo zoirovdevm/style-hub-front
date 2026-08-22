@@ -4,7 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { useMutation, useQuery } from '@apollo/client';
 import { User2, Package, Pencil, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -14,6 +14,7 @@ import { UPDATE_PROFILE } from '@/lib/graphql/mutations';
 import { useAuthStore } from '@/lib/store/auth-store';
 import { formatPrice, formatDate } from '@/lib/utils/format';
 import { OrderStatusBadge } from '@/components/ui/OrderStatusBadge';
+import { PhoneInput } from '@/components/ui/PhoneInput';
 import { Reveal } from '@/components/ui/Reveal';
 import { useScrollLock } from '@/lib/hooks/use-scroll-lock';
 import type { Locale } from '@/i18n/config';
@@ -29,6 +30,16 @@ interface ProfileForm {
 
 type ProfileTab = 'orders' | 'info';
 type OrderFilter = 'all' | 'paid' | 'unpaid';
+
+// Strips an optional leading "+998" (with or without a following space) and
+// any other non-digit characters, then caps at 9 — turns whatever shape a
+// stored phone happens to be in ("+998992132801", "+998 99 213 28 01", or
+// even an old pre-+998 bare "975213130") into just the 9-digit tail
+// PhoneInput's `value` prop expects. Pairs with `+998${digits}` below to
+// reconstruct the full canonical value on every change/save.
+function toPhoneDigits(phone: string) {
+  return phone.replace(/^\+?998\s*/, '').replace(/\D/g, '').slice(0, 9);
+}
 
 export default function ProfilePage({ params }: { params: { locale: Locale } }) {
   const { locale } = params;
@@ -80,7 +91,13 @@ export default function ProfilePage({ params }: { params: { locale: Locale } }) 
         ? allOrders.filter((o: any) => o.paymentStatus === 'PAID')
         : allOrders;
 
-  const { register, handleSubmit, reset } = useForm<ProfileForm>();
+  const {
+    register,
+    control,
+    handleSubmit,
+    reset,
+    formState: { errors: profileErrors },
+  } = useForm<ProfileForm>();
 
   useEffect(() => {
     if (data?.me) {
@@ -163,9 +180,24 @@ export default function ProfilePage({ params }: { params: { locale: Locale } }) 
       {/* Dashboard layout: sidebar nav on the left, active section's content
           on the right. On mobile the sidebar collapses into a horizontal
           scrollable tab row instead of a vertical list, so it stays usable
-          without eating vertical space above the content. */}
+          without eating vertical space above the content. On desktop
+          (lg:) it sticks under the fixed header while the right column
+          scrolls normally with the page — see the plain (non-Reveal) div
+          below for why. `lg:items-start` on this grid is required for the
+          sticky child: without it, grid's default stretch would force the
+          nav to match the right column's full height, leaving it nowhere
+          to "stick" to since it would already span the whole row. */}
       <div className="mt-10 grid gap-6 lg:grid-cols-[240px_1fr] lg:items-start">
-        <Reveal>
+        {/* Deliberately a plain <div>, not <Reveal> — Reveal is a
+            framer-motion element that keeps an inline `transform` style
+            even at rest (translateY(0)), and ANY transform on an ancestor
+            creates a new containing block that breaks `position: sticky`
+            on descendants in every browser. The fixed header floats at
+            84px tall from the sm: breakpoint up (see [locale]/layout.tsx's
+            `<main className="pt-[68px] sm:pt-[84px]">`); `lg:top-[100px]`
+            adds a deliberate 16px breathing gap below that instead of
+            sitting flush against it. */}
+        <div className="lg:sticky lg:top-[100px] lg:self-start">
           <nav className="card-surface flex gap-2 overflow-x-auto p-3 lg:flex-col lg:overflow-visible">
             {navItems.map((item) => {
               const active = activeTab === item.key;
@@ -185,10 +217,17 @@ export default function ProfilePage({ params }: { params: { locale: Locale } }) 
               );
             })}
           </nav>
-        </Reveal>
+        </div>
 
         {activeTab === 'orders' ? (
-          <Reveal delay={0.05}>
+          // `min-w-0` here is load-bearing, not decoration: this is a
+          // direct child of the CSS grid above, and grid items default to
+          // `min-width: auto` — which lets a descendant's un-wrapped text
+          // (long order numbers, addresses) force this whole column, and
+          // with it the page, wider than the viewport, no matter how much
+          // the card itself further down gets shrunk or truncated. This
+          // one override is what actually stops that.
+          <Reveal delay={0.05} className="min-w-0">
             <div className="space-y-5">
               <div className="flex flex-wrap gap-2">
                 {(['all', 'paid', 'unpaid'] as const).map((f) => (
@@ -220,51 +259,99 @@ export default function ProfilePage({ params }: { params: { locale: Locale } }) 
                   </Link>
                 </div>
               ) : (
-                <div className="max-h-[70vh] space-y-4 overflow-y-auto pr-1">
+                // Scoped to mobile ONLY — from lg: up (desktop, where the
+                // sidebar goes sticky) this list has no cap at all and
+                // grows with the page's own single scrollbar, same as
+                // always, so the sticky sidebar keeps working exactly like
+                // before. Below lg: (phones/tablets, where the sidebar is
+                // never sticky in the first place — see the plain <div>
+                // above) the list gets its own bounded height and only
+                // shows a scrollbar once its content actually doesn't fit;
+                // `overflow-y-auto` never shows a scrollbar for content
+                // that already fits. The mobile-only `px-3` here (cancelled
+                // at sm: since cards go back to matching the column width
+                // there) is what gives the cards their narrower inset on
+                // phones — see the card itself below for why that's a
+                // fixed padding rather than a percentage width.
+                <div className="min-w-0 max-w-full max-h-[60vh] space-y-3 overflow-y-auto overscroll-contain px-3 sm:px-0 lg:max-h-none lg:overflow-visible">
                   {orders.map((order: any, i: number) => {
                     const cover = order.items[0]?.product?.images?.[0] || '/placeholder-product.svg';
                     const deliveryPoint = [order.deliveryCity, order.deliveryAddress].filter(Boolean).join(', ');
                     return (
-                      <Reveal key={order.id} delay={i * 0.04}>
-                        {/* Tighter padding/gap/image size on mobile — the
-                            previous sizing (built for desktop) left barely
-                            any room for the text column on a narrow phone
-                            screen, forcing long address/name lines to spill
-                            past the card edge instead of truncating cleanly. */}
-                        <div className="card-surface flex gap-3 p-3 sm:gap-4 sm:p-5">
-                          <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-ink-900/5 sm:h-24 sm:w-24">
+                      <Reveal key={order.id} delay={i * 0.04} className="min-w-0 max-w-full">
+                        {/* Badges used to sit beside the price line with
+                            `justify-between` + `flex-wrap` on the shared
+                            row — on a narrow card that squeezed the
+                            "To'lanmadi"/status pair right up against the
+                            card's edge before the wrap kicked in, reading
+                            as clipped/cramped. They're now always their own
+                            row underneath the price instead of sharing one,
+                            so there's never a fight for horizontal space,
+                            plus the image and every gap/padding value here
+                            is a size smaller again, and everything here
+                            is smaller still on top of that. The card is a
+                            plain `w-full` now — it used to be
+                            `w-[92%] mx-auto` to look narrower on phones,
+                            but a *percentage* width has to be recomputed
+                            against its parent every time that parent's
+                            box changes, and on real mobile browsers that
+                            recompute could briefly land on a different
+                            value mid-scroll, which read as the cards
+                            suddenly "growing" wider once you started
+                            scrolling. The narrower look on phones now
+                            comes entirely from the list wrapper's own
+                            fixed `px-3` padding above, which can't wobble
+                            like that — the card itself just fills
+                            whatever width it's given. */}
+                        {/* Sizing below is mobile-first-cramped on purpose
+                            (see the long comment above this block) but that
+                            was only ever needed on phones/tablets — from
+                            `lg:` up there's a full column of desktop width
+                            to work with, so the card, image, and every text
+                            size step back up to a comfortable reading size
+                            there instead of staying thumbnail-sized. */}
+                        <div className="card-surface flex w-full min-w-0 max-w-full gap-1.5 p-1.5 lg:gap-4 lg:p-4">
+                          <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-ink-900/5 lg:h-20 lg:w-20">
                             <Image src={cover} alt={order.items[0]?.title ?? ''} fill className="object-cover" unoptimized />
                           </div>
-                          <div className="min-w-0 flex-1 space-y-1 sm:space-y-1.5">
-                            <div className="flex flex-wrap items-center justify-between gap-1.5 sm:gap-2">
-                              <p className="text-xs font-semibold dark:text-cream sm:text-sm">
-                                {order.items.length} {dict.orders.items} · {formatPrice(order.totalAmount, locale)}
-                              </p>
-                              <div className="flex items-center gap-1.5 sm:gap-2">
-                                <span
-                                  className={`rounded-full px-2 py-0.5 text-[10px] font-bold sm:px-3 sm:py-1 sm:text-xs ${
-                                    order.paymentStatus === 'PAID'
-                                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
-                                      : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
-                                  }`}
-                                >
-                                  {order.paymentStatus === 'PAID' ? dict.admin.paid : dict.admin.unpaid}
-                                </span>
-                                <OrderStatusBadge status={order.status} dict={dict} />
-                              </div>
+                          <div className="min-w-0 max-w-full flex-1 space-y-0.5 lg:space-y-1.5">
+                            <p className="truncate text-[11px] font-semibold leading-tight dark:text-cream lg:text-base">
+                              {order.items.length} {dict.orders.items} · {formatPrice(order.totalAmount, locale)}
+                            </p>
+                            <div className="flex flex-wrap items-center gap-1 lg:gap-2">
+                              <span
+                                className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold lg:px-3 lg:py-1 lg:text-xs ${
+                                  order.paymentStatus === 'PAID'
+                                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+                                    : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
+                                }`}
+                              >
+                                {order.paymentStatus === 'PAID' ? dict.admin.paid : dict.admin.unpaid}
+                              </span>
+                              <OrderStatusBadge status={order.status} dict={dict} compact />
                             </div>
-                            <p className="truncate text-[11px] text-ink-900/50 dark:text-cream/50 sm:text-xs">
+                            {/* These four lines used to be `truncate`
+                                (nowrap + ellipsis) — with a long enough
+                                order number or address, `white-space:
+                                nowrap` gives the line a min-content width
+                                equal to its full unwrapped length, and
+                                that's exactly what was reaching up through
+                                the grid item above and forcing the page
+                                wider than the viewport, regardless of the
+                                `overflow:hidden` truncate also sets. They
+                                now wrap normally instead. */}
+                            <p className="whitespace-normal [overflow-wrap:anywhere] text-[10px] leading-tight text-ink-900/50 dark:text-cream/50 lg:text-sm lg:leading-normal">
                               {dict.orders.orderNumber} № {order.orderNumber}
                             </p>
                             {deliveryPoint && (
-                              <p className="truncate text-[11px] text-ink-900/50 dark:text-cream/50 sm:text-xs">
+                              <p className="whitespace-normal [overflow-wrap:anywhere] text-[10px] leading-tight text-ink-900/50 dark:text-cream/50 lg:text-sm lg:leading-normal">
                                 {dict.profile.deliveryPoint}: {deliveryPoint}
                               </p>
                             )}
-                            <p className="truncate text-[11px] text-ink-900/50 dark:text-cream/50 sm:text-xs">
+                            <p className="whitespace-normal [overflow-wrap:anywhere] text-[10px] leading-tight text-ink-900/50 dark:text-cream/50 lg:text-sm lg:leading-normal">
                               {dict.profile.recipient}: {user.firstName} {user.lastName}
                             </p>
-                            <p className="text-[11px] text-ink-900/40 dark:text-cream/40 sm:text-xs">{formatDate(order.createdAt, locale)}</p>
+                            <p className="whitespace-normal [overflow-wrap:anywhere] text-[10px] leading-tight text-ink-900/40 dark:text-cream/40 lg:text-sm lg:leading-normal">{formatDate(order.createdAt, locale)}</p>
                           </div>
                         </div>
                       </Reveal>
@@ -275,7 +362,10 @@ export default function ProfilePage({ params }: { params: { locale: Locale } }) 
             </div>
           </Reveal>
         ) : (
-          <Reveal delay={0.05}>
+          // Same `min-w-0` reasoning as the orders tab's Reveal above —
+          // this is the grid's other possible second child, so it needs
+          // the same override to not be a blowout risk itself.
+          <Reveal delay={0.05} className="min-w-0">
             <form onSubmit={handleSubmit(handleSaveProfile)} className="card-surface space-y-5 p-6">
               <div className="flex items-center justify-between gap-3">
                 <h2 className="text-sm font-bold uppercase tracking-wider">{dict.profile.personalInfo}</h2>
@@ -300,38 +390,60 @@ export default function ProfilePage({ params }: { params: { locale: Locale } }) 
                   <label className="mb-1.5 block text-xs font-semibold text-ink-900/60">{dict.auth.firstName}</label>
                   <input
                     disabled={!isEditing}
-                    {...register('firstName')}
+                    {...register('firstName', { pattern: /^[^0-9]+$/ })}
                     className={`w-full rounded-xl border px-4 py-3 text-sm outline-none transition-colors ${
                       isEditing
                         ? 'border-ink-900/15 focus:border-ink-950'
                         : 'border-ink-900/10 bg-ink-900/5 text-ink-900/50'
                     }`}
                   />
+                  {isEditing && profileErrors.firstName && (
+                    <p className="mt-1 text-xs text-red-500">{dict.auth.nameNoDigits}</p>
+                  )}
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-ink-900/60">{dict.auth.lastName}</label>
                   <input
                     disabled={!isEditing}
-                    {...register('lastName')}
+                    {...register('lastName', { pattern: /^[^0-9]*$/ })}
                     className={`w-full rounded-xl border px-4 py-3 text-sm outline-none transition-colors ${
                       isEditing
                         ? 'border-ink-900/15 focus:border-ink-950'
                         : 'border-ink-900/10 bg-ink-900/5 text-ink-900/50'
                     }`}
                   />
+                  {isEditing && profileErrors.lastName && (
+                    <p className="mt-1 text-xs text-red-500">{dict.auth.nameNoDigits}</p>
+                  )}
                 </div>
               </div>
 
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-ink-900/60">{dict.auth.phone}</label>
-                <input
-                  disabled={!isEditing}
-                  {...register('phone')}
-                  className={`w-full rounded-xl border px-4 py-3 text-sm outline-none transition-colors ${
-                    isEditing
-                      ? 'border-ink-900/15 focus:border-ink-950'
-                      : 'border-ink-900/10 bg-ink-900/5 text-ink-900/50'
-                  }`}
+                {/* Same PhoneInput used on the register wizard's phone step:
+                    the "+998 " prefix is permanently fixed (can't be
+                    deleted/selected-over/pasted-over) and only the 9 digits
+                    after it are editable, digit-only, capped at 9 — the
+                    exact way an earlier account's phone got corrupted to
+                    "+998 99b 213 28 01" in the database is no longer
+                    possible here. Wired through Controller (rather than
+                    plain register()) since PhoneInput is a controlled
+                    value/onChange component, not a native <input>. */}
+                <Controller
+                  name="phone"
+                  control={control}
+                  render={({ field }) => (
+                    <PhoneInput
+                      value={toPhoneDigits(field.value ?? '')}
+                      onChange={(digits) => field.onChange(`+998${digits}`)}
+                      disabled={!isEditing}
+                      className={`w-full rounded-xl border px-4 py-3 text-sm outline-none transition-colors ${
+                        isEditing
+                          ? 'border-ink-900/15 focus:border-ink-950'
+                          : 'border-ink-900/10 bg-ink-900/5 text-ink-900/50'
+                      }`}
+                    />
+                  )}
                 />
               </div>
 

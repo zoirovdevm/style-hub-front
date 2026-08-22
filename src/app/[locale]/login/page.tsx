@@ -10,12 +10,13 @@ import { LOGIN } from '@/lib/graphql/mutations';
 import { useAuthStore } from '@/lib/store/auth-store';
 import { getFriendlyErrorMessage } from '@/lib/utils/graphql-error';
 import { PasswordInput } from '@/components/ui/PasswordInput';
+import { MOCK_AUTH_FALLBACK, mockAuthPayload } from '@/lib/utils/mock-auth';
 import type { Locale } from '@/i18n/config';
 import uzDict from '@/i18n/dictionaries/uz.json';
 import ruDict from '@/i18n/dictionaries/ru.json';
 
 interface LoginForm {
-  email: string;
+  identifier: string;
   password: string;
 }
 
@@ -48,8 +49,22 @@ export default function LoginPage({ params }: { params: { locale: Locale } }) {
       // exception got serialized.
       const allMessages = [e?.message, ...(e?.graphQLErrors?.map((g: any) => g?.message) ?? [])].filter(Boolean).join(' ');
       const isUnverified = allMessages.includes('PHONE_NOT_VERIFIED');
-      if (isUnverified) {
-        router.push(`/${locale}/verify-email?email=${encodeURIComponent(values.email)}`);
+      // Only a pre-existing account from the old single-step flow can still
+      // be unverified — that flow always keyed verification off the email,
+      // so this redirect only makes sense when what was typed looks like an
+      // email. A phone-identifier login hitting this (extremely unlikely
+      // under the new flow, where phone is verified before the account
+      // exists at all) just falls through to the generic error below.
+      if (isUnverified && values.identifier.includes('@')) {
+        router.push(`/${locale}/verify-email?email=${encodeURIComponent(values.identifier)}`);
+        return;
+      }
+      // See mock-auth.ts — no backend reachable yet, so log the buyer in
+      // with fabricated data instead of getting stuck on a network error.
+      if (MOCK_AUTH_FALLBACK) {
+        const mockPayload = mockAuthPayload(values.identifier.includes('@') ? { email: values.identifier } : {});
+        setSession(mockPayload);
+        router.push(`/${locale}`);
         return;
       }
       setError(getFriendlyErrorMessage(e));
@@ -68,13 +83,12 @@ export default function LoginPage({ params }: { params: { locale: Locale } }) {
 
         <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-4">
           <div>
-            <label className="mb-1.5 block text-xs font-semibold text-ink-900/60">{dict.auth.email}</label>
+            <label className="mb-1.5 block text-xs font-semibold text-ink-900/60">{dict.auth.identifierLabel}</label>
             <input
-              type="email"
-              {...register('email', { required: true })}
+              {...register('identifier', { required: true })}
               className="w-full rounded-xl border border-ink-900/15 px-4 py-3 text-sm outline-none focus:border-ink-950"
             />
-            {errors.email && <p className="mt-1 text-xs text-red-500">Majburiy maydon</p>}
+            {errors.identifier && <p className="mt-1 text-xs text-red-500">{dict.auth.identifierRequired}</p>}
           </div>
           <div>
             <div className="mb-1.5 flex items-center justify-between">
