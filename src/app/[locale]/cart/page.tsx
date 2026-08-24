@@ -11,6 +11,7 @@ import { UPDATE_CART_ITEM, REMOVE_CART_ITEM } from '@/lib/graphql/mutations';
 import { useAuthStore } from '@/lib/store/auth-store';
 import { formatPrice } from '@/lib/utils/format';
 import { getFriendlyErrorMessage } from '@/lib/utils/graphql-error';
+import { translateColorName } from '@/lib/utils/colorNames';
 import { Reveal } from '@/components/ui/Reveal';
 import type { Locale } from '@/i18n/config';
 import uzDict from '@/i18n/dictionaries/uz.json';
@@ -228,7 +229,7 @@ export default function CartPage({ params }: { params: { locale: Locale } }) {
                           <h3 className="line-clamp-2 text-sm font-semibold dark:text-cream">{title}</h3>
                           {(item.size || item.color) && (
                             <p className="mt-0.5 truncate text-xs text-ink-900/50 dark:text-cream/50">
-                              {[item.size, item.color].filter(Boolean).join(' · ')}
+                              {[item.size, item.color ? translateColorName(item.color, locale) : null].filter(Boolean).join(' · ')}
                             </p>
                           )}
                         </div>

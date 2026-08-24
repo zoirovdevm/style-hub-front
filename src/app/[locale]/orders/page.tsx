@@ -7,6 +7,7 @@ import { Package } from 'lucide-react';
 import { GET_MY_ORDERS } from '@/lib/graphql/queries';
 import { useAuthStore } from '@/lib/store/auth-store';
 import { formatPrice, formatDate } from '@/lib/utils/format';
+import { translateColorName } from '@/lib/utils/colorNames';
 import { OrderStatusBadge } from '@/components/ui/OrderStatusBadge';
 import { Reveal } from '@/components/ui/Reveal';
 import type { Locale } from '@/i18n/config';
@@ -100,7 +101,9 @@ export default function OrdersPage({ params }: { params: { locale: Locale } }) {
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold dark:text-cream">{item.title}</p>
                         {(item.size || item.color) && (
-                          <p className="text-xs text-ink-900/50">{[item.size, item.color].filter(Boolean).join(' · ')}</p>
+                          <p className="text-xs text-ink-900/50">
+                            {[item.size, item.color ? translateColorName(item.color, locale) : null].filter(Boolean).join(' · ')}
+                          </p>
                         )}
                         <p className="text-xs text-ink-900/50">{item.quantity} × {formatPrice(item.price, locale)}</p>
                       </div>

@@ -8,6 +8,7 @@ import { ADD_TO_CART, TOGGLE_WISHLIST } from '@/lib/graphql/mutations';
 import { GET_MY_CART, GET_MY_WISHLIST } from '@/lib/graphql/queries';
 import { useAuthStore } from '@/lib/store/auth-store';
 import { getFriendlyErrorMessage } from '@/lib/utils/graphql-error';
+import { translateColorName } from '@/lib/utils/colorNames';
 import type { Dictionary } from '@/i18n/get-dictionary';
 import type { Locale } from '@/i18n/config';
 
@@ -79,7 +80,7 @@ export function ProductActions({ productId, sizes, colors, stock, variants = [],
     if (!hasVariants || selectedVariantStock === null || selectedVariantStock <= 0) return null;
     const descriptorParts: string[] = [];
     if (hasSizeDim && size) descriptorParts.push(`${size} ${dict.product.variantSizeWord}`);
-    if (hasColorDim && color) descriptorParts.push(`${color.toLowerCase()} ${dict.product.variantColorWord}`);
+    if (hasColorDim && color) descriptorParts.push(`${translateColorName(color, locale).toLowerCase()} ${dict.product.variantColorWord}`);
     const descriptor = descriptorParts.join(', ');
     const isLow = selectedVariantStock <= 5;
     const status = isLow
@@ -199,7 +200,7 @@ export function ProductActions({ productId, sizes, colors, stock, variants = [],
                         : 'border-ink-900/15 hover:border-ink-950 dark:border-cream/20 dark:text-cream dark:hover:border-cream'
                   }`}
                 >
-                  {c}
+                  {translateColorName(c, locale)}
                 </button>
               );
             })}

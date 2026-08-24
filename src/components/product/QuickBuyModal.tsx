@@ -10,6 +10,7 @@ import { ADD_TO_CART, TOGGLE_WISHLIST } from '@/lib/graphql/mutations';
 import { GET_MY_CART, GET_MY_WISHLIST } from '@/lib/graphql/queries';
 import { useAuthStore } from '@/lib/store/auth-store';
 import { getFriendlyErrorMessage } from '@/lib/utils/graphql-error';
+import { translateColorName } from '@/lib/utils/colorNames';
 import { formatPrice } from '@/lib/utils/format';
 import { useScrollLock } from '@/lib/hooks/use-scroll-lock';
 import type { Dictionary } from '@/i18n/get-dictionary';
@@ -363,7 +364,7 @@ export function QuickBuyModal({ product, locale, dict, onClose }: QuickBuyModalP
                         setErrorMessage(null);
                       }}
                       disabled={!available}
-                      title={c + (!available ? ` — ${dict.product.outOfStock}` : '')}
+                      title={translateColorName(c, locale) + (!available ? ` — ${dict.product.outOfStock}` : '')}
                       className={`relative flex h-8 w-8 items-center justify-center rounded-full transition-transform ${
                         !available ? 'cursor-not-allowed opacity-30' : 'hover:scale-110'
                       } ${selected ? 'ring-2 ring-gold-500 ring-offset-2 ring-offset-white dark:ring-offset-ink-900' : ''}`}

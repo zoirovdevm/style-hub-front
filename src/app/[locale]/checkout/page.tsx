@@ -9,6 +9,7 @@ import { GET_MY_CART } from '@/lib/graphql/queries';
 import { CREATE_ORDER } from '@/lib/graphql/mutations';
 import { useAuthStore } from '@/lib/store/auth-store';
 import { formatPrice } from '@/lib/utils/format';
+import { translateColorName } from '@/lib/utils/colorNames';
 import { Reveal } from '@/components/ui/Reveal';
 import type { Locale } from '@/i18n/config';
 import uzDict from '@/i18n/dictionaries/uz.json';
@@ -35,6 +36,11 @@ const PAYMENT_CARD_HOLDER = 'Muhammadjon Zoirov';
 // it here lets a fresh mount restore the payment-confirmation screen instead
 // of silently dropping the buyer back onto a blank checkout form.
 const PLACED_ORDER_STORAGE_KEY = 'checkout:lastPlacedOrder';
+// Yetkazib berish manzili/shahar/telefon — muvaffaqiyatli buyurtmadan
+// keyin shu kalit bilan saqlanadi (pastdagi onSubmit'ga qarang) va
+// xaridor keyingi safar checkout sahifasiga kelganda formaga qaytarib
+// to'ldiriladi, har safar qayta qo'lda yozmasin deb.
+const SAVED_DELIVERY_INFO_KEY = 'checkout:savedDeliveryInfo';
 // Falls back to the admin's personal account if the bot isn't configured
 // yet (NEXT_PUBLIC_TELEGRAM_BOT_USERNAME empty in .env.local) — otherwise
 // deep-links straight into the bot with ?start=order_<id>, so the bot can
@@ -98,8 +104,30 @@ function CheckoutPageInner({ params }: { params: { locale: Locale } }) {
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors },
   } = useForm<CheckoutForm>({ defaultValues: { phone: '+998 ' } });
+
+  // Oldingi muvaffaqiyatli buyurtmadan qolgan manzil/shahar/telefonni
+  // formaga qaytarib to'ldirish (pastdagi onSubmit ularni saqlaydi).
+  // useEffect ichida — localStorage faqat brauzerda mavjud, server-side
+  // render paytida bu componentning o'zi ham bir marta serverda ishlaydi
+  // (bu "use client" bo'lsa ham), shu sababli localStorage'ga to'g'ridan-
+  // to'g'ri render vaqtida emas, faqat mount bo'lgandan keyin murojaat
+  // qilinadi. Faqat bir marta (mount'da) ishlaydi — xaridor formani qo'lda
+  // o'zgartirsa, bu effekt qayta ishga tushib uni bosib ketmaydi.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(SAVED_DELIVERY_INFO_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as Partial<CheckoutForm>;
+      reset((current) => ({ ...current, ...saved }));
+    } catch {
+      // localStorage o'qishda xato bo'lsa (masalan maxfiy rejim) — forma
+      // shunchaki bo'sh boshlanadi, bu funksiya qo'shilishidan oldingidek.
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Real Click/Payme merchant credentials aren't set up yet, so online
   // payment selection is hidden — every order goes through as "to be
@@ -137,6 +165,22 @@ function CheckoutPageInner({ params }: { params: { locale: Locale } }) {
         sessionStorage.setItem(PLACED_ORDER_STORAGE_KEY, JSON.stringify(order));
       } catch {
         // sessionStorage can throw in some privacy modes — safe to ignore.
+      }
+      // Keyingi safar checkout'ga qaytganda formani avtomatik to'ldirish
+      // uchun — yuqoridagi useEffect shuni o'qiydi.
+      try {
+        localStorage.setItem(
+          SAVED_DELIVERY_INFO_KEY,
+          JSON.stringify({
+            deliveryAddress: values.deliveryAddress,
+            deliveryCity: values.deliveryCity,
+            phone: values.phone,
+          }),
+        );
+      } catch {
+        // localStorage yozishda xato bo'lsa (masalan maxfiy rejim) —
+        // buyurtmaning o'zi baribir muvaffaqiyatli joylashtirilgan, shuning
+        // uchun bu yerda xato ko'rsatilmaydi, faqat eslab qolish ishlamaydi.
       }
     } catch (e: any) {
       setError(e.message ?? 'Xatolik yuz berdi');
@@ -342,7 +386,9 @@ function CheckoutPageInner({ params }: { params: { locale: Locale } }) {
                       {item.product.title} × {item.quantity}
                     </span>
                     {(item.size || item.color) && (
-                      <span className="text-ink-900/40">{[item.size, item.color].filter(Boolean).join(' · ')}</span>
+                      <span className="text-ink-900/40">
+                        {[item.size, item.color ? translateColorName(item.color, locale) : null].filter(Boolean).join(' · ')}
+                      </span>
                     )}
                   </span>
                   <span className="shrink-0">{formatPrice(item.product.price * item.quantity, locale)}</span>

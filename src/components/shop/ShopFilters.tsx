@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
+import { translateColorName } from '@/lib/utils/colorNames';
 import type { Dictionary } from '@/i18n/get-dictionary';
 
 const CLOTHING_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
@@ -169,7 +170,7 @@ export function ShopFilters({ dict, categories, locale }: ShopFiltersProps) {
           {COLORS.map((color) => (
             <button
               key={color.name}
-              title={color.name}
+              title={translateColorName(color.name, locale)}
               onClick={() => toggleListParam('colors', color.name, activeColors)}
               style={{ backgroundColor: color.hex }}
               className={`h-8 w-8 rounded-full border-2 transition-transform hover:scale-110 ${

@@ -139,16 +139,26 @@ export function ProductCard({
                 title — and the price got a bigger font-size to read as the
                 dominant number in that row. Title moves to its own line
                 below. */}
-            <div className="flex items-baseline justify-between gap-2">
+            <div className="flex items-start justify-between gap-2">
               {categoryName ? (
                 <p className="min-w-0 truncate text-[11px] uppercase tracking-wider text-ink-900/40 dark:text-cream/40">{categoryName}</p>
               ) : (
                 <span />
               )}
-              <div className="flex shrink-0 items-baseline gap-1.5">
-                <span className="text-[17px] font-bold text-gold-600 dark:text-gold-400">{formatPrice(product.price, locale)}</span>
+              {/* Chegirma bo'lganda eski (chizilgan) narx endi joriy narx
+                  bilan bitta qatorda emas, ustma-ust (yangi narx ustida,
+                  eskisi ostida) joylashadi — ikkalasi bir qatorda yonma-yon
+                  turgani, tor mobil kartalarda (2 ustunli grid) narxlar
+                  uzun bo'lganda kartadan tashqariga chiqib, qo'shni
+                  kartaning ustiga yozilib ketishiga sabab bo'lgan edi. */}
+              <div className="flex min-w-0 shrink flex-col items-end leading-tight">
+                <span className="whitespace-nowrap text-[15px] font-bold text-gold-600 dark:text-gold-400 sm:text-[17px]">
+                  {formatPrice(product.price, locale)}
+                </span>
                 {hasDiscount && (
-                  <span className="text-xs text-ink-900/40 line-through dark:text-cream/40">{formatPrice(product.oldPrice!, locale)}</span>
+                  <span className="whitespace-nowrap text-[10px] text-ink-900/40 line-through dark:text-cream/40 sm:text-xs">
+                    {formatPrice(product.oldPrice!, locale)}
+                  </span>
                 )}
               </div>
             </div>
