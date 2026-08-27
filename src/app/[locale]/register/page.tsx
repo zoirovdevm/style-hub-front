@@ -141,7 +141,7 @@ export default function RegisterPage({ params }: { params: { locale: Locale } })
 
   async function handleVerifyOtp() {
     setOtpError(null);
-    if (otpCode.length !== 6) {
+    if (otpCode.length !== 5) {
       setOtpError(dict.auth.codeInvalidLength);
       return;
     }
@@ -313,10 +313,10 @@ export default function RegisterPage({ params }: { params: { locale: Locale } })
                   <label className="mb-1.5 block text-xs font-semibold text-ink-900/60">{dict.auth.codeLabel}</label>
                   <input
                     inputMode="numeric"
-                    maxLength={6}
-                    placeholder="123456"
+                    maxLength={5}
+                    placeholder="12345"
                     value={otpCode}
-                    onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 5))}
                     className="w-full rounded-xl border border-ink-900/15 px-4 py-3 text-center text-lg font-bold tracking-[0.5em] outline-none focus:border-ink-950"
                   />
                   {otpError && <p className="mt-1 text-xs text-red-500">{otpError}</p>}

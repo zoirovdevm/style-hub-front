@@ -149,9 +149,9 @@ function VerifyEmailInner({ params }: { params: { locale: Locale } }) {
             <label className="mb-1.5 block text-xs font-semibold text-ink-900/60">{dict.auth.codeLabel}</label>
             <input
               inputMode="numeric"
-              maxLength={6}
-              placeholder="123456"
-              {...register('code', { required: true, minLength: 6, maxLength: 6 })}
+              maxLength={5}
+              placeholder="12345"
+              {...register('code', { required: true, minLength: 5, maxLength: 5 })}
               className="w-full rounded-xl border border-ink-900/15 px-4 py-3 text-center text-lg font-bold tracking-[0.5em] outline-none focus:border-ink-950"
             />
             {errors.code && <p className="mt-1 text-xs text-red-500">{dict.auth.codeInvalidLength}</p>}
