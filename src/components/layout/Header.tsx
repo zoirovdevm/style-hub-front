@@ -114,6 +114,13 @@ export function Header({ locale, dict }: HeaderProps) {
         >
         <Link
           href={`/${locale}`}
+          // Header is `fixed` + always mounted (every page, every screen
+          // size), so this — and every other Link below — is "visible" from
+          // frame one and would otherwise background-prefetch immediately,
+          // adding load exactly when a strained mobile connection can least
+          // afford it. See the matching comment in MobileBottomNav.tsx for
+          // the on-device evidence; doesn't change what happens on tap.
+          prefetch={false}
           className="min-w-0 shrink-0 truncate font-display text-base font-semibold uppercase text-ink-950 dark:text-cream sm:text-xl"
           style={{ letterSpacing: '0.2em' }}
         >
@@ -127,6 +134,7 @@ export function Header({ locale, dict }: HeaderProps) {
               <Link
                 key={link.href}
                 href={link.href}
+                prefetch={false}
                 aria-current={active ? 'page' : undefined}
                 className={`relative py-1 text-sm font-medium transition-colors ${
                   active
@@ -150,6 +158,7 @@ export function Header({ locale, dict }: HeaderProps) {
 
           <Link
             href={`/${locale}/wishlist`}
+            prefetch={false}
             className="group relative hidden rounded-full p-2 text-ink-900 transition-colors hover:bg-ink-900/5 lg:block dark:text-cream dark:hover:bg-cream/10"
             aria-label={dict.nav.wishlist}
           >
@@ -166,6 +175,7 @@ export function Header({ locale, dict }: HeaderProps) {
 
           <Link
             href={`/${locale}/cart`}
+            prefetch={false}
             className="relative hidden rounded-full p-2 text-ink-900 transition-colors hover:bg-ink-900/5 lg:block dark:text-cream dark:hover:bg-cream/10"
             aria-label={dict.nav.cart}
           >
@@ -191,12 +201,13 @@ export function Header({ locale, dict }: HeaderProps) {
               content avoids that whole failure mode. */}
           <div className="hidden items-center gap-2 lg:flex">
             {user?.role === 'ADMIN' && (
-              <Link href={`/${locale}/admin`} className="btn-outline !px-4 !py-2 text-xs">
+              <Link href={`/${locale}/admin`} prefetch={false} className="btn-outline !px-4 !py-2 text-xs">
                 {dict.nav.admin}
               </Link>
             )}
             <Link
               href={`/${locale}/${user ? 'profile' : 'login'}`}
+              prefetch={false}
               className="flex items-center gap-1.5 rounded-full py-2 pl-2 pr-3 text-ink-900 transition-colors hover:bg-ink-900/5 dark:text-cream dark:hover:bg-cream/10"
             >
               {user ? <User2 size={20} /> : <LogIn size={20} />}

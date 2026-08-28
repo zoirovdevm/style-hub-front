@@ -34,20 +34,30 @@ export function Footer({ locale, dict }: { locale: Locale; dict: Dictionary }) {
 
         <div>
           <h4 className="text-sm font-semibold uppercase tracking-wider text-cream/50">{dict.footer.quickLinks}</h4>
+          {/* prefetch={false} on every link in this footer: Next.js's
+              viewport-prefetch trigger fires once a Link is within its
+              rootMargin of the viewport, not only once fully visible — on a
+              short homepage this footer qualifies soon after mount, well
+              before a visitor has scrolled anywhere near it. Diagnostics on
+              a real iPhone (perf overlay, LTE) caught these exact routes
+              (/categories, /about, /contact, /orders, /profile) bursting as
+              background fetches and stalling for 10-15s, competing with the
+              actual page's own critical resources. Doesn't change what
+              happens on tap. */}
           <div className="mt-4 flex flex-col gap-3 text-sm text-cream/70">
-            <Link href={`/${locale}/shop`}>{dict.nav.shop}</Link>
-            <Link href={`/${locale}/categories`}>{dict.nav.categories}</Link>
-            <Link href={`/${locale}/about`}>{dict.nav.about}</Link>
-            <Link href={`/${locale}/contact`}>{dict.nav.contact}</Link>
+            <Link href={`/${locale}/shop`} prefetch={false}>{dict.nav.shop}</Link>
+            <Link href={`/${locale}/categories`} prefetch={false}>{dict.nav.categories}</Link>
+            <Link href={`/${locale}/about`} prefetch={false}>{dict.nav.about}</Link>
+            <Link href={`/${locale}/contact`} prefetch={false}>{dict.nav.contact}</Link>
           </div>
         </div>
 
         <div>
           <h4 className="text-sm font-semibold uppercase tracking-wider text-cream/50">{dict.footer.support}</h4>
           <div className="mt-4 flex flex-col gap-3 text-sm text-cream/70">
-            <Link href={`/${locale}/orders`}>{dict.nav.orders}</Link>
-            <Link href={`/${locale}/profile`}>{dict.nav.profile}</Link>
-            <Link href={`/${locale}/contact`}>{dict.contact.title}</Link>
+            <Link href={`/${locale}/orders`} prefetch={false}>{dict.nav.orders}</Link>
+            <Link href={`/${locale}/profile`} prefetch={false}>{dict.nav.profile}</Link>
+            <Link href={`/${locale}/contact`} prefetch={false}>{dict.contact.title}</Link>
           </div>
         </div>
 

@@ -104,6 +104,16 @@ export function MobileBottomNav({ locale, dict }: MobileBottomNavProps) {
             <Link
               key={item.href}
               href={item.href}
+              // This bar is `fixed` + always mounted, so its 5 links are
+              // "visible" from the very first frame on every page — Next.js's
+              // default prefetch fires background fetches for all of them
+              // immediately, right when the connection is most strained
+              // during initial load. Diagnostics on a real failing iPhone
+              // (perf overlay) showed these exact routes bursting together
+              // and stalling for 10-15s on degraded LTE — this doesn't change
+              // what happens on tap, only removes the unrequested background
+              // fetch.
+              prefetch={false}
               className={`relative flex flex-col items-center gap-1 py-2.5 text-[10px] font-semibold transition-colors ${
                 active ? 'text-gold-600 dark:text-gold-400' : 'text-ink-900/45 dark:text-cream/45'
               }`}
