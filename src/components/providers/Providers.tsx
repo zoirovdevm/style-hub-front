@@ -6,6 +6,7 @@ import { ThemeInitializer } from './ThemeInitializer';
 import { PresenceProvider } from '@/lib/hooks/use-presence';
 import { PresenceBeacon } from './PresenceBeacon';
 import { RouteProgressBar } from './RouteProgressBar';
+import { PerfDebugOverlay } from './PerfDebugOverlay';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -15,6 +16,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
           <RouteProgressBar />
           <PresenceBeacon />
           <ThemeInitializer />
+          {/* Renders nothing unless the URL has ?perfdebug=1 — see the
+              component for why: real on-device timing numbers for
+              diagnosing the iOS-only slowness, with zero effect on normal
+              visitors. */}
+          <PerfDebugOverlay />
           {children}
         </PresenceProvider>
       </ApolloClientProvider>
