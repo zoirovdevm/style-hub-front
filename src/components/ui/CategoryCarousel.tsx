@@ -48,6 +48,7 @@ export function CategoryCarousel({
   return (
     <Link
       href={`/${locale}/shop?category=${current.slug}`}
+      prefetch={false}
       className="group relative flex h-64 w-full items-center justify-center overflow-hidden rounded-3xl bg-ink-950 text-cream shadow-soft transition-transform duration-300 hover:-translate-y-1 sm:h-80"
     >
       <div className="absolute inset-0 bg-gradient-to-br from-ink-950 via-ink-900 to-ink-950 opacity-90 transition-opacity group-hover:opacity-100" />

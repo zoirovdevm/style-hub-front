@@ -116,7 +116,20 @@ export function ProductCard({
           wrapper/padding/radius around it changed. rounded-xl = 0.75rem
           (12px), per request — also matched by the quick-buy button below. */}
       <div className="overflow-hidden rounded-xl border border-ink-900/8 bg-white transition-shadow duration-300 hover:shadow-soft dark:border-cream/10 dark:bg-ink-900">
-        <Link href={`/${locale}/product/${product.slug}`} className="block">
+        {/* prefetch={false}: a product grid can render 8-20+ of these cards
+            at once, and Next.js's default Link behavior background-fetches
+            each one's route data as it scrolls into view. On a fast/low-
+            latency connection that's invisible; on a high-RTT connection
+            (confirmed via screen recording: iPhone on LTE, ~250-300ms+ to
+            a US-hosted server) those background prefetches compete for the
+            same limited-throughput connection as the page's own critical
+            JS chunks and images — directly delaying when React finishes
+            hydrating and buttons/links start responding to taps. Turning
+            prefetch off here doesn't change what clicking the card does
+            (it still navigates instantly on tap, just fetches at click-time
+            instead of pre-fetching in the background) — only removes the
+            competing background requests. */}
+        <Link href={`/${locale}/product/${product.slug}`} className="block" prefetch={false}>
           <div className="relative aspect-[3/4] overflow-hidden bg-ink-900/5">
             <Image
               src={cover}
