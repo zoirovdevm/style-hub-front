@@ -5,7 +5,20 @@
   --font-display: "Playfair Display", serif;
   --font-sans: "Inter", sans-serif;
 }
-@import url("https://fonts.googleapis.com/css2?family=Playfair:ital,opsz,wght@0,5..1200,300..900;1,5..1200,300..900&display=swap");
+/* Removed a dead `@import url("https://fonts.googleapis.com/...")` that
+   used to sit here. It was CSS-invalid in this position (an @import must
+   be the very first thing in a stylesheet, before any other rule — the
+   @tailwind directives above compile to real rules ahead of it), so every
+   browser silently discarded it; it never actually fetched anything
+   (confirmed live: no fonts.googleapis.com/fonts.gstatic.com request shows
+   up in production's network log). It was also a fully redundant duplicate
+   of Playfair Display, which next/font/google already self-hosts at build
+   time via the `playfair` font in [locale]/layout.tsx (see the woff2 files
+   served from /_next/static/media/ — no external font request needed).
+   Leaving dead, invalid @import in the source risked it becoming "live" —
+   and genuinely render-blocking, since @import blocks CSS parsing until
+   the imported stylesheet round-trips — the moment someone reorders this
+   file during an edit. */
 
 html {
   scroll-behavior: smooth;

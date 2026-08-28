@@ -88,7 +88,10 @@ export function MobileBottomNav({ locale, dict }: MobileBottomNavProps) {
         // matching the dark-theme pill's own 72% for consistency). Blur
         // bumped up again too per follow-up "more blur" request (was
         // 40px/24px, same change as Header.tsx).
-        className={`mx-auto grid max-w-md grid-cols-5 rounded-full border px-1 backdrop-blur-[64px] backdrop-saturate-200 dark:border-white/10 dark:bg-[rgba(14,20,16,0.72)] dark:backdrop-blur-[56px] dark:shadow-[0_8px_30px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.1)] ${
+        // Same blur-radius reduction as Header.tsx (64px/56px -> 20px) —
+        // see the comment there. This nav is fixed + always mounted too,
+        // so it pays the same per-frame WebKit backdrop-filter cost on iOS.
+        className={`mx-auto grid max-w-md grid-cols-5 rounded-full border px-1 backdrop-blur-[20px] backdrop-saturate-200 dark:border-white/10 dark:bg-[rgba(14,20,16,0.72)] dark:backdrop-blur-[20px] dark:shadow-[0_8px_30px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.1)] ${
           overDark
             ? 'navbar-on-dark border-white/15 bg-[rgba(20,20,20,0.78)] shadow-[0_8px_30px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.15)]'
             : 'border-black/10 bg-white/85 shadow-[0_8px_30px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.5)]'

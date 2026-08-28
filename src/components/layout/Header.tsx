@@ -91,7 +91,22 @@ export function Header({ locale, dict }: HeaderProps) {
           // merged with the nav text/logo sitting on top of it. Bumped both
           // to a much more opaque glass (85% / 78%, roughly matching the
           // dark-theme pill's own 72% for consistency).
-          className={`flex h-14 items-center justify-between gap-2 rounded-full border px-4 backdrop-blur-[64px] backdrop-saturate-200 transition-colors duration-300 sm:h-[68px] sm:px-6 dark:border-white/10 dark:bg-[rgba(14,20,16,0.72)] dark:backdrop-blur-[56px] dark:shadow-[0_8px_30px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.1)] ${
+          // backdrop-blur radius intentionally kept modest (20px, was
+          // 64px/56px). WebKit (Safari + Chrome-iOS, which is required to
+          // use WebKit's engine on iOS) has to recompute backdrop-filter's
+          // blur sample on every scroll/composite frame for a `fixed`
+          // element — unlike a static blurred element, it can't be baked
+          // into a cached layer because what's behind it keeps changing as
+          // the page scrolls underneath. WebKit's blur cost scales sharply
+          // with radius, so a 64px blur recomputed continuously on TWO
+          // always-mounted fixed elements (this header + MobileBottomNav)
+          // is a well-documented iOS/WebKit jank source — Chromium's
+          // (desktop + Android) compositor handles the same blur far more
+          // cheaply, which is exactly why this was invisible in Android/
+          // desktop testing but showed up as "the site stays slow after it
+          // loads" specifically on iOS. 20px keeps the same visual glass
+          // effect at a small fraction of the compositing cost.
+          className={`flex h-14 items-center justify-between gap-2 rounded-full border px-4 backdrop-blur-[20px] backdrop-saturate-200 transition-colors duration-300 sm:h-[68px] sm:px-6 dark:border-white/10 dark:bg-[rgba(14,20,16,0.72)] dark:backdrop-blur-[20px] dark:shadow-[0_8px_30px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.1)] ${
             overDark
               ? 'navbar-on-dark border-white/15 bg-[rgba(20,20,20,0.78)] shadow-[0_8px_30px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.15)]'
               : 'border-black/10 bg-white/85 shadow-[0_8px_30px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.5)]'
