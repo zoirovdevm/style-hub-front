@@ -259,6 +259,7 @@ export default async function HomePage({ params }: { params: { locale: Locale } 
         />
         <div
           className="pointer-events-none absolute right-[30%] top-[-4%] h-[22rem] w-[22rem] rounded-full bg-gold-600/10 blur-[140px]"
+        />
 
         <div className="container-app relative">
           <div className="flex items-end justify-between">
