@@ -105,28 +105,32 @@ export default async function HomePage({ params }: { params: { locale: Locale } 
             brightness; the two nearer the visual center of the hero are a
             couple points stronger than the ones nearer the edges, which is
             what keeps the edges feeling more subtle without a hard cutoff.
-            Each one drifts on its own slow, independent loop (different
-            animate-float-slow duration/delay set inline) for an ambient
-            feel instead of everything bouncing in unison. */}
+            STATIC now, not animated — see the note below for why. */}
+        {/* These used to drift via `animate-float-slow` (transform-only,
+            20-32s loops). Large (320-640px), heavily blurred (100-150px
+            radius) elements being continuously transform-animated force
+            WebKit (Safari + Chrome-iOS — Apple requires every iOS browser
+            to use WebKit's engine) to keep re-rasterizing the blur every
+            frame for as long as this page stays open, unlike Chromium
+            (desktop/Android) which composites/caches it far more cheaply —
+            a likely contributor to "stays slow even after it finishes
+            loading" being iOS-only. Per request, the animation is removed
+            entirely rather than just hinted: same position, size, color,
+            opacity, and blur radius as before — just not drifting anymore. */}
         <div
-          className="pointer-events-none absolute left-[6%] top-[42%] h-[38rem] w-[38rem] -translate-y-1/2 rounded-full bg-gold-500/14 blur-[130px] animate-float-slow"
-          style={{ animationDuration: '22s' }}
+          className="pointer-events-none absolute left-[6%] top-[42%] h-[38rem] w-[38rem] -translate-y-1/2 rounded-full bg-gold-500/14 blur-[130px]"
         />
         <div
-          className="pointer-events-none absolute right-[10%] top-[35%] h-[40rem] w-[40rem] -translate-y-1/2 rounded-full bg-gold-400/12 blur-[150px] animate-float-slow"
-          style={{ animationDuration: '28s', animationDelay: '-6s' }}
+          className="pointer-events-none absolute right-[10%] top-[35%] h-[40rem] w-[40rem] -translate-y-1/2 rounded-full bg-gold-400/12 blur-[150px]"
         />
         <div
-          className="pointer-events-none absolute left-[38%] top-[4%] h-[26rem] w-[26rem] rounded-full bg-gold-500/10 blur-[110px] animate-float-slow"
-          style={{ animationDuration: '25s', animationDelay: '-11s' }}
+          className="pointer-events-none absolute left-[38%] top-[4%] h-[26rem] w-[26rem] rounded-full bg-gold-500/10 blur-[110px]"
         />
         <div
-          className="pointer-events-none absolute right-[18%] bottom-[2%] h-[30rem] w-[30rem] rounded-full bg-gold-600/10 blur-[130px] animate-float-slow"
-          style={{ animationDuration: '32s', animationDelay: '-16s' }}
+          className="pointer-events-none absolute right-[18%] bottom-[2%] h-[30rem] w-[30rem] rounded-full bg-gold-600/10 blur-[130px]"
         />
         <div
-          className="pointer-events-none absolute left-[16%] bottom-[6%] h-[20rem] w-[20rem] rounded-full bg-gold-400/9 blur-[100px] animate-float-slow"
-          style={{ animationDuration: '19s', animationDelay: '-3s' }}
+          className="pointer-events-none absolute left-[16%] bottom-[6%] h-[20rem] w-[20rem] rounded-full bg-gold-400/9 blur-[100px]"
         />
 
         <div className="container-app relative flex min-h-[640px] flex-col justify-center py-24">
@@ -245,18 +249,16 @@ export default async function HomePage({ params }: { params: { locale: Locale } 
             background: 'linear-gradient(135deg, rgba(16,185,129,0.05) 0%, rgba(5,150,105,0.03) 100%)',
           }}
         />
+        {/* Static now, not animated — same WebKit blur+transform reasoning
+            as the hero section's glow blobs above. */}
         <div
-          className="pointer-events-none absolute left-[8%] top-[10%] h-[30rem] w-[30rem] rounded-full bg-gold-500/14 blur-[150px] animate-float-slow"
-          style={{ animationDuration: '24s' }}
+          className="pointer-events-none absolute left-[8%] top-[10%] h-[30rem] w-[30rem] rounded-full bg-gold-500/14 blur-[150px]"
         />
         <div
-          className="pointer-events-none absolute right-[12%] bottom-[6%] h-[32rem] w-[32rem] rounded-full bg-gold-400/12 blur-[170px] animate-float-slow"
-          style={{ animationDuration: '30s', animationDelay: '-8s' }}
+          className="pointer-events-none absolute right-[12%] bottom-[6%] h-[32rem] w-[32rem] rounded-full bg-gold-400/12 blur-[170px]"
         />
         <div
-          className="pointer-events-none absolute right-[30%] top-[-4%] h-[22rem] w-[22rem] rounded-full bg-gold-600/10 blur-[140px] animate-float-slow"
-          style={{ animationDuration: '20s', animationDelay: '-13s' }}
-        />
+          className="pointer-events-none absolute right-[30%] top-[-4%] h-[22rem] w-[22rem] rounded-full bg-gold-600/10 blur-[140px]"
 
         <div className="container-app relative">
           <div className="flex items-end justify-between">
