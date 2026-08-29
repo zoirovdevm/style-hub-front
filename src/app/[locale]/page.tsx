@@ -28,9 +28,140 @@ const WHY_ITEMS = [
   { icon: CreditCard, ring: 'bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400' },
 ];
 
-export default async function HomePage({ params }: { params: { locale: Locale } }) {
+export default async function HomePage({
+  params,
+  searchParams,
+}: {
+  params: { locale: Locale };
+  searchParams?: { stage?: string };
+}) {
+  // ==========================================================================
+  // VAQTINCHALIK DIAGNOSTIKA POG'ONALARI — faqat ?stage=N bilan ochilganda
+  // ishlaydi. Parametrsiz (oddiy /ru, /uz) — hech narsa o'zgarmagan, to'liq
+  // asl Home pastda, o'zgarishsiz render bo'ladi. Bosqichlar har birini
+  // qayta deploy qilmasdan, faqat URL orqali sinash uchun:
+  //   ?stage=0  <div>TEST HOME</div> — nazorat (allaqachon tez ekani isbotlangan)
+  //   ?stage=1  + getDictionary()
+  //   ?stage=2  + ikkala GraphQL so'rov (bestSellers, categories) — faqat sonlar
+  //   ?stage=3  + 5 ta statik blur (Reveal/matnsiz) — sof GPU/paint xarajati
+  //   ?stage=4  + 8 ta ProductCard (Reveal'siz)
+  //   ?stage=5  + xuddi shu 8 ta card, endi Reveal bilan o'ralgan
+  //   ?stage=6  + CategoryCarousel
+  // Har bir bosqich fresh Safari'da alohida sinaladi (telefonda: to'liq
+  // Safari'ni yopib, qayta ochib, to'g'ridan-to'g'ri shu URL'ga o'tish).
+  // ==========================================================================
+  const stage = searchParams?.stage !== undefined ? Number(searchParams.stage) : null;
   const { locale } = params;
+
+  if (stage === 0) {
+    return <div>TEST HOME</div>;
+  }
+
   const dict = await getDictionary(locale);
+
+  if (stage === 1) {
+    return <div>TEST HOME — dict loaded: {dict.home.heroTitle}</div>;
+  }
+
+  if (stage !== null && stage >= 2) {
+    const [bsData, catData] = await Promise.all([
+      serverFetchGraphQL<{ bestSellers: ProductCardData[] }>(GET_BEST_SELLERS_STR, { limit: 8 }).catch(() => ({
+        bestSellers: [],
+      })),
+      serverFetchGraphQL<{ categories: HomeCategory[] }>(GET_CATEGORIES_STR, undefined, 0).catch(() => ({
+        categories: [],
+      })),
+    ]);
+    const bs = bsData.bestSellers ?? [];
+    const cats = catData.categories ?? [];
+
+    if (stage === 2) {
+      return (
+        <div>
+          TEST HOME — data loaded: {bs.length} bestSellers, {cats.length} categories
+        </div>
+      );
+    }
+
+    if (stage === 3) {
+      return (
+        <div className="relative min-h-[100vh] overflow-hidden bg-white dark:bg-ink-950">
+          <div
+            className="pointer-events-none absolute left-[6%] top-[42%] h-[38rem] w-[38rem] -translate-y-1/2 rounded-full bg-gold-500/14 blur-[130px]"
+          />
+          <div
+            className="pointer-events-none absolute right-[10%] top-[35%] h-[40rem] w-[40rem] -translate-y-1/2 rounded-full bg-gold-400/12 blur-[150px]"
+          />
+          <div
+            className="pointer-events-none absolute left-[38%] top-[4%] h-[26rem] w-[26rem] rounded-full bg-gold-500/10 blur-[110px]"
+          />
+          <div
+            className="pointer-events-none absolute right-[18%] bottom-[2%] h-[30rem] w-[30rem] rounded-full bg-gold-600/10 blur-[130px]"
+          />
+          <div
+            className="pointer-events-none absolute left-[16%] bottom-[6%] h-[20rem] w-[20rem] rounded-full bg-gold-400/9 blur-[100px]"
+          />
+          <p className="relative p-8">TEST HOME — 5 blurs only, no Reveal, no text content</p>
+        </div>
+      );
+    }
+
+    if (stage === 4) {
+      return (
+        <div className="container-app py-10">
+          <p className="mb-6">TEST HOME — {bs.length} ProductCards, NO Reveal</p>
+          <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-5">
+            {bs.map((product) => (
+              <ProductCard key={product.id} product={product} locale={locale} dict={dict} />
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    if (stage === 5) {
+      return (
+        <div className="container-app py-10">
+          <p className="mb-6">TEST HOME — {bs.length} ProductCards, WITH Reveal</p>
+          <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-5">
+            {bs.map((product, i) => (
+              <Reveal key={product.id} delay={i * 0.05}>
+                <ProductCard product={product} locale={locale} dict={dict} />
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    if (stage === 6) {
+      return (
+        <div className="container-app py-10">
+          <p className="mb-6">
+            TEST HOME — {bs.length} ProductCards WITH Reveal + CategoryCarousel ({cats.length} categories)
+          </p>
+          <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-5">
+            {bs.map((product, i) => (
+              <Reveal key={product.id} delay={i * 0.05}>
+                <ProductCard product={product} locale={locale} dict={dict} />
+              </Reveal>
+            ))}
+          </div>
+          <div className="mt-10">
+            {cats.length > 0 && (
+              <Reveal delay={0.15}>
+                <CategoryCarousel categories={cats} locale={locale} />
+              </Reveal>
+            )}
+          </div>
+        </div>
+      );
+    }
+  }
+  // ========================== DIAGNOSTIKA POG'ONALARI TUGADI ==========================
+  // Pastdagi hammasi — ASL, TO'LIQ, O'ZGARTIRILMAGAN Home sahifa (stage
+  // parametrisiz yoki noma'lum qiymatda shu yerga tushiladi — production
+  // uchun hech narsa o'zgarmagan).
 
   // Categories section is back on the home page (previously removed) — this
   // time as the BANNER section's content, replacing the old static
