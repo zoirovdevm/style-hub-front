@@ -106,7 +106,23 @@ export function Header({ locale, dict }: HeaderProps) {
           // desktop testing but showed up as "the site stays slow after it
           // loads" specifically on iOS. 20px keeps the same visual glass
           // effect at a small fraction of the compositing cost.
-          className={`flex h-14 items-center justify-between gap-2 rounded-full border px-4 backdrop-blur-[20px] backdrop-saturate-200 transition-colors duration-300 sm:h-[68px] sm:px-6 dark:border-white/10 dark:bg-[rgba(14,20,16,0.72)] dark:backdrop-blur-[20px] dark:shadow-[0_8px_30px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.1)] ${
+          //
+          // transform-gpu + will-change-transform (root-cause fix, see
+          // investigation notes): confirmed via a staged isolation test
+          // (Home's Hero section alone, under this real fixed header) that
+          // THIS is what produces the ~30s iOS stall — specifically the
+          // combination of this backdrop-blur with Hero's negative-margin
+          // trick that extends Hero's 5 large colored glow blobs up behind
+          // this header (see page.tsx's hero `-mt-[68px]`), giving WebKit a
+          // complex, colorful backdrop to keep re-sampling. translateZ(0)
+          // (what transform-gpu adds) promotes this pill to its own
+          // compositor layer, which lets WebKit reuse/cache that layer's
+          // blur instead of re-rasterizing it as part of the page's main
+          // paint — a standard, purely-compositing mitigation for iOS
+          // backdrop-filter jank. No visual change whatsoever: same blur
+          // radius, same colors, same opacity, same everything — only how
+          // the browser schedules the paint.
+          className={`transform-gpu will-change-transform flex h-14 items-center justify-between gap-2 rounded-full border px-4 backdrop-blur-[20px] backdrop-saturate-200 transition-colors duration-300 sm:h-[68px] sm:px-6 dark:border-white/10 dark:bg-[rgba(14,20,16,0.72)] dark:backdrop-blur-[20px] dark:shadow-[0_8px_30px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.1)] ${
             overDark
               ? 'navbar-on-dark border-white/15 bg-[rgba(20,20,20,0.78)] shadow-[0_8px_30px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.15)]'
               : 'border-black/10 bg-white/85 shadow-[0_8px_30px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.5)]'

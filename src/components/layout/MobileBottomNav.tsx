@@ -91,7 +91,19 @@ export function MobileBottomNav({ locale, dict }: MobileBottomNavProps) {
         // Same blur-radius reduction as Header.tsx (64px/56px -> 20px) —
         // see the comment there. This nav is fixed + always mounted too,
         // so it pays the same per-frame WebKit backdrop-filter cost on iOS.
-        className={`mx-auto grid max-w-md grid-cols-5 rounded-full border px-1 backdrop-blur-[20px] backdrop-saturate-200 dark:border-white/10 dark:bg-[rgba(14,20,16,0.72)] dark:backdrop-blur-[20px] dark:shadow-[0_8px_30px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.1)] ${
+        //
+        // transform-gpu + will-change-transform (root-cause fix, see
+        // Header.tsx for the full investigation notes): a staged isolation
+        // test confirmed the ~30s iOS stall comes from a fixed, blurred
+        // pill sitting behind Hero's negative-margin bleed trick, which
+        // extends Hero's 5 large colored glow blobs up behind it. This nav
+        // is fixed + backdrop-blurred the same way, so it pays the exact
+        // same per-frame WebKit recompute cost — promoting it to its own
+        // GPU compositor layer (translateZ(0), via transform-gpu) lets
+        // WebKit cache/reuse that layer's blur instead of re-rasterizing it
+        // on every frame. Purely compositing: no visual change (same blur
+        // radius, colors, opacity — only how the browser schedules paint).
+        className={`transform-gpu will-change-transform mx-auto grid max-w-md grid-cols-5 rounded-full border px-1 backdrop-blur-[20px] backdrop-saturate-200 dark:border-white/10 dark:bg-[rgba(14,20,16,0.72)] dark:backdrop-blur-[20px] dark:shadow-[0_8px_30px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.1)] ${
           overDark
             ? 'navbar-on-dark border-white/15 bg-[rgba(20,20,20,0.78)] shadow-[0_8px_30px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.15)]'
             : 'border-black/10 bg-white/85 shadow-[0_8px_30px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.5)]'
