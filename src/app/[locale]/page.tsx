@@ -157,6 +157,86 @@ export default async function HomePage({
         </div>
       );
     }
+
+    // stage=7 — ASL HERO BO'LIMINING O'ZI, boshqa hech narsasiz (WhyUs,
+    // BestSellers, Banner yo'q). Maqsad: shu bitta bo'lim (5 ta katta blur +
+    // 5 ta Reveal + matn), haqiqiy `fixed` Header (layout.tsx'dan, uning
+    // backdrop-blur'i bilan) ostida turganda, o'zi yolg'iz sekinlikni
+    // keltirib chiqaradimi — buni Header'ning backdrop-blur'i Hero'ning
+    // rangli blur to'plarini orqada doimiy "shisha" effekti bilan qayta
+    // hisoblashi bilan bog'liqligini tekshirish uchun.
+    if (stage === 7) {
+      const heroTitleHighlightWord = locale === 'ru' ? 'премиум' : 'premium';
+      const heroTitleSplitIndex = dict.home.heroTitle.indexOf(heroTitleHighlightWord);
+      const heroTitleBefore =
+        heroTitleSplitIndex >= 0 ? dict.home.heroTitle.slice(0, heroTitleSplitIndex) : dict.home.heroTitle;
+      const heroTitleHighlight = heroTitleSplitIndex >= 0 ? heroTitleHighlightWord : '';
+      const heroTitleAfter =
+        heroTitleSplitIndex >= 0
+          ? dict.home.heroTitle.slice(heroTitleSplitIndex + heroTitleHighlightWord.length)
+          : '';
+      return (
+        <section className="relative -mt-[68px] overflow-hidden bg-white pt-[68px] text-ink-950 dark:bg-ink-950 dark:text-cream sm:-mt-[84px] sm:pt-[84px]">
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              background: 'linear-gradient(135deg, rgba(16,185,129,0.05) 0%, rgba(5,150,105,0.03) 100%)',
+            }}
+          />
+          <div
+            className="pointer-events-none absolute left-[6%] top-[42%] h-[38rem] w-[38rem] -translate-y-1/2 rounded-full bg-gold-500/14 blur-[130px]"
+          />
+          <div
+            className="pointer-events-none absolute right-[10%] top-[35%] h-[40rem] w-[40rem] -translate-y-1/2 rounded-full bg-gold-400/12 blur-[150px]"
+          />
+          <div
+            className="pointer-events-none absolute left-[38%] top-[4%] h-[26rem] w-[26rem] rounded-full bg-gold-500/10 blur-[110px]"
+          />
+          <div
+            className="pointer-events-none absolute right-[18%] bottom-[2%] h-[30rem] w-[30rem] rounded-full bg-gold-600/10 blur-[130px]"
+          />
+          <div
+            className="pointer-events-none absolute left-[16%] bottom-[6%] h-[20rem] w-[20rem] rounded-full bg-gold-400/9 blur-[100px]"
+          />
+          <div className="container-app relative flex min-h-[640px] flex-col justify-center py-24">
+            <p className="mb-2 text-xs text-red-500">TEST HOME — stage=7: Hero only (real fixed Header above)</p>
+            <Reveal>
+              <div className="mb-6 h-px w-full max-w-md bg-gradient-to-r from-gold-500 via-gold-500/40 to-transparent" />
+            </Reveal>
+            <Reveal delay={0.05}>
+              <p className="mb-4 text-xs font-semibold uppercase tracking-[0.3em] text-gold-600 dark:text-gold-400">
+                {dict.home.heroEyebrow}
+              </p>
+            </Reveal>
+            <Reveal delay={0.1}>
+              <h1 className="max-w-2xl font-display text-5xl font-medium leading-tight sm:text-6xl lg:text-7xl">
+                {heroTitleBefore}
+                {heroTitleHighlight && (
+                  <em className="italic" style={{ color: '#10b981' }}>
+                    {heroTitleHighlight}
+                  </em>
+                )}
+                {heroTitleAfter}
+              </h1>
+            </Reveal>
+            <Reveal delay={0.2}>
+              <p className="mt-6 max-w-lg text-base text-ink-900/60 dark:text-cream/70">{dict.home.heroSubtitle}</p>
+            </Reveal>
+            <Reveal delay={0.3}>
+              <div className="mt-10 flex flex-wrap gap-4">
+                <Link href={`/${locale}/shop`} className="btn-primary">
+                  {dict.home.shopNow}
+                  <ArrowRight size={16} />
+                </Link>
+                <Link href={`/${locale}/categories`} className="btn-outline">
+                  {dict.home.exploreCategories}
+                </Link>
+              </div>
+            </Reveal>
+          </div>
+        </section>
+      );
+    }
   }
   // ========================== DIAGNOSTIKA POG'ONALARI TUGADI ==========================
   // Pastdagi hammasi — ASL, TO'LIQ, O'ZGARTIRILMAGAN Home sahifa (stage
