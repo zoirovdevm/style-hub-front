@@ -52,8 +52,11 @@ export function CategoryCarousel({
       className="group relative flex h-64 w-full items-center justify-center overflow-hidden rounded-3xl bg-ink-950 text-cream shadow-soft transition-transform duration-300 hover:-translate-y-1 sm:h-80"
     >
       <div className="absolute inset-0 bg-gradient-to-br from-ink-950 via-ink-900 to-ink-950 opacity-90 transition-opacity group-hover:opacity-100" />
-      <div className="absolute -right-10 -top-10 h-56 w-56 rounded-full bg-gold-500/10 blur-2xl transition-transform duration-500 group-hover:scale-125" />
-      <div className="absolute -left-10 -bottom-10 h-56 w-56 rounded-full bg-gold-600/8 blur-2xl transition-transform duration-500 group-hover:scale-125" />
+      {/* blur-2xl removed on both accent circles (heavy-CSS cleanup, per
+          request) — same soft accent circles, just without the
+          filter:blur() cost. */}
+      <div className="absolute -right-10 -top-10 h-56 w-56 rounded-full bg-gold-500/10 transition-transform duration-500 group-hover:scale-125" />
+      <div className="absolute -left-10 -bottom-10 h-56 w-56 rounded-full bg-gold-600/8 transition-transform duration-500 group-hover:scale-125" />
 
       {/* Every category's content is stacked in the same spot; only the
           active one is opaque. Crossfading via opacity (rather than

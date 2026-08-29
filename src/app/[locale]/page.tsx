@@ -28,220 +28,14 @@ const WHY_ITEMS = [
   { icon: CreditCard, ring: 'bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400' },
 ];
 
-export default async function HomePage({
-  params,
-  searchParams,
-}: {
-  params: { locale: Locale };
-  searchParams?: { stage?: string };
-}) {
-  // ==========================================================================
-  // VAQTINCHALIK DIAGNOSTIKA POG'ONALARI — faqat ?stage=N bilan ochilganda
-  // ishlaydi. Parametrsiz (oddiy /ru, /uz) — hech narsa o'zgarmagan, to'liq
-  // asl Home pastda, o'zgarishsiz render bo'ladi. Bosqichlar har birini
-  // qayta deploy qilmasdan, faqat URL orqali sinash uchun:
-  //   ?stage=0  <div>TEST HOME</div> — nazorat (allaqachon tez ekani isbotlangan)
-  //   ?stage=1  + getDictionary()
-  //   ?stage=2  + ikkala GraphQL so'rov (bestSellers, categories) — faqat sonlar
-  //   ?stage=3  + 5 ta statik blur (Reveal/matnsiz) — sof GPU/paint xarajati
-  //   ?stage=4  + 8 ta ProductCard (Reveal'siz)
-  //   ?stage=5  + xuddi shu 8 ta card, endi Reveal bilan o'ralgan
-  //   ?stage=6  + CategoryCarousel
-  // Har bir bosqich fresh Safari'da alohida sinaladi (telefonda: to'liq
-  // Safari'ni yopib, qayta ochib, to'g'ridan-to'g'ri shu URL'ga o'tish).
-  // ==========================================================================
-  const stage = searchParams?.stage !== undefined ? Number(searchParams.stage) : null;
+export default async function HomePage({ params }: { params: { locale: Locale } }) {
+  // The temporary `?stage=N` diagnostic scaffolding (used to binary-isolate
+  // the ~30s iOS Safari stall down to Header's backdrop-blur + Hero's glow
+  // blobs — see Header.tsx for the full finding) has done its job and is
+  // removed now that the fix (no more blur/backdrop-blur anywhere on the
+  // site) is in place. This is back to a plain Home page again.
   const { locale } = params;
-
-  if (stage === 0) {
-    return <div>TEST HOME</div>;
-  }
-
   const dict = await getDictionary(locale);
-
-  if (stage === 1) {
-    return <div>TEST HOME — dict loaded: {dict.home.heroTitle}</div>;
-  }
-
-  if (stage !== null && stage >= 2) {
-    const [bsData, catData] = await Promise.all([
-      serverFetchGraphQL<{ bestSellers: ProductCardData[] }>(GET_BEST_SELLERS_STR, { limit: 8 }).catch(() => ({
-        bestSellers: [],
-      })),
-      serverFetchGraphQL<{ categories: HomeCategory[] }>(GET_CATEGORIES_STR, undefined, 0).catch(() => ({
-        categories: [],
-      })),
-    ]);
-    const bs = bsData.bestSellers ?? [];
-    const cats = catData.categories ?? [];
-
-    if (stage === 2) {
-      return (
-        <div>
-          TEST HOME — data loaded: {bs.length} bestSellers, {cats.length} categories
-        </div>
-      );
-    }
-
-    if (stage === 3) {
-      return (
-        <div className="relative min-h-[100vh] overflow-hidden bg-white dark:bg-ink-950">
-          <div
-            className="pointer-events-none absolute left-[6%] top-[42%] h-[38rem] w-[38rem] -translate-y-1/2 rounded-full bg-gold-500/14 blur-[130px]"
-          />
-          <div
-            className="pointer-events-none absolute right-[10%] top-[35%] h-[40rem] w-[40rem] -translate-y-1/2 rounded-full bg-gold-400/12 blur-[150px]"
-          />
-          <div
-            className="pointer-events-none absolute left-[38%] top-[4%] h-[26rem] w-[26rem] rounded-full bg-gold-500/10 blur-[110px]"
-          />
-          <div
-            className="pointer-events-none absolute right-[18%] bottom-[2%] h-[30rem] w-[30rem] rounded-full bg-gold-600/10 blur-[130px]"
-          />
-          <div
-            className="pointer-events-none absolute left-[16%] bottom-[6%] h-[20rem] w-[20rem] rounded-full bg-gold-400/9 blur-[100px]"
-          />
-          <p className="relative p-8">TEST HOME — 5 blurs only, no Reveal, no text content</p>
-        </div>
-      );
-    }
-
-    if (stage === 4) {
-      return (
-        <div className="container-app py-10">
-          <p className="mb-6">TEST HOME — {bs.length} ProductCards, NO Reveal</p>
-          <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-5">
-            {bs.map((product) => (
-              <ProductCard key={product.id} product={product} locale={locale} dict={dict} />
-            ))}
-          </div>
-        </div>
-      );
-    }
-
-    if (stage === 5) {
-      return (
-        <div className="container-app py-10">
-          <p className="mb-6">TEST HOME — {bs.length} ProductCards, WITH Reveal</p>
-          <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-5">
-            {bs.map((product, i) => (
-              <Reveal key={product.id} delay={i * 0.05}>
-                <ProductCard product={product} locale={locale} dict={dict} />
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      );
-    }
-
-    if (stage === 6) {
-      return (
-        <div className="container-app py-10">
-          <p className="mb-6">
-            TEST HOME — {bs.length} ProductCards WITH Reveal + CategoryCarousel ({cats.length} categories)
-          </p>
-          <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-5">
-            {bs.map((product, i) => (
-              <Reveal key={product.id} delay={i * 0.05}>
-                <ProductCard product={product} locale={locale} dict={dict} />
-              </Reveal>
-            ))}
-          </div>
-          <div className="mt-10">
-            {cats.length > 0 && (
-              <Reveal delay={0.15}>
-                <CategoryCarousel categories={cats} locale={locale} />
-              </Reveal>
-            )}
-          </div>
-        </div>
-      );
-    }
-
-    // stage=7 — ASL HERO BO'LIMINING O'ZI, boshqa hech narsasiz (WhyUs,
-    // BestSellers, Banner yo'q). Maqsad: shu bitta bo'lim (5 ta katta blur +
-    // 5 ta Reveal + matn), haqiqiy `fixed` Header (layout.tsx'dan, uning
-    // backdrop-blur'i bilan) ostida turganda, o'zi yolg'iz sekinlikni
-    // keltirib chiqaradimi — buni Header'ning backdrop-blur'i Hero'ning
-    // rangli blur to'plarini orqada doimiy "shisha" effekti bilan qayta
-    // hisoblashi bilan bog'liqligini tekshirish uchun.
-    if (stage === 7) {
-      const heroTitleHighlightWord = locale === 'ru' ? 'премиум' : 'premium';
-      const heroTitleSplitIndex = dict.home.heroTitle.indexOf(heroTitleHighlightWord);
-      const heroTitleBefore =
-        heroTitleSplitIndex >= 0 ? dict.home.heroTitle.slice(0, heroTitleSplitIndex) : dict.home.heroTitle;
-      const heroTitleHighlight = heroTitleSplitIndex >= 0 ? heroTitleHighlightWord : '';
-      const heroTitleAfter =
-        heroTitleSplitIndex >= 0
-          ? dict.home.heroTitle.slice(heroTitleSplitIndex + heroTitleHighlightWord.length)
-          : '';
-      return (
-        <section className="relative -mt-[68px] overflow-hidden bg-white pt-[68px] text-ink-950 dark:bg-ink-950 dark:text-cream sm:-mt-[84px] sm:pt-[84px]">
-          <div
-            className="pointer-events-none absolute inset-0"
-            style={{
-              background: 'linear-gradient(135deg, rgba(16,185,129,0.05) 0%, rgba(5,150,105,0.03) 100%)',
-            }}
-          />
-          <div
-            className="pointer-events-none absolute left-[6%] top-[42%] h-[38rem] w-[38rem] -translate-y-1/2 rounded-full bg-gold-500/14 blur-[130px]"
-          />
-          <div
-            className="pointer-events-none absolute right-[10%] top-[35%] h-[40rem] w-[40rem] -translate-y-1/2 rounded-full bg-gold-400/12 blur-[150px]"
-          />
-          <div
-            className="pointer-events-none absolute left-[38%] top-[4%] h-[26rem] w-[26rem] rounded-full bg-gold-500/10 blur-[110px]"
-          />
-          <div
-            className="pointer-events-none absolute right-[18%] bottom-[2%] h-[30rem] w-[30rem] rounded-full bg-gold-600/10 blur-[130px]"
-          />
-          <div
-            className="pointer-events-none absolute left-[16%] bottom-[6%] h-[20rem] w-[20rem] rounded-full bg-gold-400/9 blur-[100px]"
-          />
-          <div className="container-app relative flex min-h-[640px] flex-col justify-center py-24">
-            <p className="mb-2 text-xs text-red-500">TEST HOME — stage=7: Hero only (real fixed Header above)</p>
-            <Reveal>
-              <div className="mb-6 h-px w-full max-w-md bg-gradient-to-r from-gold-500 via-gold-500/40 to-transparent" />
-            </Reveal>
-            <Reveal delay={0.05}>
-              <p className="mb-4 text-xs font-semibold uppercase tracking-[0.3em] text-gold-600 dark:text-gold-400">
-                {dict.home.heroEyebrow}
-              </p>
-            </Reveal>
-            <Reveal delay={0.1}>
-              <h1 className="max-w-2xl font-display text-5xl font-medium leading-tight sm:text-6xl lg:text-7xl">
-                {heroTitleBefore}
-                {heroTitleHighlight && (
-                  <em className="italic" style={{ color: '#10b981' }}>
-                    {heroTitleHighlight}
-                  </em>
-                )}
-                {heroTitleAfter}
-              </h1>
-            </Reveal>
-            <Reveal delay={0.2}>
-              <p className="mt-6 max-w-lg text-base text-ink-900/60 dark:text-cream/70">{dict.home.heroSubtitle}</p>
-            </Reveal>
-            <Reveal delay={0.3}>
-              <div className="mt-10 flex flex-wrap gap-4">
-                <Link href={`/${locale}/shop`} className="btn-primary">
-                  {dict.home.shopNow}
-                  <ArrowRight size={16} />
-                </Link>
-                <Link href={`/${locale}/categories`} className="btn-outline">
-                  {dict.home.exploreCategories}
-                </Link>
-              </div>
-            </Reveal>
-          </div>
-        </section>
-      );
-    }
-  }
-  // ========================== DIAGNOSTIKA POG'ONALARI TUGADI ==========================
-  // Pastdagi hammasi — ASL, TO'LIQ, O'ZGARTIRILMAGAN Home sahifa (stage
-  // parametrisiz yoki noma'lum qiymatda shu yerga tushiladi — production
-  // uchun hech narsa o'zgarmagan).
 
   // Categories section is back on the home page (previously removed) — this
   // time as the BANNER section's content, replacing the old static
@@ -307,43 +101,17 @@ export default async function HomePage({
             background: 'linear-gradient(135deg, rgba(16,185,129,0.05) 0%, rgba(5,150,105,0.03) 100%)',
           }}
         />
-        {/* Five soft, dimmer, larger glows spread across the WHOLE section
-            — not just clustered behind the text anymore, but also over the
-            open space to the right and the top/bottom margins — each a
-            different size so they read as an organic, overlapping cluster
-            rather than one shape. Opacity is deliberately low (10-14%,
-            down from the previous 20-25%) since the request was to reduce
-            brightness; the two nearer the visual center of the hero are a
-            couple points stronger than the ones nearer the edges, which is
-            what keeps the edges feeling more subtle without a hard cutoff.
-            STATIC now, not animated — see the note below for why. */}
-        {/* These used to drift via `animate-float-slow` (transform-only,
-            20-32s loops). Large (320-640px), heavily blurred (100-150px
-            radius) elements being continuously transform-animated force
-            WebKit (Safari + Chrome-iOS — Apple requires every iOS browser
-            to use WebKit's engine) to keep re-rasterizing the blur every
-            frame for as long as this page stays open, unlike Chromium
-            (desktop/Android) which composites/caches it far more cheaply —
-            a likely contributor to "stays slow even after it finishes
-            loading" being iOS-only. Per request, the animation is removed
-            entirely rather than just hinted: same position, size, color,
-            opacity, and blur radius as before — just not drifting anymore. */}
-        <div
-          className="pointer-events-none absolute left-[6%] top-[42%] h-[38rem] w-[38rem] -translate-y-1/2 rounded-full bg-gold-500/14 blur-[130px]"
-        />
-        <div
-          className="pointer-events-none absolute right-[10%] top-[35%] h-[40rem] w-[40rem] -translate-y-1/2 rounded-full bg-gold-400/12 blur-[150px]"
-        />
-        <div
-          className="pointer-events-none absolute left-[38%] top-[4%] h-[26rem] w-[26rem] rounded-full bg-gold-500/10 blur-[110px]"
-        />
-        <div
-          className="pointer-events-none absolute right-[18%] bottom-[2%] h-[30rem] w-[30rem] rounded-full bg-gold-600/10 blur-[130px]"
-        />
-        <div
-          className="pointer-events-none absolute left-[16%] bottom-[6%] h-[20rem] w-[20rem] rounded-full bg-gold-400/9 blur-[100px]"
-        />
-
+        {/* ROOT-CAUSE FIX — the 5 large colorful glow-orb divs that used to
+            sit here (each `blur-[100-150px]`) are removed entirely per
+            explicit request. A staged isolation test confirmed these,
+            combined with the header's backdrop-blur sampling them through
+            its glass (see Header.tsx), were what produced the ~30s iOS
+            stall — WebKit had to keep re-rasterizing a huge, heavily
+            blurred, colorful area on every frame. The header no longer
+            uses backdrop-blur either, so this section no longer needs to
+            supply anything for it to blur — the plain gradient tint below
+            is the only decorative background left, and it's cheap (a
+            static CSS gradient, no filter/blur involved). */}
         <div className="container-app relative flex min-h-[640px] flex-col justify-center py-24">
           {/* Long accent line above the eyebrow text — left-aligned with
               the text block (same starting edge as everything below it)
@@ -460,18 +228,12 @@ export default async function HomePage({
             background: 'linear-gradient(135deg, rgba(16,185,129,0.05) 0%, rgba(5,150,105,0.03) 100%)',
           }}
         />
-        {/* Static now, not animated — same WebKit blur+transform reasoning
-            as the hero section's glow blobs above. */}
-        <div
-          className="pointer-events-none absolute left-[8%] top-[10%] h-[30rem] w-[30rem] rounded-full bg-gold-500/14 blur-[150px]"
-        />
-        <div
-          className="pointer-events-none absolute right-[12%] bottom-[6%] h-[32rem] w-[32rem] rounded-full bg-gold-400/12 blur-[170px]"
-        />
-        <div
-          className="pointer-events-none absolute right-[30%] top-[-4%] h-[22rem] w-[22rem] rounded-full bg-gold-600/10 blur-[140px]"
-        />
-
+        {/* ROOT-CAUSE FIX — the 3 glow-orb divs (blur-[140-170px]) that used
+            to sit here are removed entirely, same reasoning as the Hero
+            section above: no more backdrop-blur anywhere on the page means
+            nothing needs a heavily blurred backdrop to show through, and
+            these were themselves an expensive `filter: blur()` cost on
+            every paint. */}
         <div className="container-app relative">
           <div className="flex items-end justify-between">
             <Reveal>

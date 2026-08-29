@@ -75,38 +75,24 @@ export function MobileBottomNav({ locale, dict }: MobileBottomNavProps) {
       style={{ bottom: 'calc(env(safe-area-inset-bottom) + 0.75rem)' }}
     >
       <div
-        // Same fix as Header.tsx: dark:bg-white/10 was too transparent —
-        // a light patch scrolling underneath in dark theme washed out both
-        // the pill and the cream tab labels together. A more opaque,
-        // near-black glass keeps it legible no matter what's behind it.
-        //
-        // Per follow-up request, the light-theme default and "floating over
-        // a dark hero" states had the same problem on mobile — this bar
-        // sits directly over product photos/dark banners, and at 45%/35%
-        // opacity the content behind it visually merged with the tab
-        // labels. Bumped both to a much more opaque glass (85% / 78%,
-        // matching the dark-theme pill's own 72% for consistency). Blur
-        // bumped up again too per follow-up "more blur" request (was
-        // 40px/24px, same change as Header.tsx).
-        // Same blur-radius reduction as Header.tsx (64px/56px -> 20px) —
-        // see the comment there. This nav is fixed + always mounted too,
-        // so it pays the same per-frame WebKit backdrop-filter cost on iOS.
-        //
-        // transform-gpu + will-change-transform (root-cause fix, see
-        // Header.tsx for the full investigation notes): a staged isolation
-        // test confirmed the ~30s iOS stall comes from a fixed, blurred
-        // pill sitting behind Hero's negative-margin bleed trick, which
-        // extends Hero's 5 large colored glow blobs up behind it. This nav
-        // is fixed + backdrop-blurred the same way, so it pays the exact
-        // same per-frame WebKit recompute cost — promoting it to its own
-        // GPU compositor layer (translateZ(0), via transform-gpu) lets
-        // WebKit cache/reuse that layer's blur instead of re-rasterizing it
-        // on every frame. Purely compositing: no visual change (same blur
-        // radius, colors, opacity — only how the browser schedules paint).
-        className={`transform-gpu will-change-transform mx-auto grid max-w-md grid-cols-5 rounded-full border px-1 backdrop-blur-[20px] backdrop-saturate-200 dark:border-white/10 dark:bg-[rgba(14,20,16,0.72)] dark:backdrop-blur-[20px] dark:shadow-[0_8px_30px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.1)] ${
+        // ROOT-CAUSE FIX — backdrop-blur removed entirely (per explicit
+        // request; see Header.tsx for the full investigation notes). A
+        // staged isolation test confirmed the ~30s iOS stall comes from a
+        // fixed, backdrop-blurred pill sitting near Hero's negative-margin
+        // bleed trick, which extends Hero's colored glow blobs up behind
+        // the top header — this bottom nav paid the identical per-frame
+        // WebKit backdrop-filter cost just from being fixed + blurred.
+        // A GPU-layer-promotion mitigation (transform-gpu) was tried
+        // first; this instead removes the backdrop-filter cost outright.
+        // Now a plain, solid/near-solid background instead of "see-through
+        // glass" — opacity bumped up (was 45-85%, now 94-96%) so it still
+        // reads as one solid tab bar without a blur to soften what's
+        // showing through. Box-shadow simplified to Tailwind's built-in
+        // `shadow-lg` instead of a custom two-layer inset shadow.
+        className={`mx-auto grid max-w-md grid-cols-5 rounded-full border px-1 shadow-lg dark:border-white/10 dark:bg-[rgba(14,20,16,0.94)] ${
           overDark
-            ? 'navbar-on-dark border-white/15 bg-[rgba(20,20,20,0.78)] shadow-[0_8px_30px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.15)]'
-            : 'border-black/10 bg-white/85 shadow-[0_8px_30px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.5)]'
+            ? 'navbar-on-dark border-white/15 bg-[rgba(20,20,20,0.94)]'
+            : 'border-black/10 bg-white/96'
         }`}
       >
         {items.map((item) => {

@@ -74,7 +74,9 @@ export function ProductGallery({ images, title }: { images: string[]; title: str
               onClick={() => goTo(active - 1)}
               disabled={isFirst}
               aria-label="Oldingi rasm"
-              className="absolute left-3 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 text-ink-950 shadow-soft backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:bg-white disabled:pointer-events-none disabled:opacity-30 disabled:hover:scale-100 dark:bg-ink-950/70 dark:text-cream dark:hover:bg-ink-950 sm:h-10 sm:w-10"
+              // backdrop-blur-sm removed (heavy-CSS cleanup, per request) —
+              // bg opacity bumped up so the arrow stays legible without it.
+              className="absolute left-3 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/95 text-ink-950 shadow-soft transition-all duration-300 hover:scale-105 hover:bg-white disabled:pointer-events-none disabled:opacity-30 disabled:hover:scale-100 dark:bg-ink-950/90 dark:text-cream dark:hover:bg-ink-950 sm:h-10 sm:w-10"
             >
               <ChevronLeft size={20} />
             </button>
@@ -83,7 +85,7 @@ export function ProductGallery({ images, title }: { images: string[]; title: str
               onClick={() => goTo(active + 1)}
               disabled={isLast}
               aria-label="Keyingi rasm"
-              className="absolute right-3 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 text-ink-950 shadow-soft backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:bg-white disabled:pointer-events-none disabled:opacity-30 disabled:hover:scale-100 dark:bg-ink-950/70 dark:text-cream dark:hover:bg-ink-950 sm:h-10 sm:w-10"
+              className="absolute right-3 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/95 text-ink-950 shadow-soft transition-all duration-300 hover:scale-105 hover:bg-white disabled:pointer-events-none disabled:opacity-30 disabled:hover:scale-100 dark:bg-ink-950/90 dark:text-cream dark:hover:bg-ink-950 sm:h-10 sm:w-10"
             >
               <ChevronRight size={20} />
             </button>

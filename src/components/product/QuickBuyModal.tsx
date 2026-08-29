@@ -247,7 +247,10 @@ export function QuickBuyModal({ product, locale, dict, onClose }: QuickBuyModalP
 
   const modal = (
     <div
-      className={`fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm transition-opacity duration-200 ${
+      // backdrop-blur-sm removed (heavy-CSS cleanup, per request) — overlay
+      // darkened a bit more (60% -> 70%) so the dimming still reads clearly
+      // without the blur.
+      className={`fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4 transition-opacity duration-200 ${
         visible && !closing ? 'opacity-100' : 'opacity-0'
       }`}
       onClick={requestClose}

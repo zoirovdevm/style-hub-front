@@ -28,7 +28,9 @@ export default async function CategoriesPage({ params }: { params: { locale: Loc
               className="group relative flex h-52 flex-col items-center justify-center overflow-hidden rounded-3xl bg-ink-950 text-cream shadow-soft"
             >
               <div className="absolute inset-0 bg-gradient-to-br from-ink-950 via-ink-900 to-ink-950 opacity-90 transition-opacity group-hover:opacity-100" />
-              <div className="absolute -right-8 -top-8 h-40 w-40 rounded-full bg-gold-500/10 blur-2xl transition-transform duration-500 group-hover:scale-125" />
+              {/* blur-2xl removed (heavy-CSS cleanup, per request) — same
+                  soft accent circle, just without the filter:blur() cost. */}
+              <div className="absolute -right-8 -top-8 h-40 w-40 rounded-full bg-gold-500/10 transition-transform duration-500 group-hover:scale-125" />
               <span className="relative font-display text-3xl font-medium">
                 {locale === 'ru' && cat.nameRu ? cat.nameRu : cat.name}
               </span>
