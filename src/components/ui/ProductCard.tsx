@@ -131,13 +131,33 @@ export function ProductCard({
             competing background requests. */}
         <Link href={`/${locale}/product/${product.slug}`} className="block" prefetch={false}>
           <div className="relative aspect-[3/4] overflow-hidden bg-ink-900/5">
+            {/* unoptimized removed (root-cause fix, see investigation notes):
+                the backend saves product photos exactly as uploaded — no
+                resize/compress step anywhere in the stack (confirmed: no
+                `sharp` or similar in the backend) — and `unoptimized` here
+                told next/image to skip ITS OWN resize/compress step too, so
+                every one of these cards shipped the full original file.
+                Home is the only page that renders 8 of these in one screen
+                (Best Sellers), so on a cold Safari session (fresh TLS
+                connection, small TCP congestion window, nothing cached yet)
+                those 8 full-size images compete with the page's own
+                critical CSS/JS for the same constrained pipe — matching the
+                video evidence exactly: fine when Home is reached via
+                already-warm client-side navigation (connection + JS/CSS
+                already established, only a small RSC diff + images left to
+                fetch), badly stalled when Home is the very first cold hit.
+                next.config.js already allows any https host and localhost
+                for the optimizer, so removing this just lets Next.js do
+                its normal job: serve a properly-sized, compressed variant
+                per `sizes` above instead of the raw upload. Pixel-identical
+                on screen — `fill` + `sizes` + the same crop/object-cover
+                behavior — only the transferred bytes shrink. */}
             <Image
               src={cover}
               alt={title}
               fill
               sizes="(max-width: 768px) 50vw, 25vw"
               className="object-cover transition-transform duration-700 group-hover:scale-105"
-              unoptimized
             />
             {hasDiscount && (
               <span className="absolute left-3 top-3 rounded-full bg-gold-500 px-2.5 py-1 text-[11px] font-bold text-ink-950">
