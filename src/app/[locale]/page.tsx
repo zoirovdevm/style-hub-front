@@ -237,7 +237,61 @@ export default async function HomePage({ params }: { params: { locale: Locale } 
       </section>
 
       {/* BANNER */}
-     
+      <section className="relative overflow-hidden bg-white py-20 dark:bg-ink-950">
+        {/* Same soft blurred-glow treatment as the hero up top. Per latest
+            request the section's own base fill is pulled close to
+            white/black (matching the hero's bg-white/dark:bg-ink-950) so the
+            glow blobs read as the dominant color signal — blobs are bigger,
+            more opaque, and more blurred than the earlier passes. */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background: 'linear-gradient(135deg, rgba(16,185,129,0.05) 0%, rgba(5,150,105,0.03) 100%)',
+          }}
+        />
+        {/* Static now, not animated — same WebKit blur+transform reasoning
+            as the hero section's glow blobs above. */}
+        <div
+          className="pointer-events-none absolute left-[8%] top-[10%] h-[30rem] w-[30rem] rounded-full bg-gold-500/14 blur-[150px]"
+        />
+        <div
+          className="pointer-events-none absolute right-[12%] bottom-[6%] h-[32rem] w-[32rem] rounded-full bg-gold-400/12 blur-[170px]"
+        />
+        <div
+          className="pointer-events-none absolute right-[30%] top-[-4%] h-[22rem] w-[22rem] rounded-full bg-gold-600/10 blur-[140px]"
+        />
+
+        <div className="container-app relative">
+          <div className="flex items-end justify-between">
+            <Reveal>
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-gold-600">{dict.home.newArrivals}</p>
+              <h2 className="mt-4 font-display text-3xl font-medium sm:text-4xl dark:text-cream">{dict.nav.categories}</h2>
+            </Reveal>
+            <Link
+              href={`/${locale}/categories`}
+              className="group hidden items-center gap-1 text-sm font-semibold text-gold-600 transition-colors duration-300 hover:text-gold-700 dark:text-gold-400 dark:hover:text-gold-300 sm:flex"
+            >
+              {dict.home.exploreCategories}
+              <ArrowRight size={14} className="transition-transform duration-300 group-hover:translate-x-1" />
+            </Link>
+          </div>
+        </div>
+
+        {/* Category showcase — per follow-up request this is no longer a
+            row of separate cards scrolling past each other; it's ONE big
+            box, and the categories rotate (crossfade) inside that single
+            box instead. See CategoryCarousel.tsx for the rotation itself
+            (timer-driven, since the category count is dynamic). */}
+        <div className="container-app relative mt-10">
+          {categories.length === 0 ? (
+            <p className="text-sm text-ink-900/50 dark:text-cream/50">{dict.product.noResults}</p>
+          ) : (
+            <Reveal delay={0.15}>
+              <CategoryCarousel categories={categories} locale={locale} />
+            </Reveal>
+          )}
+        </div>
+      </section>
     </div>
   );
 }
