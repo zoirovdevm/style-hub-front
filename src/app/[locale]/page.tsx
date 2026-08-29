@@ -204,37 +204,7 @@ export default async function HomePage({ params }: { params: { locale: Locale } 
       {/* BEST SELLERS — shown before the category grid, per request: product
           cards should be the first thing shoppers see below the fold, with
           "shop by category" browsing further down as a secondary option. */}
-      <section className="bg-white py-20 dark:bg-ink-950">
-        <div className="container-app">
-          <div className="flex items-end justify-between">
-            <Reveal>
-              <h2 className="section-title">{dict.home.bestSellers}</h2>
-            </Reveal>
-            {/* Site's green accent instead of plain gray, with a hover
-                effect: the text deepens and the arrow nudges right —
-                per request. */}
-            <Link
-              href={`/${locale}/shop`}
-              className="group hidden items-center gap-1 text-sm font-semibold text-gold-600 transition-colors duration-300 hover:text-gold-700 dark:text-gold-400 dark:hover:text-gold-300 sm:flex"
-            >
-              {dict.home.shopNow}
-              <ArrowRight size={14} className="transition-transform duration-300 group-hover:translate-x-1" />
-            </Link>
-          </div>
-
-          {bestSellers.length === 0 ? (
-            <p className="mt-10 text-sm text-ink-900/50">{dict.product.noResults}</p>
-          ) : (
-            <div className="mt-10 grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-5">
-              {bestSellers.map((product, i) => (
-                <Reveal key={product.id} delay={i * 0.05}>
-                  <ProductCard product={product} locale={locale} dict={dict} />
-                </Reveal>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
+    
 
       {/* BANNER */}
       <section className="relative overflow-hidden bg-white py-20 dark:bg-ink-950">
