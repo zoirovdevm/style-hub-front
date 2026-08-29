@@ -13,50 +13,70 @@ export function Reveal({
   className?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  // null = not yet determined (server render / very first client paint).
-  // true = this element was ALREADY inside the viewport the moment it
-  // mounted on the client — skip the slide-up-and-fade-in animation for
-  // it entirely (see the effect below for why). false = normal case:
-  // still below the fold at mount, so it plays the intended "fades up as
-  // you scroll down to it" animation via whileInView, unchanged.
+  // null = server render / not yet measured on the client. true = already
+  // inside the viewport the moment it mounted — never animate it. false =
+  // confirmed below the fold at mount — play the normal scroll-triggered
+  // fade-in via whileInView, exactly as before.
   const [alreadyInView, setAlreadyInView] = useState<boolean | null>(null);
 
-  // useLayoutEffect (not useEffect): it runs synchronously right after
-  // this node is committed to the DOM but BEFORE the browser paints that
-  // frame — which is what lets the correction below apply before the user
-  // ever sees a single frame of it, instead of some number of visible
-  // frames of the wrong state.
-  //
-  // Why this exists: Reveal wraps section headings and every product card
-  // (27 places across the site). On a real iPhone (confirmed via a screen
-  // recording), while hydration was still catching up, content already on
-  // screen would visibly reset and replay this slide-up animation
-  // mid-scroll — because whileInView's IntersectionObserver hadn't fired
-  // yet for elements already in view when React finished taking over from
-  // the server-rendered HTML, and iOS's much slower hydration (measured
-  // separately) gave that gap enough time to become visible as a glitch,
-  // right as the user was scrolling past it. Skipping the animation only
-  // for elements already in view at mount removes that glitch; anything
-  // below the fold still fades up exactly as before once scrolled to.
+  // useLayoutEffect: runs synchronously right after mount, before paint.
   useLayoutEffect(() => {
     if (!ref.current) return;
     const rect = ref.current.getBoundingClientRect();
     setAlreadyInView(rect.top < window.innerHeight && rect.bottom > 0);
   }, []);
 
+  // ROOT-CAUSE FIX (see investigation notes): the previous version always
+  // rendered a <motion.div initial={{opacity:0, y:28}}>, even for the
+  // `null` (server-rendered / not-yet-measured) case — which means EVERY
+  // Reveal instance's real content (hero heading, "why us" cards, best
+  // sellers heading + all 8 product cards, banner heading — on the home
+  // page that's nearly the entire visible page) shipped in the server
+  // HTML itself already hidden at opacity:0. That's invisible by design
+  // for a fraction of a second on a fast device, but on a slow/cold iOS
+  // Safari load — first request of a fresh session, full JS bundle still
+  // downloading before React can hydrate anything — that opacity:0 state
+  // can sit on screen for 20-30+ seconds before hydration ever reaches
+  // this component and lifts it. Confirmed frame-by-frame from a screen
+  // recording of a cold first load: header and bottom nav (not wrapped in
+  // Reveal) render and work immediately, while the entire middle of the
+  // page between them stays a blank, contentless block for the rest of
+  // the recording — exactly the set of elements Reveal wraps, and nothing
+  // else. This reproduced with NO dependency on which locale (`/ru` vs
+  // `/uz`) was requested — it's about how much of a given PAGE's content
+  // is wrapped in Reveal, not the route/locale.
+  //
+  // Fix: render a plain, always-visible <div> — no framer-motion, no
+  // inline opacity — for the server render and for the `true` (already
+  // in view) case, so real content is on screen immediately regardless of
+  // how long hydration takes. Only once we've confirmed, client-side,
+  // that an element is genuinely below the fold do we swap in a fresh
+  // <motion.div initial={{opacity:0}}>. That swap happens while the
+  // element is still off-screen (by definition, since alreadyInView is
+  // false), so the user never sees it — and because it's a brand-new
+  // component instance, framer-motion's `initial` applies fresh, so the
+  // below-fold slide-up-and-fade-in on scroll still plays exactly as
+  // designed. (A conditional `initial` prop on the SAME motion.div
+  // instance would not work here — framer-motion only reads `initial` at
+  // that instance's first mount, so swapping component type is what
+  // makes the fresh hidden-state apply.)
+  if (alreadyInView === false) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 28 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: '-80px' }}
+        transition={{ duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] }}
+        className={className}
+      >
+        {children}
+      </motion.div>
+    );
+  }
+
   return (
-    <motion.div
-      ref={ref}
-      initial={{ opacity: 0, y: 28 }}
-      animate={alreadyInView ? { opacity: 1, y: 0 } : undefined}
-      whileInView={alreadyInView ? undefined : { opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: '-80px' }}
-      transition={
-        alreadyInView ? { duration: 0 } : { duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] }
-      }
-      className={className}
-    >
+    <div ref={ref} className={className}>
       {children}
-    </motion.div>
+    </div>
   );
 }
