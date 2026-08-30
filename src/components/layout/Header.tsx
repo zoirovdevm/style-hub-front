@@ -72,26 +72,30 @@ export function Header({ locale, dict }: HeaderProps) {
     <header className="fixed inset-x-0 top-0 z-50 pt-3 sm:pt-4">
       <div className="container-app">
         <div
-          // ROOT-CAUSE FIX — backdrop-blur removed entirely (per explicit
-          // request, after a staged isolation test confirmed this fixed
-          // pill's backdrop-blur, especially combined with Hero's colorful
-          // glow blobs bleeding up behind it — see page.tsx's `-mt-[68px]`
-          // trick — is what made WebKit (Safari + Chrome-iOS) recompute a
-          // blur sample on every scroll/composite frame, ~30s stall on
-          // iOS first load). A GPU-layer-promotion mitigation
-          // (transform-gpu) was tried first; this instead removes the
-          // backdrop-filter cost outright — cheapest possible fix.
-          // The pill is now a plain, solid/near-solid background instead
-          // of "see-through glass" — opacity bumped up (was 45-85%, now
-          // 94-96%) so it still reads as one solid nav bar rather than
-          // showing page content sharply through it, since there's no blur
-          // left to soften that. Box-shadow simplified to Tailwind's
-          // built-in `shadow-lg` instead of a custom two-layer inset
-          // shadow — same "floating pill" depth cue, less custom CSS.
-          className={`flex h-14 items-center justify-between gap-2 rounded-full border px-4 shadow-lg transition-colors duration-300 sm:h-[68px] sm:px-6 dark:border-white/10 dark:bg-[rgba(14,20,16,0.94)] ${
+          // Per follow-up request: bring a LIGHT glassmorphism blur back on
+          // this pill specifically (opacity was 94-96%, now pushed even
+          // higher, 96-97%, so it reads as solid/legible first and glassy
+          // second). IMPORTANT CONTEXT for whoever touches this next: the
+          // reason backdrop-blur was removed entirely a moment ago is that
+          // it (everywhere on the site, not just here) caused a ~30s iOS
+          // Safari stall on first load — confirmed by removing ALL blur
+          // site-wide and having the user verify iOS + Chrome both became
+          // fully fast. This reintroduces backdrop-blur ONLY on this fixed
+          // pill (and MobileBottomNav's), kept deliberately light (10px,
+          // was 20px) and with NO backdrop-saturate (that rode along
+          // before and adds its own compositing cost on top of the blur),
+          // plus transform-gpu + will-change-transform to promote this
+          // pill to its own GPU compositor layer — the standard mitigation
+          // for iOS backdrop-filter jank on a `fixed` element. This is a
+          // deliberate, requested trade-off, not a full revert: MUST be
+          // re-verified on real iOS Safari (fully quit + reopen, fresh
+          // load) after deploying — if the stall comes back, the fix is to
+          // drop the blur radius further or remove it again, not to
+          // reach for a heavier GPU hack.
+          className={`transform-gpu will-change-transform flex h-14 items-center justify-between gap-2 rounded-full border px-4 shadow-lg backdrop-blur-[10px] transition-colors duration-300 sm:h-[68px] sm:px-6 dark:border-white/10 dark:bg-[rgba(14,20,16,0.96)] ${
             overDark
-              ? 'navbar-on-dark border-white/15 bg-[rgba(20,20,20,0.94)]'
-              : 'border-black/10 bg-white/96'
+              ? 'navbar-on-dark border-white/15 bg-[rgba(20,20,20,0.96)]'
+              : 'border-black/10 bg-white/97'
           }`}
         >
         <Link

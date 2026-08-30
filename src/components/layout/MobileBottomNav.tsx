@@ -75,24 +75,20 @@ export function MobileBottomNav({ locale, dict }: MobileBottomNavProps) {
       style={{ bottom: 'calc(env(safe-area-inset-bottom) + 0.75rem)' }}
     >
       <div
-        // ROOT-CAUSE FIX — backdrop-blur removed entirely (per explicit
-        // request; see Header.tsx for the full investigation notes). A
-        // staged isolation test confirmed the ~30s iOS stall comes from a
-        // fixed, backdrop-blurred pill sitting near Hero's negative-margin
-        // bleed trick, which extends Hero's colored glow blobs up behind
-        // the top header — this bottom nav paid the identical per-frame
-        // WebKit backdrop-filter cost just from being fixed + blurred.
-        // A GPU-layer-promotion mitigation (transform-gpu) was tried
-        // first; this instead removes the backdrop-filter cost outright.
-        // Now a plain, solid/near-solid background instead of "see-through
-        // glass" — opacity bumped up (was 45-85%, now 94-96%) so it still
-        // reads as one solid tab bar without a blur to soften what's
-        // showing through. Box-shadow simplified to Tailwind's built-in
-        // `shadow-lg` instead of a custom two-layer inset shadow.
-        className={`mx-auto grid max-w-md grid-cols-5 rounded-full border px-1 shadow-lg dark:border-white/10 dark:bg-[rgba(14,20,16,0.94)] ${
+        // Per follow-up request: bring a LIGHT glassmorphism blur back on
+        // this pill too, mirroring Header.tsx exactly — see the full
+        // context/warning comment there (backdrop-blur was removed
+        // site-wide because it, not just this pill's own version of it,
+        // caused a ~30s iOS Safari stall; this reintroduces a light 10px
+        // blur here only, no backdrop-saturate, with transform-gpu +
+        // will-change-transform as the compositor-layer mitigation, and
+        // opacity pushed even higher (94-96% -> 96-97%) so it stays
+        // legible first). MUST be re-verified on real iOS Safari after
+        // deploying.
+        className={`transform-gpu will-change-transform mx-auto grid max-w-md grid-cols-5 rounded-full border px-1 shadow-lg backdrop-blur-[10px] dark:border-white/10 dark:bg-[rgba(14,20,16,0.96)] ${
           overDark
-            ? 'navbar-on-dark border-white/15 bg-[rgba(20,20,20,0.94)]'
-            : 'border-black/10 bg-white/96'
+            ? 'navbar-on-dark border-white/15 bg-[rgba(20,20,20,0.96)]'
+            : 'border-black/10 bg-white/97'
         }`}
       >
         {items.map((item) => {
