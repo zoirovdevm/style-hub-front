@@ -6,7 +6,6 @@ import { Heart, ShoppingBag, User2, LogIn } from 'lucide-react';
 import { useQuery } from '@apollo/client';
 import { GET_MY_CART, GET_MY_WISHLIST } from '@/lib/graphql/queries';
 import { useAuthStore } from '@/lib/store/auth-store';
-import { useNavbarContrast } from '@/lib/hooks/use-navbar-contrast';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { ThemeToggle } from './ThemeToggle';
 import type { Locale } from '@/i18n/config';
@@ -32,12 +31,12 @@ export function Header({ locale, dict }: HeaderProps) {
   const cartCount = cartData?.myCart?.reduce((sum: number, i: any) => sum + i.quantity, 0) ?? 0;
   const wishlistCount = wishlistData?.myWishlist?.length ?? 0;
 
-  // Probe near the vertical middle of the pill's own band (roughly 30-40px
-  // from the very top, comfortably inside both the mobile h-14+pt-3 and
-  // desktop h-[68px]+pt-4 sizes) — see use-navbar-contrast.ts for why this
-  // is needed at all (light theme + an unconditionally-dark hero).
-  const overDark = useNavbarContrast(() => 40);
-
+  // The adaptive dark/light contrast switch (useNavbarContrast) that used
+  // to pick this pill's background/text is no longer called here — per
+  // explicit request this pill now always stays a light glass pill (see
+  // its className below and `.navbar-force-light` in globals.css),
+  // regardless of site theme or what's behind it, so there's nothing left
+  // for that hook to decide for this component.
   const navLinks = [
     { href: `/${locale}`, label: dict.nav.home },
     { href: `/${locale}/shop`, label: dict.nav.shop },
@@ -72,31 +71,20 @@ export function Header({ locale, dict }: HeaderProps) {
     <header className="fixed inset-x-0 top-0 z-50 pt-3 sm:pt-4">
       <div className="container-app">
         <div
-          // Per follow-up request: bring a LIGHT glassmorphism blur back on
-          // this pill specifically (opacity was 94-96%, now pushed even
-          // higher, 96-97%, so it reads as solid/legible first and glassy
-          // second). IMPORTANT CONTEXT for whoever touches this next: the
-          // reason backdrop-blur was removed entirely a moment ago is that
-          // it (everywhere on the site, not just here) caused a ~30s iOS
-          // Safari stall on first load — confirmed by removing ALL blur
-          // site-wide and having the user verify iOS + Chrome both became
-          // fully fast. This reintroduces backdrop-blur ONLY on this fixed
-          // pill (and MobileBottomNav's), kept deliberately light (10px,
-          // was 20px) and with NO backdrop-saturate (that rode along
-          // before and adds its own compositing cost on top of the blur),
-          // plus transform-gpu + will-change-transform to promote this
-          // pill to its own GPU compositor layer — the standard mitigation
-          // for iOS backdrop-filter jank on a `fixed` element. This is a
-          // deliberate, requested trade-off, not a full revert: MUST be
-          // re-verified on real iOS Safari (fully quit + reopen, fresh
-          // load) after deploying — if the stall comes back, the fix is to
-          // drop the blur radius further or remove it again, not to
-          // reach for a heavier GPU hack.
-          className={`transform-gpu will-change-transform flex h-14 items-center justify-between gap-2 rounded-full border px-4 shadow-lg backdrop-blur-[10px] transition-colors duration-300 sm:h-[68px] sm:px-6 dark:border-white/10 dark:bg-[rgba(14,20,16,0.96)] ${
-            overDark
-              ? 'navbar-on-dark border-white/15 bg-[rgba(20,20,20,0.96)]'
-              : 'border-black/10 bg-white/97'
-          }`}
+          // Per follow-up request: this pill is now ALWAYS a light/white
+          // glass — regardless of site theme (light/dark) or what's behind
+          // it — instead of switching to a dark pill in dark theme or over
+          // a dark section. bg-white/78 (was 96-97%) so page content shows
+          // through a little, per request, while staying clearly legible.
+          // `navbar-force-light` (see globals.css) forces every child's
+          // text/border back to ink colors even inside dark theme, since
+          // this pill no longer participates in the site-wide dark/light
+          // swap the rest of the page still uses normally. Still keeps the
+          // light 10px backdrop-blur + transform-gpu/will-change-transform
+          // GPU-layer mitigation from the previous pass (unrelated to this
+          // color change) — MUST still be re-verified on real iOS Safari
+          // after deploying, same as before.
+          className="navbar-force-light transform-gpu will-change-transform flex h-14 items-center justify-between gap-2 rounded-full border border-black/10 bg-white/78 px-4 shadow-lg backdrop-blur-[10px] transition-colors duration-300 sm:h-[68px] sm:px-6"
         >
         <Link
           href={`/${locale}`}

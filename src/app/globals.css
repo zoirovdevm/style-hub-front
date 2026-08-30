@@ -186,3 +186,24 @@ h1 {
 .navbar-on-dark [class*="border-ink-900"] {
   border-color: rgba(247, 245, 242, 0.2) !important;
 }
+
+/*
+ * Always-light floating navbar pills (Header.tsx / MobileBottomNav.tsx).
+ * Per explicit request, these two pills no longer follow the site's
+ * light/dark theme at all — they always stay a light glass now (see their
+ * own className: no more `dark:bg-...`/overDark switch), so anything
+ * inside them (nav links, LanguageSwitcher, ThemeToggle icon) needs to
+ * stay ink-colored too, even while `.dark` is active on <html> — otherwise
+ * their existing `dark:text-cream`/`dark:border-cream` utilities would
+ * still flip them to light-on-light and make them unreadable. Same
+ * targeted-override technique as `.navbar-on-dark` above (attribute
+ * substring match + `!important`), just the opposite direction, and
+ * unconditional — both components always carry this class now, no JS
+ * toggle involved.
+ */
+.navbar-force-light [class*="text-cream"]:not([class*="bg-gold"]) {
+  color: #111114 !important;
+}
+.navbar-force-light [class*="border-cream"] {
+  border-color: rgba(17, 17, 20, 0.14) !important;
+}

@@ -6,7 +6,6 @@ import { useQuery } from '@apollo/client';
 import { Home, LayoutGrid, ShoppingBag, Heart, User2 } from 'lucide-react';
 import { GET_MY_CART, GET_MY_WISHLIST } from '@/lib/graphql/queries';
 import { useAuthStore } from '@/lib/store/auth-store';
-import { useNavbarContrast } from '@/lib/hooks/use-navbar-contrast';
 import type { Locale } from '@/i18n/config';
 import type { Dictionary } from '@/i18n/get-dictionary';
 
@@ -29,12 +28,10 @@ export function MobileBottomNav({ locale, dict }: MobileBottomNavProps) {
   const cartCount = cartData?.myCart?.reduce((sum: number, i: any) => sum + i.quantity, 0) ?? 0;
   const wishlistCount = wishlistData?.myWishlist?.length ?? 0;
 
-  // Probe near where this pill actually sits — window.innerHeight isn't
-  // known until the browser runs, so this is a function (re-evaluated on
-  // every scroll/resize check) rather than a plain number. 60px up from
-  // the bottom comfortably lands inside the pill regardless of the exact
-  // safe-area inset on a given device.
-  const overDark = useNavbarContrast(() => (typeof window === 'undefined' ? 0 : window.innerHeight - 60));
+  // The adaptive dark/light contrast switch (useNavbarContrast) that used
+  // to pick this pill's background/text is no longer called here — same
+  // as Header.tsx, this pill now always stays a light glass pill (see
+  // `.navbar-force-light` in globals.css) regardless of site theme.
 
   // The last tab always points to /profile and always reads "Profil" now —
   // it used to switch to an explicit "Kirish" (Login) tab for guests, but
@@ -75,21 +72,15 @@ export function MobileBottomNav({ locale, dict }: MobileBottomNavProps) {
       style={{ bottom: 'calc(env(safe-area-inset-bottom) + 0.75rem)' }}
     >
       <div
-        // Per follow-up request: bring a LIGHT glassmorphism blur back on
-        // this pill too, mirroring Header.tsx exactly — see the full
-        // context/warning comment there (backdrop-blur was removed
-        // site-wide because it, not just this pill's own version of it,
-        // caused a ~30s iOS Safari stall; this reintroduces a light 10px
-        // blur here only, no backdrop-saturate, with transform-gpu +
-        // will-change-transform as the compositor-layer mitigation, and
-        // opacity pushed even higher (94-96% -> 96-97%) so it stays
-        // legible first). MUST be re-verified on real iOS Safari after
-        // deploying.
-        className={`transform-gpu will-change-transform mx-auto grid max-w-md grid-cols-5 rounded-full border px-1 shadow-lg backdrop-blur-[10px] dark:border-white/10 dark:bg-[rgba(14,20,16,0.96)] ${
-          overDark
-            ? 'navbar-on-dark border-white/15 bg-[rgba(20,20,20,0.96)]'
-            : 'border-black/10 bg-white/97'
-        }`}
+        // Per follow-up request: this pill is now ALWAYS a light/white
+        // glass, same change and same reasoning as Header.tsx — see the
+        // comment there. bg-white/78 (was 96-97%) so page content shows
+        // through a little, `navbar-force-light` (globals.css) keeps its
+        // own text/icons/borders ink-colored even in dark theme. Still
+        // keeps the light 10px backdrop-blur + transform-gpu/
+        // will-change-transform GPU-layer mitigation from the previous
+        // pass — MUST still be re-verified on real iOS Safari.
+        className="navbar-force-light transform-gpu will-change-transform mx-auto grid max-w-md grid-cols-5 rounded-full border border-black/10 bg-white/78 px-1 shadow-lg backdrop-blur-[10px]"
       >
         {items.map((item) => {
           const active = isActive(item.href);
