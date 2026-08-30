@@ -72,15 +72,13 @@ export function MobileBottomNav({ locale, dict }: MobileBottomNavProps) {
       style={{ bottom: 'calc(env(safe-area-inset-bottom) + 0.75rem)' }}
     >
       <div
-        // Per follow-up request: this pill is now ALWAYS a light/white
-        // glass, same change and same reasoning as Header.tsx — see the
-        // comment there. bg-white/78 (was 96-97%) so page content shows
-        // through a little, `navbar-force-light` (globals.css) keeps its
-        // own text/icons/borders ink-colored even in dark theme. Still
-        // keeps the light 10px backdrop-blur + transform-gpu/
-        // will-change-transform GPU-layer mitigation from the previous
-        // pass — MUST still be re-verified on real iOS Safari.
-        className="navbar-force-light transform-gpu will-change-transform mx-auto grid max-w-md grid-cols-5 rounded-full border border-black/10 bg-white/78 px-1 shadow-lg backdrop-blur-[10px]"
+        // Per follow-up request: fully solid now, same change and
+        // reasoning as Header.tsx — see the comment there. Opacity 1
+        // (bg-white, no /NN fraction), backdrop-blur + transform-gpu/
+        // will-change-transform removed (pointless once nothing behind is
+        // visible anyway). Still always a light pill regardless of site
+        // theme (`navbar-force-light` in globals.css).
+        className="navbar-force-light mx-auto grid max-w-md grid-cols-5 rounded-full border border-black/10 bg-white px-1 shadow-lg"
       >
         {items.map((item) => {
           const active = isActive(item.href);

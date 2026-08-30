@@ -71,20 +71,16 @@ export function Header({ locale, dict }: HeaderProps) {
     <header className="fixed inset-x-0 top-0 z-50 pt-3 sm:pt-4">
       <div className="container-app">
         <div
-          // Per follow-up request: this pill is now ALWAYS a light/white
-          // glass — regardless of site theme (light/dark) or what's behind
-          // it — instead of switching to a dark pill in dark theme or over
-          // a dark section. bg-white/78 (was 96-97%) so page content shows
-          // through a little, per request, while staying clearly legible.
-          // `navbar-force-light` (see globals.css) forces every child's
-          // text/border back to ink colors even inside dark theme, since
-          // this pill no longer participates in the site-wide dark/light
-          // swap the rest of the page still uses normally. Still keeps the
-          // light 10px backdrop-blur + transform-gpu/will-change-transform
-          // GPU-layer mitigation from the previous pass (unrelated to this
-          // color change) — MUST still be re-verified on real iOS Safari
-          // after deploying, same as before.
-          className="navbar-force-light transform-gpu will-change-transform flex h-14 items-center justify-between gap-2 rounded-full border border-black/10 bg-white/78 px-4 shadow-lg backdrop-blur-[10px] transition-colors duration-300 sm:h-[68px] sm:px-6"
+          // Per follow-up request: fully solid now — opacity 1 (bg-white,
+          // no /NN fraction), no translucency/"hira" (hazy) look at all.
+          // backdrop-blur + transform-gpu/will-change-transform removed
+          // too: with a 100%-opaque background nothing behind this pill is
+          // visible anyway, so the blur was doing nothing visually while
+          // still costing WebKit a compositing pass — pointless cost, drop
+          // it. Still always a light pill regardless of site theme (see
+          // `navbar-force-light` in globals.css for why its own children's
+          // text/borders stay ink-colored even in dark theme).
+          className="navbar-force-light flex h-14 items-center justify-between gap-2 rounded-full border border-black/10 bg-white shadow-lg transition-colors duration-300 px-4 sm:h-[68px] sm:px-6"
         >
         <Link
           href={`/${locale}`}
