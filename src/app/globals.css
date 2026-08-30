@@ -188,22 +188,53 @@ h1 {
 }
 
 /*
- * Always-light floating navbar pills (Header.tsx / MobileBottomNav.tsx).
- * Per explicit request, these two pills no longer follow the site's
- * light/dark theme at all — they always stay a light glass now (see their
- * own className: no more `dark:bg-...`/overDark switch), so anything
- * inside them (nav links, LanguageSwitcher, ThemeToggle icon) needs to
- * stay ink-colored too, even while `.dark` is active on <html> — otherwise
- * their existing `dark:text-cream`/`dark:border-cream` utilities would
- * still flip them to light-on-light and make them unreadable. Same
- * targeted-override technique as `.navbar-on-dark` above (attribute
- * substring match + `!important`), just the opposite direction, and
- * unconditional — both components always carry this class now, no JS
- * toggle involved.
+ * Fix for a regression: a previous pass added `.navbar-force-light` to
+ * make Header/MobileBottomNav always a light pill regardless of theme —
+ * but the actual request was for them to follow the SITE theme (white pill
+ * in light mode, black pill in dark mode), not to ignore theme entirely.
+ * That class (and its use in Header.tsx/MobileBottomNav.tsx) is removed;
+ * both pills now use plain `dark:` Tailwind variants directly in their
+ * className, same as every other themed element on the site, so they
+ * switch automatically with `.dark` on <html> with no JS/CSS override
+ * needed. `.navbar-on-dark` above is a separate, still-present mechanism
+ * (JS-driven, for a pill sitting over an unconditionally-dark section
+ * regardless of site theme) — currently unused since neither component
+ * calls useNavbarContrast right now, left in place rather than deleted.
  */
-.navbar-force-light [class*="text-cream"]:not([class*="bg-gold"]) {
-  color: #111114 !important;
+
+/*
+ * Reveal.tsx's initial-load entrance animation — a plain CSS keyframe
+ * (opacity + transform: translateY only, both compositor-only properties)
+ * instead of a JS-driven one, specifically so it can't reintroduce the
+ * bug the framer-motion version caused (see Reveal.tsx's own comment):
+ * content isn't hidden by React/JS state, so it can never get stuck
+ * invisible if hydration is slow on a strained connection — the browser's
+ * own CSS animation engine starts playing this the moment the element is
+ * painted, completely independent of when (or whether) React hydrates.
+ * `both` fill-mode holds the 0% (invisible, offset) state from first
+ * paint through the animation-delay, then holds the 100% (visible, in
+ * place) state forever after — no JS needed at any point, and no re-run
+ * risk on re-render. Kept deliberately light: a small 16px vertical
+ * offset and only `transform`/`opacity`, both handled entirely on the
+ * compositor thread by every browser including WebKit/iOS Safari, unlike
+ * the `backdrop-filter` cost this whole investigation was actually about
+ * — a normal `transform: translateY()` animation was never the problem.
+ */
+@keyframes reveal-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
-.navbar-force-light [class*="border-cream"] {
-  border-color: rgba(17, 17, 20, 0.14) !important;
+.reveal-fade-up {
+  animation: reveal-fade-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal-fade-up {
+    animation: none;
+  }
 }

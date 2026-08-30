@@ -28,10 +28,10 @@ export function MobileBottomNav({ locale, dict }: MobileBottomNavProps) {
   const cartCount = cartData?.myCart?.reduce((sum: number, i: any) => sum + i.quantity, 0) ?? 0;
   const wishlistCount = wishlistData?.myWishlist?.length ?? 0;
 
-  // The adaptive dark/light contrast switch (useNavbarContrast) that used
-  // to pick this pill's background/text is no longer called here — same
-  // as Header.tsx, this pill now always stays a light glass pill (see
-  // `.navbar-force-light` in globals.css) regardless of site theme.
+  // Per explicit request, this pill's colors follow the SITE THEME only
+  // (Tailwind `dark:` variant), same as Header.tsx — see the comment on
+  // its pill for the full reasoning. The old JS-driven useNavbarContrast
+  // switch is not used here.
 
   // The last tab always points to /profile and always reads "Profil" now —
   // it used to switch to an explicit "Kirish" (Login) tab for guests, but
@@ -72,13 +72,13 @@ export function MobileBottomNav({ locale, dict }: MobileBottomNavProps) {
       style={{ bottom: 'calc(env(safe-area-inset-bottom) + 0.75rem)' }}
     >
       <div
-        // Per follow-up request: fully solid now, same change and
-        // reasoning as Header.tsx — see the comment there. Opacity 1
-        // (bg-white, no /NN fraction), backdrop-blur + transform-gpu/
-        // will-change-transform removed (pointless once nothing behind is
-        // visible anyway). Still always a light pill regardless of site
-        // theme (`navbar-force-light` in globals.css).
-        className="navbar-force-light mx-auto grid max-w-md grid-cols-5 rounded-full border border-black/10 bg-white px-1 shadow-lg"
+        // Per explicit theme spec, same change and reasoning as
+        // Header.tsx — see the comment there. Light theme = white bg +
+        // ink text/icons, dark theme = black bg + cream text/icons,
+        // automatic via `.dark`. 92% opacity, light 8px backdrop-blur +
+        // transform-gpu/will-change-transform GPU-layer mitigation — MUST
+        // be re-verified on real iOS Safari after deploying.
+        className="transform-gpu will-change-transform mx-auto grid max-w-md grid-cols-5 rounded-full border border-black/10 bg-white/92 px-1 shadow-lg backdrop-blur-[8px] dark:border-white/10 dark:bg-[rgba(10,10,12,0.92)]"
       >
         {items.map((item) => {
           const active = isActive(item.href);

@@ -60,6 +60,16 @@ export function Reveal({
   // instance would not work here — framer-motion only reads `initial` at
   // that instance's first mount, so swapping component type is what
   // makes the fresh hidden-state apply.)
+  //
+  // Per follow-up request: the plain <div> branch below (server render +
+  // "already in view at mount") now plays a first-load slide-up-and-fade
+  // entrance too, via the `reveal-fade-up` CSS keyframe (globals.css) —
+  // NOT framer-motion, specifically so this can't reintroduce the bug
+  // above: a CSS `animation` starts playing the instant the browser paints
+  // the element, regardless of whether/when React ever hydrates, so
+  // content can never get stuck invisible on a slow load the way the old
+  // always-on <motion.div> could. `animationDelay` reuses the same
+  // stagger value the below-fold branch already gets via `delay`.
   if (alreadyInView === false) {
     return (
       <motion.div
@@ -75,7 +85,11 @@ export function Reveal({
   }
 
   return (
-    <div ref={ref} className={className}>
+    <div
+      ref={ref}
+      className={className ? `${className} reveal-fade-up` : 'reveal-fade-up'}
+      style={delay ? { animationDelay: `${delay}s` } : undefined}
+    >
       {children}
     </div>
   );

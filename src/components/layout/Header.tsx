@@ -31,12 +31,13 @@ export function Header({ locale, dict }: HeaderProps) {
   const cartCount = cartData?.myCart?.reduce((sum: number, i: any) => sum + i.quantity, 0) ?? 0;
   const wishlistCount = wishlistData?.myWishlist?.length ?? 0;
 
-  // The adaptive dark/light contrast switch (useNavbarContrast) that used
-  // to pick this pill's background/text is no longer called here — per
-  // explicit request this pill now always stays a light glass pill (see
-  // its className below and `.navbar-force-light` in globals.css),
-  // regardless of site theme or what's behind it, so there's nothing left
-  // for that hook to decide for this component.
+  // Per explicit request, this pill's colors now follow the SITE THEME
+  // only (Tailwind's `dark:` variant, tied to the `.dark` class on <html>)
+  // — light theme = white bg + ink text, dark theme = black bg + cream
+  // text — not the old JS-driven "what's actually behind the pill right
+  // now" contrast switch (useNavbarContrast), which is no longer called
+  // here. Every nav item below already carries its own `dark:text-cream`-
+  // style pairing, so theme changes propagate automatically with no JS.
   const navLinks = [
     { href: `/${locale}`, label: dict.nav.home },
     { href: `/${locale}/shop`, label: dict.nav.shop },
@@ -71,16 +72,21 @@ export function Header({ locale, dict }: HeaderProps) {
     <header className="fixed inset-x-0 top-0 z-50 pt-3 sm:pt-4">
       <div className="container-app">
         <div
-          // Per follow-up request: fully solid now — opacity 1 (bg-white,
-          // no /NN fraction), no translucency/"hira" (hazy) look at all.
-          // backdrop-blur + transform-gpu/will-change-transform removed
-          // too: with a 100%-opaque background nothing behind this pill is
-          // visible anyway, so the blur was doing nothing visually while
-          // still costing WebKit a compositing pass — pointless cost, drop
-          // it. Still always a light pill regardless of site theme (see
-          // `navbar-force-light` in globals.css for why its own children's
-          // text/borders stay ink-colored even in dark theme).
-          className="navbar-force-light flex h-14 items-center justify-between gap-2 rounded-full border border-black/10 bg-white shadow-lg transition-colors duration-300 px-4 sm:h-[68px] sm:px-6"
+          // Per explicit theme spec: light theme = white bg + ink text/
+          // icons; dark theme = black bg + cream text/icons; switches
+          // automatically with the site's `.dark` class (no JS). Opacity
+          // 92% (not 100%) — high enough that page content behind doesn't
+          // show through noticeably, while keeping a touch of glass rather
+          // than a flat, dead-solid bar. A light 8px backdrop-blur is back
+          // too (kept deliberately small, no backdrop-saturate) with
+          // transform-gpu + will-change-transform as the GPU-compositor-
+          // layer mitigation for iOS backdrop-filter cost — this is a
+          // meaningfully lighter setup than the 20px/heavy-blur version
+          // that originally caused the ~30s iOS Safari stall, but it IS
+          // real backdrop-blur again: re-verify on real iOS Safari after
+          // deploying, same as every earlier blur change in this file's
+          // history.
+          className="transform-gpu will-change-transform flex h-14 items-center justify-between gap-2 rounded-full border border-black/10 bg-white/92 px-4 shadow-lg backdrop-blur-[8px] transition-colors duration-300 sm:h-[68px] sm:px-6 dark:border-white/10 dark:bg-[rgba(10,10,12,0.92)]"
         >
         <Link
           href={`/${locale}`}
