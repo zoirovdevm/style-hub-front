@@ -78,7 +78,7 @@ export function MobileBottomNav({ locale, dict }: MobileBottomNavProps) {
         // automatic via `.dark`. 92% opacity, light 8px backdrop-blur +
         // transform-gpu/will-change-transform GPU-layer mitigation — MUST
         // be re-verified on real iOS Safari after deploying.
-        className="transform-gpu will-change-transform mx-auto grid max-w-md grid-cols-5 rounded-full border border-black/10 bg-white/92 px-1 shadow-lg backdrop-blur-[8px] dark:border-white/10 dark:bg-[rgba(10,10,12,0.92)]"
+        className="transform-gpu will-change-transform mx-auto grid max-w-md grid-cols-5 rounded-full border border-black/10 bg-white/92 px-1 shadow-lg backdrop-blur-[8px] dark:border-white/10 dark:bg-[rgba(10,10,12,0.92)] bg-white"
       >
         {items.map((item) => {
           const active = isActive(item.href);

@@ -86,7 +86,7 @@ export function Header({ locale, dict }: HeaderProps) {
           // real backdrop-blur again: re-verify on real iOS Safari after
           // deploying, same as every earlier blur change in this file's
           // history.
-          className="transform-gpu will-change-transform flex h-14 items-center justify-between gap-2 rounded-full border border-black/10 bg-white/92 px-4 shadow-lg backdrop-blur-[8px] transition-colors duration-300 sm:h-[68px] sm:px-6 dark:border-white/10 dark:bg-[rgba(10,10,12,0.92)]"
+          className="transform-gpu will-change-transform flex h-14 items-center justify-between gap-2 rounded-full border border-black/10 bg-white/92 px-4 shadow-lg backdrop-blur-[8px] transition-colors duration-300 sm:h-[68px] sm:px-6 dark:border-white/10 dark:bg-[rgba(10,10,12,0.92)] bg-white"
         >
         <Link
           href={`/${locale}`}
