@@ -237,8 +237,20 @@ export function QuickBuyModal({ product, locale, dict, onClose }: QuickBuyModalP
     setErrorMessage(null);
     setSubmitting(true);
     try {
-      await addToCart({ variables: { input: { productId: product.id, size, color, quantity } } });
-      router.push(`/${locale}/checkout`);
+      // Pushing to plain /checkout (no `?items=`) made checkout fall back to
+      // its "nothing selected -> show the WHOLE cart" default — so a "1-click
+      // buy" on a product while something else already sat in the cart sent
+      // the buyer to a payment page charging for both, not just the item
+      // they just picked. addToCart's response carries the resulting cart
+      // row's id (existing row if this exact product/size/color was already
+      // in the cart, a new one otherwise) — passing that as `?items=`
+      // scopes checkout to only that single row, same mechanism the cart
+      // page's own "checkout selected items" checkboxes already use.
+      const { data } = await addToCart({ variables: { input: { productId: product.id, size, color, quantity } } });
+      const cartItemId = data?.addToCart?.id;
+      router.push(
+        cartItemId ? `/${locale}/checkout?items=${encodeURIComponent(cartItemId)}` : `/${locale}/checkout`,
+      );
     } catch (error) {
       setErrorMessage(getFriendlyErrorMessage(error));
       setSubmitting(false);

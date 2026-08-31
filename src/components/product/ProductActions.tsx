@@ -135,8 +135,18 @@ export function ProductActions({ productId, sizes, colors, stock, variants = [],
     }
     setErrorMessage(null);
     try {
-      await addToCart({ variables: { input: { productId, size, color, quantity } } });
-      router.push(`/${locale}/checkout`);
+      // Same fix as QuickBuyModal's "1-click buy": pushing to plain
+      // /checkout fell back to its "nothing selected -> whole cart"
+      // default, so "Buy now" on a product while something else already
+      // sat in the cart charged for both instead of just this one. Scoping
+      // to the cart row addToCart just returned/updated (via `?items=`)
+      // keeps it to only this item, same as the cart page's own
+      // checkout-selected-items checkboxes.
+      const { data } = await addToCart({ variables: { input: { productId, size, color, quantity } } });
+      const cartItemId = data?.addToCart?.id;
+      router.push(
+        cartItemId ? `/${locale}/checkout?items=${encodeURIComponent(cartItemId)}` : `/${locale}/checkout`,
+      );
     } catch (error) {
       setErrorMessage(getFriendlyErrorMessage(error));
     }
