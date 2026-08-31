@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { useQuery } from '@apollo/client';
-import { Package } from 'lucide-react';
+import { Check, Clock, Package, X } from 'lucide-react';
 import { GET_MY_ORDERS } from '@/lib/graphql/queries';
 import { useAuthStore } from '@/lib/store/auth-store';
 import { formatPrice, formatDate } from '@/lib/utils/format';
@@ -77,14 +77,27 @@ export default function OrdersPage({ params }: { params: { locale: Locale } }) {
                   <p className="font-mono text-sm font-bold">{order.orderNumber}</p>
                 </div>
                 <div className="flex items-center gap-2">
+                  {/* Explicit checkmark/X/clock icon, not just color — a
+                      clear visual, not just a colored label, for whichever
+                      of the three states admin last set (or a review still
+                      pending) this order is in. */}
                   <span
-                    className={`rounded-full px-3 py-1 text-xs font-bold ${
+                    className={`flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold ${
                       order.paymentStatus === 'PAID'
                         ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
-                        : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
+                        : order.paymentStatus === 'FAILED'
+                          ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+                          : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
                     }`}
                   >
-                    {order.paymentStatus === 'PAID' ? dict.admin.paid : dict.admin.unpaid}
+                    {order.paymentStatus === 'PAID' && <Check size={12} strokeWidth={3} />}
+                    {order.paymentStatus === 'FAILED' && <X size={12} strokeWidth={3} />}
+                    {order.paymentStatus === 'PENDING' && <Clock size={12} strokeWidth={3} />}
+                    {order.paymentStatus === 'PAID'
+                      ? dict.admin.paid
+                      : order.paymentStatus === 'FAILED'
+                        ? dict.admin.rejected
+                        : dict.admin.unpaid}
                   </span>
                   <OrderStatusBadge status={order.status} dict={dict} />
                 </div>

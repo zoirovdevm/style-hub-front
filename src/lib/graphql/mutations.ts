@@ -362,3 +362,17 @@ export const SET_ORDER_PAYMENT_STATUS = gql`
     }
   }
 `;
+
+// Distinct from SET_ORDER_PAYMENT_STATUS(paid: false) — that just means
+// "not (yet) paid," the state every new order already starts in. This is
+// for actively turning down a receipt the admin looked at, which the buyer
+// should see as a clear rejected state (see order.service.ts's
+// rejectPayment for the full reasoning).
+export const REJECT_ORDER_PAYMENT = gql`
+  mutation RejectOrderPayment($orderId: ID!) {
+    rejectOrderPayment(orderId: $orderId) {
+      id
+      paymentStatus
+    }
+  }
+`;

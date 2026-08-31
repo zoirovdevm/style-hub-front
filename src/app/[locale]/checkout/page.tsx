@@ -4,8 +4,8 @@ import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { useMutation, useQuery } from '@apollo/client';
-import { Copy, Send } from 'lucide-react';
-import { GET_MY_CART } from '@/lib/graphql/queries';
+import { Check, Copy, Send, X } from 'lucide-react';
+import { GET_MY_CART, GET_MY_ORDERS } from '@/lib/graphql/queries';
 import { CREATE_ORDER } from '@/lib/graphql/mutations';
 import { useAuthStore } from '@/lib/store/auth-store';
 import { formatPrice } from '@/lib/utils/format';
@@ -88,6 +88,22 @@ function CheckoutPageInner({ params }: { params: { locale: Locale } }) {
   );
 
   const { data, loading: cartLoading } = useQuery(GET_MY_CART, { skip: !user });
+
+  // Once an order is placed, keep polling the buyer's own orders so this
+  // screen can reflect what actually happened to the receipt (admin
+  // confirms/rejects it, on the site or via the Telegram bot) — without
+  // this, returning to the site after sending a payment kept showing the
+  // exact same "here's the card number, send your receipt" screen forever,
+  // no matter what the admin had already done with it. `network-only` +
+  // polling (not the cache) so a status the admin just changed always shows
+  // up, same reasoning as the /orders page's own query.
+  const { data: ordersData } = useQuery(GET_MY_ORDERS, {
+    skip: !placedOrder,
+    pollInterval: 4000,
+    fetchPolicy: 'network-only',
+  });
+  const livePaymentStatus: 'PENDING' | 'PAID' | 'FAILED' =
+    ordersData?.myOrders?.find((o: any) => o.id === placedOrder?.id)?.paymentStatus ?? 'PENDING';
   const allCartItems = data?.myCart ?? [];
   const items = selectedItemIds
     ? allCartItems.filter((i: any) => selectedItemIds.includes(i.id))
@@ -269,11 +285,67 @@ function CheckoutPageInner({ params }: { params: { locale: Locale } }) {
       })();
 
   if (placedOrder) {
+    const goToOrdersButton = (
+      <button
+        onClick={() => {
+          try {
+            sessionStorage.removeItem(PLACED_ORDER_STORAGE_KEY);
+          } catch {
+            // sessionStorage can throw in some privacy modes — safe to ignore.
+          }
+          router.push(`/${locale}/orders`);
+        }}
+        className="btn-outline w-full"
+      >
+        {dict.checkout.goToOrders}
+      </button>
+    );
+
+    // Confirmed — the card/Telegram instructions are no longer needed, so
+    // this replaces them entirely with a plain success state instead of
+    // leaving a "still waiting for payment" screen up after payment is
+    // already done.
+    if (livePaymentStatus === 'PAID') {
+      return (
+        <div className="container-app py-20">
+          <Reveal>
+            <div className="mx-auto max-w-md card-surface space-y-5 p-8 text-center">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-300">
+                <Check size={28} strokeWidth={3} />
+              </div>
+              <h1 className="font-display text-2xl font-medium">{dict.checkout.paymentConfirmedTitle}</h1>
+              <p className="text-sm text-ink-900/60 dark:text-cream/60">{dict.checkout.paymentConfirmedBody}</p>
+              <p className="text-xs text-ink-900/50">
+                {dict.checkout.orderPlacedSubtitle}: <span className="font-mono font-semibold">{placedOrder.orderNumber}</span>
+              </p>
+              {goToOrdersButton}
+            </div>
+          </Reveal>
+        </div>
+      );
+    }
+
+    // Rejected — keeps the card/Telegram instructions below the rejection
+    // notice (rather than replacing them) so the buyer can immediately
+    // retry with a corrected screenshot without hunting for the card number
+    // again.
+    const rejected = livePaymentStatus === 'FAILED';
+
     return (
       <div className="container-app py-20">
         <Reveal>
           <div className="mx-auto max-w-md card-surface space-y-5 p-8 text-center">
-            <h1 className="font-display text-2xl font-medium">{dict.checkout.orderPlacedTitle}</h1>
+            {rejected ? (
+              <>
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-300">
+                  <X size={28} strokeWidth={3} />
+                </div>
+                <h1 className="font-display text-2xl font-medium">{dict.checkout.paymentRejectedTitle}</h1>
+                <p className="text-sm text-ink-900/60 dark:text-cream/60">{dict.checkout.paymentRejectedBody}</p>
+              </>
+            ) : (
+              <h1 className="font-display text-2xl font-medium">{dict.checkout.orderPlacedTitle}</h1>
+            )}
             <p className="text-xs text-ink-900/50">
               {dict.checkout.orderPlacedSubtitle}: <span className="font-mono font-semibold">{placedOrder.orderNumber}</span>
             </p>
@@ -302,19 +374,7 @@ function CheckoutPageInner({ params }: { params: { locale: Locale } }) {
               </a>
             </div>
 
-            <button
-              onClick={() => {
-                try {
-                  sessionStorage.removeItem(PLACED_ORDER_STORAGE_KEY);
-                } catch {
-                  // sessionStorage can throw in some privacy modes — safe to ignore.
-                }
-                router.push(`/${locale}/orders`);
-              }}
-              className="btn-outline w-full"
-            >
-              {dict.checkout.goToOrders}
-            </button>
+            {goToOrdersButton}
           </div>
         </Reveal>
       </div>

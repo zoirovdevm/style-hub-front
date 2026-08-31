@@ -146,7 +146,11 @@
     "telegramReceiptMessage": "To'lov chekini (skrinshotni) shu yerga biriktiraman.",
     "cardHolder": "Karta egasi",
     "sendReceiptTelegram": "Chekni Telegram'ga yuborish",
-    "goToOrders": "Buyurtmalarimga o'tish"
+    "goToOrders": "Buyurtmalarimga o'tish",
+    "paymentConfirmedTitle": "To'lov tasdiqlandi!",
+    "paymentConfirmedBody": "Buyurtmangiz uchun to'lov qabul qilindi. Tez orada yetkazib beramiz.",
+    "paymentRejectedTitle": "To'lov rad etildi",
+    "paymentRejectedBody": "Yuborgan chekingiz tasdiqlanmadi. Iltimos, to'lovni qaytadan amalga oshirib, to'g'ri skrinshotni pastdagi tugma orqali qayta yuboring."
   },
   "orders": {
     "title": "Buyurtmalarim",
@@ -321,6 +325,9 @@
     "paymentStatus": "To'lov",
     "paid": "To'landi",
     "unpaid": "To'lanmadi",
+    "rejected": "Rad etilgan",
+    "markPaid": "Tasdiqlash",
+    "rejectPayment": "Rad etish",
     "customer": "Xaridor",
     "phone": "Telefon",
     "address": "Manzil",

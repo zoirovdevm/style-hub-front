@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation } from '@apollo/client';
-import { AlertCircle, Search } from 'lucide-react';
+import { AlertCircle, Check, Search, X } from 'lucide-react';
 import { GET_ALL_ORDERS } from '@/lib/graphql/queries';
-import { UPDATE_ORDER_STATUS, SET_ORDER_PAYMENT_STATUS } from '@/lib/graphql/mutations';
+import { UPDATE_ORDER_STATUS, SET_ORDER_PAYMENT_STATUS, REJECT_ORDER_PAYMENT } from '@/lib/graphql/mutations';
 import { formatPrice, formatDate } from '@/lib/utils/format';
 import { OrderStatusBadge } from '@/components/ui/OrderStatusBadge';
 import { getFriendlyErrorMessage } from '@/lib/utils/graphql-error';
@@ -65,6 +65,12 @@ export default function AdminOrdersPage({ params }: { params: { locale: Locale }
   // manually (Telegram receipt check) and shouldn't be conflated with the
   // fulfillment stage dropdown below.
   const [setPaymentStatus] = useMutation(SET_ORDER_PAYMENT_STATUS);
+  // Separate mutation (not just setPaymentStatus(false)) — rejecting a
+  // receipt is a distinct, actively-reviewed state (PaymentStatus.FAILED),
+  // not the same as "nobody has looked at this yet" (PENDING). This is
+  // also what makes the buyer's own account/Telegram get a clear ❌
+  // notification instead of nothing happening.
+  const [rejectPayment] = useMutation(REJECT_ORDER_PAYMENT);
 
   const orders = data?.allOrders?.list ?? [];
 
@@ -119,6 +125,23 @@ export default function AdminOrdersPage({ params }: { params: { locale: Locale }
             id: orderId,
             paymentStatus: currentlyPaid ? 'PENDING' : 'PAID',
           },
+        },
+      });
+    } catch (error) {
+      setRowError({ orderId, message: getFriendlyErrorMessage(error) });
+    } finally {
+      setUpdatingId(null);
+    }
+  }
+
+  async function handleRejectPayment(orderId: string) {
+    setRowError(null);
+    setUpdatingId(orderId);
+    try {
+      await rejectPayment({
+        variables: { orderId },
+        optimisticResponse: {
+          rejectOrderPayment: { __typename: 'Order', id: orderId, paymentStatus: 'FAILED' },
         },
       });
     } catch (error) {
@@ -221,18 +244,59 @@ export default function AdminOrdersPage({ params }: { params: { locale: Locale }
                   <td className="px-5 py-4 text-ink-900/60">{formatDate(order.createdAt, locale)}</td>
                   <td className="px-5 py-4 font-semibold">{formatPrice(order.totalAmount, locale)}</td>
                   <td className="px-5 py-4">
-                    <button
-                      onClick={() => handleTogglePaid(order.id, order.paymentStatus === 'PAID')}
-                      disabled={updatingId === order.id}
-                      className={`rounded-full px-3 py-1 text-xs font-bold transition-colors disabled:opacity-50 ${
-                        order.paymentStatus === 'PAID'
-                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
-                          : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
-                      }`}
-                      title={order.paymentStatus === 'PAID' ? dict.admin.unpaid : dict.admin.paid}
-                    >
-                      {order.paymentStatus === 'PAID' ? dict.admin.paid : dict.admin.unpaid}
-                    </button>
+                    <div className="flex flex-col items-start gap-1.5">
+                      <span
+                        className={`flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold ${
+                          order.paymentStatus === 'PAID'
+                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+                            : order.paymentStatus === 'FAILED'
+                              ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+                              : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
+                        }`}
+                      >
+                        {order.paymentStatus === 'PAID' && <Check size={12} strokeWidth={3} />}
+                        {order.paymentStatus === 'FAILED' && <X size={12} strokeWidth={3} />}
+                        {order.paymentStatus === 'PAID'
+                          ? dict.admin.paid
+                          : order.paymentStatus === 'FAILED'
+                            ? dict.admin.rejected
+                            : dict.admin.unpaid}
+                      </span>
+
+                      {/* Context-sensitive actions: a PENDING (never-reviewed)
+                          or FAILED (rejected, buyer may have resent a
+                          corrected receipt) order can be confirmed or
+                          rejected; a PAID order can only be walked back to
+                          unpaid (e.g. a mistaken confirm) — rejecting an
+                          already-paid order isn't a meaningful action (the
+                          backend refuses it too, see rejectPayment). */}
+                      {order.paymentStatus === 'PAID' ? (
+                        <button
+                          onClick={() => handleTogglePaid(order.id, true)}
+                          disabled={updatingId === order.id}
+                          className="text-[11px] font-semibold text-ink-900/40 underline decoration-dotted hover:text-ink-950 disabled:opacity-50 dark:text-cream/40 dark:hover:text-cream"
+                        >
+                          {dict.admin.unpaid}
+                        </button>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleTogglePaid(order.id, false)}
+                            disabled={updatingId === order.id}
+                            className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 hover:text-emerald-700 disabled:opacity-50 dark:text-emerald-400"
+                          >
+                            <Check size={12} strokeWidth={3} /> {dict.admin.markPaid}
+                          </button>
+                          <button
+                            onClick={() => handleRejectPayment(order.id)}
+                            disabled={updatingId === order.id || order.paymentStatus === 'FAILED'}
+                            className="flex items-center gap-1 text-[11px] font-bold text-red-600 hover:text-red-700 disabled:opacity-30 dark:text-red-400"
+                          >
+                            <X size={12} strokeWidth={3} /> {dict.admin.rejectPayment}
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </td>
                   <td className="px-5 py-4">
                     <OrderStatusBadge status={order.status} dict={dict} />

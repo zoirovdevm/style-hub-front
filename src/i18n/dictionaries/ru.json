@@ -146,7 +146,11 @@
     "telegramReceiptMessage": "Прикрепляю чек (скриншот) оплаты сюда.",
     "cardHolder": "Владелец карты",
     "sendReceiptTelegram": "Отправить чек в Telegram",
-    "goToOrders": "Перейти к моим заказам"
+    "goToOrders": "Перейти к моим заказам",
+    "paymentConfirmedTitle": "Оплата подтверждена!",
+    "paymentConfirmedBody": "Оплата по вашему заказу принята. Скоро доставим.",
+    "paymentRejectedTitle": "Оплата отклонена",
+    "paymentRejectedBody": "Отправленный вами чек не подтверждён. Пожалуйста, повторите оплату и отправьте корректный скриншот ещё раз через кнопку ниже."
   },
   "orders": {
     "title": "Мои заказы",
@@ -321,6 +325,9 @@
     "paymentStatus": "Оплата",
     "paid": "Оплачено",
     "unpaid": "Не оплачено",
+    "rejected": "Отклонено",
+    "markPaid": "Подтвердить",
+    "rejectPayment": "Отклонить",
     "customer": "Клиент",
     "phone": "Телефон",
     "address": "Адрес",
