@@ -8,6 +8,7 @@ import { useMutation } from '@apollo/client';
 import { AnimatePresence, motion } from 'framer-motion';
 import { SEND_REGISTER_OTP, VERIFY_REGISTER_OTP, REGISTER } from '@/lib/graphql/mutations';
 import { useAuthStore } from '@/lib/store/auth-store';
+import { useRegisterWizardStore, type RegisterDetailsForm } from '@/lib/store/register-wizard-store';
 import { getFriendlyErrorMessage } from '@/lib/utils/graphql-error';
 import { PasswordInput } from '@/components/ui/PasswordInput';
 import { PhoneInput } from '@/components/ui/PhoneInput';
@@ -16,16 +17,7 @@ import type { Locale } from '@/i18n/config';
 import uzDict from '@/i18n/dictionaries/uz.json';
 import ruDict from '@/i18n/dictionaries/ru.json';
 
-type Step = 'phone' | 'otp' | 'details' | 'confirm';
-
-interface DetailsForm {
-  firstName: string;
-  lastName: string;
-  email: string;
-  password: string;
-  confirmPassword: string;
-  address: string;
-}
+type DetailsForm = RegisterDetailsForm;
 
 const OTP_RESEND_COOLDOWN_S = 60;
 
@@ -39,20 +31,34 @@ export default function RegisterPage({ params }: { params: { locale: Locale } })
   const router = useRouter();
   const setSession = useAuthStore((s) => s.setSession);
 
-  const [step, setStep] = useState<Step>('phone');
-  const [phoneDigits, setPhoneDigits] = useState('');
+  // step/phoneDigits/otpCode/details deliberately do NOT live in useState —
+  // they're read from a small Zustand store (register-wizard-store.ts) so
+  // they survive the full component remount Next.js triggers when the
+  // `[locale]` route segment changes (e.g. switching uz/ru mid-registration
+  // used to silently bounce the user back to the phone step and drop
+  // whatever they'd already typed/received). See that file for the full
+  // explanation. Everything else below (errors, cooldowns, modal
+  // visibility) is fine to lose on a remount, so it stays as useState.
+  const step = useRegisterWizardStore((s) => s.step);
+  const setStep = useRegisterWizardStore((s) => s.setStep);
+  const phoneDigits = useRegisterWizardStore((s) => s.phoneDigits);
+  const setPhoneDigits = useRegisterWizardStore((s) => s.setPhoneDigits);
+  const otpCode = useRegisterWizardStore((s) => s.otpCode);
+  const setOtpCode = useRegisterWizardStore((s) => s.setOtpCode);
+  const details = useRegisterWizardStore((s) => s.details);
+  const setDetails = useRegisterWizardStore((s) => s.setDetails);
+  const resetWizard = useRegisterWizardStore((s) => s.reset);
+
   const [phoneError, setPhoneError] = useState<string | null>(null);
   // "Did you type this right?" confirmation modal shown before the SMS is
   // actually sent — catches a mistyped digit before it costs a real SMS
   // send / burns the resend cooldown on the wrong number.
   const [showPhoneConfirm, setShowPhoneConfirm] = useState(false);
 
-  const [otpCode, setOtpCode] = useState('');
   const [otpError, setOtpError] = useState<string | null>(null);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [resendMessage, setResendMessage] = useState<string | null>(null);
 
-  const [details, setDetails] = useState<DetailsForm | null>(null);
   const [confirmError, setConfirmError] = useState<string | null>(null);
   const [showWelcome, setShowWelcome] = useState(false);
 
@@ -184,6 +190,7 @@ export default function RegisterPage({ params }: { params: { locale: Locale } })
       });
       setSession(data.register);
       setShowWelcome(true);
+      resetWizard();
       setTimeout(() => {
         router.push(data.register.user.role === 'ADMIN' ? `/${locale}/admin` : `/${locale}`);
       }, 2000);
@@ -192,6 +199,7 @@ export default function RegisterPage({ params }: { params: { locale: Locale } })
         const mockPayload = mockAuthPayload({ email: details.email, firstName: details.firstName, lastName: details.lastName });
         setSession(mockPayload);
         setShowWelcome(true);
+        resetWizard();
         setTimeout(() => {
           router.push(`/${locale}`);
         }, 2000);

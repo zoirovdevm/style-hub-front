@@ -11,7 +11,21 @@ export function LanguageSwitcher({ locale }: { locale: Locale }) {
     if (next === locale) return;
     const segments = pathname.split('/');
     segments[1] = next;
-    router.push(segments.join('/') || `/${next}`);
+    // usePathname() never includes the query string, so without this, every
+    // language switch silently dropped it — e.g. mid-flow on
+    // reset-password (?token=... / ?identifier=...) or verify-email
+    // (?email=...&phone=...), that sent the user to a URL those pages
+    // treat as "arrived with nothing," showing their "missing" error
+    // screen instead of just switching language. Reading it straight from
+    // the browser (not next/navigation's useSearchParams()) deliberately —
+    // that hook requires whatever renders it to sit inside a <Suspense>
+    // boundary to avoid opting every page that renders it out of static
+    // rendering, and this component (via Header) is mounted in the root
+    // layout on literally every route with no Suspense wrapper.
+    // switchTo only ever runs from a browser click handler, so
+    // window.location.search is always available here.
+    const query = typeof window !== 'undefined' ? window.location.search : '';
+    router.push((segments.join('/') || `/${next}`) + query);
   }
 
   return (
