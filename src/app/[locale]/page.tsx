@@ -43,8 +43,21 @@ export default async function HomePage({ params }: { params: { locale: Locale } 
   // GET_SITE_SETTINGS_STR/heroImage fetch that only fed that static image is
   // gone since nothing renders it anymore; GET_CATEGORIES_STR (the same
   // query the /categories page already uses) takes its place.
+  // ROOT-CAUSE FIX: `serverFetchGraphQL`'s 3rd arg is Next.js's Data Cache
+  // `revalidate` window (in seconds) for that ONE fetch call — it's not
+  // route-wide, each `fetch()` on the page has its own independent cache
+  // entry. This bestSellers call used to omit it, falling back to
+  // `serverFetchGraphQL`'s own default of 60s (see server-fetch.ts) — so
+  // after an admin added/edited/deleted a product, Home kept serving a
+  // cached response for up to 60 seconds (even across a manual browser
+  // refresh, since the stale copy lives in the Next.js SERVER's cache, not
+  // the browser's), while /shop's identical-shaped fetch already used
+  // `revalidate: 0` (see shop/page.tsx) and updated immediately — exactly
+  // the "shop is fresh, home is stale until I wait/refresh" symptom
+  // reported. Categories right below already used 0 for the same reason
+  // (see its own comment). Bringing bestSellers in line with both.
   const [bestSellersData, categoriesData] = await Promise.all([
-    serverFetchGraphQL<{ bestSellers: ProductCardData[] }>(GET_BEST_SELLERS_STR, { limit: 8 }).catch(() => ({
+    serverFetchGraphQL<{ bestSellers: ProductCardData[] }>(GET_BEST_SELLERS_STR, { limit: 8 }, 0).catch(() => ({
       bestSellers: [],
     })),
     // revalidate: 0 — a newly added/renamed category should show up in the
