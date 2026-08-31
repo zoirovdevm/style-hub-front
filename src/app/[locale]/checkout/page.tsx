@@ -36,6 +36,16 @@ const PAYMENT_CARD_HOLDER = 'Muhammadjon Zoirov';
 // it here lets a fresh mount restore the payment-confirmation screen instead
 // of silently dropping the buyer back onto a blank checkout form.
 const PLACED_ORDER_STORAGE_KEY = 'checkout:lastPlacedOrder';
+// Written by QuickBuyModal.tsx / ProductActions.tsx right before they
+// navigate here with `?buyNow=1` — carries exactly the product/size/color/
+// quantity the buyer picked, so this page can order that directly via
+// CreateOrderInput's buyNowProductId (see order.service.ts) instead of
+// routing through the cart. Bypassing the cart entirely (rather than
+// addToCart-then-?items=<row>) is deliberate: CartService.add() increments
+// an EXISTING matching cart row instead of creating a second one, so a
+// "buy now" of 1 unit used to silently become "3" whenever 2 of that exact
+// same size/color were already sitting in the cart for later.
+const BUY_NOW_ITEM_STORAGE_KEY = 'checkout:buyNowItem';
 // Yetkazib berish manzili/shahar/telefon — muvaffaqiyatli buyurtmadan
 // keyin shu kalit bilan saqlanadi (pastdagi onSubmit'ga qarang) va
 // xaridor keyingi safar checkout sahifasiga kelganda formaga qaytarib
@@ -73,13 +83,15 @@ function CheckoutPageInner({ params }: { params: { locale: Locale } }) {
   const hasHydrated = useAuthStore((s) => s.hasHydrated);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [placedOrder, setPlacedOrder] = useState<{ id: string; orderNumber: string; totalAmount: number } | null>(null);
+  const [placedOrder, setPlacedOrder] = useState<{ id: string; orderNumber: string; totalAmount: number; buyNow?: boolean } | null>(
+    null,
+  );
   const [copied, setCopied] = useState(false);
 
   // ?items=id1,id2 — set by the cart page when the buyer checked out only
   // some of their cart, not the whole thing (its checkbox selection). Absent
-  // entirely (arriving from "Buy now"/1-click-buy, or /checkout with nothing
-  // selected) means "the whole cart", exactly like before this existed.
+  // entirely (checkout reached with nothing selected) means "the whole
+  // cart", exactly like before this existed.
   const searchParams = useSearchParams();
   const itemsParam = searchParams.get('items');
   const selectedItemIds = useMemo(
@@ -87,7 +99,37 @@ function CheckoutPageInner({ params }: { params: { locale: Locale } }) {
     [itemsParam],
   );
 
-  const { data, loading: cartLoading } = useQuery(GET_MY_CART, { skip: !user });
+  // ?buyNow=1 — set by QuickBuyModal.tsx / ProductActions.tsx. Synchronous
+  // from the URL (unlike buyNowItem below, which needs an effect to reach
+  // sessionStorage), so it's safe to use immediately for gating the cart
+  // query/loading state without a one-frame flicker.
+  const buyNowRequested = searchParams.get('buyNow') === '1';
+  const [buyNowItem, setBuyNowItem] = useState<{
+    productId: string;
+    title: string;
+    price: number;
+    size?: string;
+    color?: string;
+    quantity: number;
+  } | null>(null);
+
+  // Populates buyNowItem from sessionStorage once, on mount — see
+  // BUY_NOW_ITEM_STORAGE_KEY above for why this bypasses the cart entirely.
+  useEffect(() => {
+    if (!buyNowRequested) return;
+    try {
+      const raw = sessionStorage.getItem(BUY_NOW_ITEM_STORAGE_KEY);
+      if (raw) setBuyNowItem(JSON.parse(raw));
+    } catch {
+      // sessionStorage can throw in some privacy modes — the buyer just
+      // won't see their buy-now item here and can go back and retry.
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Skips the cart fetch entirely during a buy-now checkout — this page
+  // never needs the buyer's actual cart contents in that mode.
+  const { data, loading: cartLoading } = useQuery(GET_MY_CART, { skip: !user || buyNowRequested });
 
   // Once an order is placed, keep polling the buyer's own orders so this
   // screen can reflect what actually happened to the receipt (admin
@@ -105,9 +147,24 @@ function CheckoutPageInner({ params }: { params: { locale: Locale } }) {
   const livePaymentStatus: 'PENDING' | 'PAID' | 'FAILED' =
     ordersData?.myOrders?.find((o: any) => o.id === placedOrder?.id)?.paymentStatus ?? 'PENDING';
   const allCartItems = data?.myCart ?? [];
-  const items = selectedItemIds
-    ? allCartItems.filter((i: any) => selectedItemIds.includes(i.id))
-    : allCartItems;
+  // Synthesizes the same `{ id, quantity, size, color, product: { title,
+  // price } }` shape the summary/subtotal code below already expects from
+  // real cart rows, so neither has to branch on buy-now vs. cart mode.
+  const items = buyNowRequested
+    ? buyNowItem
+      ? [
+          {
+            id: 'buy-now-item',
+            quantity: buyNowItem.quantity,
+            size: buyNowItem.size,
+            color: buyNowItem.color,
+            product: { title: buyNowItem.title, price: buyNowItem.price },
+          },
+        ]
+      : []
+    : selectedItemIds
+      ? allCartItems.filter((i: any) => selectedItemIds.includes(i.id))
+      : allCartItems;
   const subtotal = items.reduce((sum: number, i: any) => sum + Number(i.product.price) * i.quantity, 0);
 
   // createOrder deletes the user's cart items server-side, but that doesn't
@@ -150,21 +207,42 @@ function CheckoutPageInner({ params }: { params: { locale: Locale } }) {
   // arranged", and payment itself is coordinated manually via Telegram
   // (see the contact note rendered below).
   async function onSubmit(values: CheckoutForm) {
+    if (buyNowRequested && !buyNowItem) {
+      // Sessionstorage read failed or was cleared (private-browsing mode,
+      // or the buyer opened this URL fresh without going through the
+      // buy-now buttons) — nothing to actually order. The submit button is
+      // already disabled in this state (items.length === 0), but this
+      // guards onSubmit directly too.
+      setError(dict.checkout.buyNowMissing);
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
       const { data: orderData } = await createOrder({
         variables: {
-          input: {
-            deliveryAddress: values.deliveryAddress,
-            deliveryCity: values.deliveryCity,
-            phone: values.phone,
-            note: values.note,
-            paymentMethod: 'CASH',
-            // undefined (not []) when nothing was pre-selected, so the
-            // backend's own "omitted = whole cart" fallback applies.
-            itemIds: selectedItemIds ?? undefined,
-          },
+          input: buyNowRequested
+            ? {
+                deliveryAddress: values.deliveryAddress,
+                deliveryCity: values.deliveryCity,
+                phone: values.phone,
+                note: values.note,
+                paymentMethod: 'CASH',
+                buyNowProductId: buyNowItem!.productId,
+                buyNowSize: buyNowItem!.size,
+                buyNowColor: buyNowItem!.color,
+                buyNowQuantity: buyNowItem!.quantity,
+              }
+            : {
+                deliveryAddress: values.deliveryAddress,
+                deliveryCity: values.deliveryCity,
+                phone: values.phone,
+                note: values.note,
+                paymentMethod: 'CASH',
+                // undefined (not []) when nothing was pre-selected, so the
+                // backend's own "omitted = whole cart" fallback applies.
+                itemIds: selectedItemIds ?? undefined,
+              },
         },
       });
 
@@ -175,10 +253,12 @@ function CheckoutPageInner({ params }: { params: { locale: Locale } }) {
         id: orderData?.createOrder?.id ?? '',
         orderNumber: orderData?.createOrder?.orderNumber ?? '',
         totalAmount: orderData?.createOrder?.totalAmount ?? 0,
+        buyNow: buyNowRequested,
       };
       setPlacedOrder(order);
       try {
         sessionStorage.setItem(PLACED_ORDER_STORAGE_KEY, JSON.stringify(order));
+        if (buyNowRequested) sessionStorage.removeItem(BUY_NOW_ITEM_STORAGE_KEY);
       } catch {
         // sessionStorage can throw in some privacy modes — safe to ignore.
       }
@@ -212,12 +292,23 @@ function CheckoutPageInner({ params }: { params: { locale: Locale } }) {
   // cart won't be empty, so we drop the stale entry and show the form
   // instead of re-showing a finished order's payment details.
   useEffect(() => {
-    if (placedOrder || cartLoading) return;
+    if (placedOrder) return;
     try {
       const raw = sessionStorage.getItem(PLACED_ORDER_STORAGE_KEY);
       if (!raw) return;
+      const parsed = JSON.parse(raw);
+      // A buy-now order never touched the cart, so there's no "cart is
+      // empty" signal to gate on the way the cart-checkout branch below
+      // does — the stored record itself is the only signal, and
+      // BUY_NOW_ITEM_STORAGE_KEY was already cleared the moment this order
+      // was placed, so this can't loop back into re-ordering it.
+      if (parsed.buyNow) {
+        setPlacedOrder(parsed);
+        return;
+      }
+      if (cartLoading) return;
       if (items.length === 0) {
-        setPlacedOrder(JSON.parse(raw));
+        setPlacedOrder(parsed);
       } else {
         sessionStorage.removeItem(PLACED_ORDER_STORAGE_KEY);
       }

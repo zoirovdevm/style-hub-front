@@ -23,6 +23,7 @@ export interface ProductCardData {
   price: number;
   oldPrice?: number;
   images: string[];
+  colorImages?: { color: string; images: string[] }[];
   category?: { name: string; nameRu?: string };
   rating: number;
   reviewsCount?: number;

@@ -14,6 +14,11 @@ export interface VariantValue {
   stock: number;
 }
 
+export interface ColorImagesValue {
+  color: string;
+  images: string[];
+}
+
 export interface ProductFormValues {
   title: string;
   titleRu?: string;
@@ -27,6 +32,7 @@ export interface ProductFormValues {
   sizes: string[];
   colors: string[];
   images: string[];
+  colorImages: ColorImagesValue[];
   variants: VariantValue[];
   categoryId: string;
   brandId?: string;
@@ -102,6 +108,7 @@ export function ProductForm({
       sizes: [],
       colors: [],
       images: [],
+      colorImages: [],
       variants: [],
       stock: 0,
       price: 0,
@@ -112,11 +119,13 @@ export function ProductForm({
   const [imageInput, setImageInput] = useState('');
   const [colorInput, setColorInput] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [uploadingColorFor, setUploadingColorFor] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const accessToken = useAuthStore((s) => s.accessToken);
   const sizes = watch('sizes') ?? [];
   const colors = watch('colors') ?? [];
   const images = watch('images') ?? [];
+  const colorImages = watch('colorImages') ?? [];
   const variants = watch('variants') ?? [];
   const hasVariantGrid = sizes.length > 0 || colors.length > 0;
 
@@ -213,10 +222,24 @@ export function ProductForm({
     });
   }
 
+  // Dropping a color also drops any dedicated photos saved for it — an
+  // orphaned colorImages entry for a color no longer offered would just be
+  // dead data the admin can never see or manage again.
+  function removeColorEntirely(name: string) {
+    setValue('colors', colors.filter((c) => c !== name), { shouldDirty: true });
+    setValue(
+      'colorImages',
+      (getValues('colorImages') ?? []).filter((ci) => ci.color !== name),
+      { shouldDirty: true },
+    );
+  }
+
   function toggleColorPreset(name: string) {
-    setValue('colors', colors.includes(name) ? colors.filter((c) => c !== name) : [...colors, name], {
-      shouldDirty: true,
-    });
+    if (colors.includes(name)) {
+      removeColorEntirely(name);
+    } else {
+      setValue('colors', [...colors, name], { shouldDirty: true });
+    }
   }
 
   function addCustomColor() {
@@ -234,6 +257,63 @@ export function ProductForm({
     }
   }
 
+  function getColorImages(color: string): string[] {
+    return colorImages.find((ci) => ci.color === color)?.images ?? [];
+  }
+
+  // Reads/writes via getValues/setValue (not the `colorImages` watched
+  // closure) so a sequence of awaited uploads for the same color — see
+  // handleColorFileUpload's loop below — each see the previous one's result
+  // instead of racing and dropping all but the last.
+  function addColorImage(color: string, url: string) {
+    const current = getValues('colorImages') ?? [];
+    const idx = current.findIndex((ci) => ci.color === color);
+    const next =
+      idx >= 0
+        ? current.map((ci, i) => (i === idx ? { ...ci, images: [...ci.images, url] } : ci))
+        : [...current, { color, images: [url] }];
+    setValue('colorImages', next, { shouldDirty: true });
+  }
+
+  function removeColorImage(color: string, index: number) {
+    const current = getValues('colorImages') ?? [];
+    const next = current.map((ci) =>
+      ci.color === color ? { ...ci, images: ci.images.filter((_, i) => i !== index) } : ci,
+    );
+    setValue('colorImages', next, { shouldDirty: true });
+  }
+
+  // Accepts multiple files at once (input has `multiple`) and uploads them
+  // one at a time to the same single-file endpoint the general images
+  // uploader uses — lets the admin add 2, 3, 4, 5+ photos for a color in one
+  // file-picker interaction instead of repeating the flow per photo.
+  async function handleColorFileUpload(color: string, e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploadingColorFor(color);
+    try {
+      for (const file of Array.from(files)) {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await fetch('/upload/product-image', {
+          method: 'POST',
+          headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
+          body: formData,
+        });
+        if (!res.ok) throw new Error('Upload failed');
+        const { url } = await res.json();
+        addColorImage(color, url);
+      }
+    } catch {
+      // eslint-disable-next-line no-alert
+      alert(dict.admin.uploadError);
+    } finally {
+      setUploadingColorFor(null);
+      e.target.value = '';
+    }
+  }
+
   function submitHandler(values: ProductFormValues) {
     // Convert the "no brand selected" option (empty string) to undefined —
     // an empty string is not a valid UUID and would be rejected by the
@@ -244,6 +324,10 @@ export function ProductForm({
       storeId: values.storeId || undefined,
       oldPrice: values.oldPrice || undefined,
       discountPercent: values.discountPercent || undefined,
+      // Drop colors that ended up with no photos actually uploaded (e.g. the
+      // admin opened the file picker and cancelled) instead of saving empty
+      // entries.
+      colorImages: (values.colorImages ?? []).filter((ci) => ci.images.length > 0),
       // Only send per-variant stock when the product actually has size/color
       // options — otherwise keep the plain "stock" number the admin typed.
       // (An empty array, not undefined: ProductFormValues.variants isn't
@@ -452,13 +536,83 @@ export function ProductForm({
                       {c}
                       <button
                         type="button"
-                        onClick={() => setValue('colors', colors.filter((x) => x !== c))}
+                        onClick={() => removeColorEntirely(c)}
                         className="text-ink-900/40 hover:text-red-500"
                       >
                         ✕
                       </button>
                     </span>
                   ))}
+              </div>
+            )}
+
+            {/* ── Rang bo'yicha rasmlar ── */}
+            {colors.length > 0 && (
+              <div className="mt-6 space-y-4 border-t border-ink-900/10 pt-5">
+                <div>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-ink-900/50">
+                    {dict.admin.colorImagesTitle}
+                  </h3>
+                  <p className="mt-1 text-xs text-ink-900/40">{dict.admin.colorImagesHint}</p>
+                </div>
+
+                {colors.map((c) => {
+                  const preset = COLOR_PRESETS.find((p) => p.name === c);
+                  const imgs = getColorImages(c);
+                  return (
+                    <div key={c} className="rounded-xl border border-ink-900/10 p-4">
+                      <div className="mb-3 flex items-center gap-2">
+                        {preset && (
+                          <span
+                            className="h-4 w-4 shrink-0 rounded-full border border-ink-900/10"
+                            style={{ backgroundColor: preset.hex }}
+                          />
+                        )}
+                        <span className="text-sm font-semibold">{c}</span>
+                      </div>
+
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={(e) => handleColorFileUpload(c, e)}
+                        className="hidden"
+                        id={`color-image-upload-${c}`}
+                      />
+                      <label
+                        htmlFor={`color-image-upload-${c}`}
+                        className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-ink-900/15 py-4 text-xs font-semibold text-ink-900/60 transition-colors hover:border-ink-950 hover:text-ink-950"
+                      >
+                        <UploadCloud size={16} />
+                        {uploadingColorFor === c ? dict.admin.uploading : dict.admin.uploadFromComputer}
+                      </label>
+
+                      {imgs.length === 0 ? (
+                        <p className="mt-2 text-xs text-ink-900/40">{dict.admin.noColorImagesYet}</p>
+                      ) : (
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {imgs.map((img, i) => (
+                            <div
+                              key={img + i}
+                              className="relative h-16 w-16 overflow-hidden rounded-lg border border-ink-900/10"
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element -- admin
+                                  thumbnail grid, arbitrary count/URLs, no need for next/image here */}
+                              <img src={img} alt={`${c} ${i + 1}`} className="h-full w-full object-cover" />
+                              <button
+                                type="button"
+                                onClick={() => removeColorImage(c, i)}
+                                className="absolute right-0.5 top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-ink-950/70 text-[10px] text-white hover:bg-red-500"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

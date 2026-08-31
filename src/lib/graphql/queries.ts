@@ -16,6 +16,10 @@ export const PRODUCT_FIELDS = gql`
     sizes
     colors
     images
+    colorImages {
+      color
+      images
+    }
     variants {
       id
       size

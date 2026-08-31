@@ -150,7 +150,8 @@
     "paymentConfirmedTitle": "To'lov tasdiqlandi!",
     "paymentConfirmedBody": "Buyurtmangiz uchun to'lov qabul qilindi. Tez orada yetkazib beramiz.",
     "paymentRejectedTitle": "To'lov rad etildi",
-    "paymentRejectedBody": "Yuborgan chekingiz tasdiqlanmadi. Iltimos, to'lovni qaytadan amalga oshirib, to'g'ri skrinshotni pastdagi tugma orqali qayta yuboring."
+    "paymentRejectedBody": "Yuborgan chekingiz tasdiqlanmadi. Iltimos, to'lovni qaytadan amalga oshirib, to'g'ri skrinshotni pastdagi tugma orqali qayta yuboring.",
+    "buyNowMissing": "Xarid ma'lumotlari topilmadi. Iltimos, mahsulot sahifasiga qaytib qaytadan urinib ko'ring."
   },
   "orders": {
     "title": "Buyurtmalarim",
@@ -358,6 +359,9 @@
     "sizesHint": "mavjud o'lchamlarni belgilang",
     "colorsHint": "bosing va tanlang",
     "customColorPlaceholder": "Ro'yxatda yo'q rang nomi (masalan: Siyohrang)",
+    "colorImagesTitle": "Rang bo'yicha rasmlar",
+    "colorImagesHint": "Har bir rang uchun alohida 2, 3, 4, 5 yoki undan ko'p rasm yuklashingiz mumkin — xaridor shu rangni tanlaganda aynan shu rasmlar ko'rsatiladi. Rasm yuklanmagan ranglar uchun mahsulotning umumiy rasmlari ishlatiladi.",
+    "noColorImagesYet": "Bu rang uchun hali rasm yuklanmagan",
     "titleRequired": "Mahsulot nomini kiriting",
     "titleMinLength": "Kamida 2 ta belgi",
     "skuRequired": "SKU kodini kiriting",

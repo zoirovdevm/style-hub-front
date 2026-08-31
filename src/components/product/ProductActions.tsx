@@ -9,6 +9,7 @@ import { GET_MY_CART, GET_MY_WISHLIST } from '@/lib/graphql/queries';
 import { useAuthStore } from '@/lib/store/auth-store';
 import { getFriendlyErrorMessage } from '@/lib/utils/graphql-error';
 import { translateColorName } from '@/lib/utils/colorNames';
+import { useProductColor } from '@/lib/store/product-color-context';
 import type { Dictionary } from '@/i18n/get-dictionary';
 import type { Locale } from '@/i18n/config';
 
@@ -20,6 +21,11 @@ interface ProductVariant {
 
 interface ProductActionsProps {
   productId: string;
+  // Needed only for the "buy now" sessionStorage payload (see handleBuyNow
+  // below) — the checkout order-summary line has to show a title/price
+  // without querying the cart, since this purchase never goes through it.
+  title: string;
+  price: number;
   sizes: string[];
   colors: string[];
   stock: number;
@@ -28,7 +34,7 @@ interface ProductActionsProps {
   locale: Locale;
 }
 
-export function ProductActions({ productId, sizes, colors, stock, variants = [], dict, locale }: ProductActionsProps) {
+export function ProductActions({ productId, title, price, sizes, colors, stock, variants = [], dict, locale }: ProductActionsProps) {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const hasSizeDim = sizes.length > 0;
@@ -101,6 +107,16 @@ export function ProductActions({ productId, sizes, colors, stock, variants = [],
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [size]);
 
+  // Publishes the currently-selected color to ProductColorContext so the
+  // gallery (ProductGalleryForColor, a sibling client component elsewhere on
+  // this page) can swap in that color's dedicated photos — see
+  // product-color-context.tsx for why this goes through context instead of
+  // lifting all this component's stock-aware color logic up a level.
+  const { setColor: setSharedColor } = useProductColor();
+  useEffect(() => {
+    setSharedColor(color);
+  }, [color, setSharedColor]);
+
   const [addToCart, { loading: addingToCart }] = useMutation(ADD_TO_CART, {
     refetchQueries: [{ query: GET_MY_CART }],
   });
@@ -128,28 +144,31 @@ export function ProductActions({ productId, sizes, colors, stock, variants = [],
     }
   }
 
-  async function handleBuyNow() {
+  function handleBuyNow() {
     if (!user) {
       router.push(`/${locale}/login`);
       return;
     }
     setErrorMessage(null);
+    // Bypasses the cart entirely — same fix as QuickBuyModal's "1-click
+    // buy" (see its handleConfirm for the full explanation): routing
+    // through addToCart + `?items=<that row>` silently merged quantities
+    // with whatever identical size/color combo was already sitting in the
+    // cart, since CartService.add() increments an existing matching row
+    // instead of creating a second one. Writing straight to sessionStorage
+    // and letting checkout read CreateOrderInput.buyNowProductId keeps this
+    // purchase independent of the cart's contents.
     try {
-      // Same fix as QuickBuyModal's "1-click buy": pushing to plain
-      // /checkout fell back to its "nothing selected -> whole cart"
-      // default, so "Buy now" on a product while something else already
-      // sat in the cart charged for both instead of just this one. Scoping
-      // to the cart row addToCart just returned/updated (via `?items=`)
-      // keeps it to only this item, same as the cart page's own
-      // checkout-selected-items checkboxes.
-      const { data } = await addToCart({ variables: { input: { productId, size, color, quantity } } });
-      const cartItemId = data?.addToCart?.id;
-      router.push(
-        cartItemId ? `/${locale}/checkout?items=${encodeURIComponent(cartItemId)}` : `/${locale}/checkout`,
+      sessionStorage.setItem(
+        'checkout:buyNowItem',
+        JSON.stringify({ productId, title, price, size: size || undefined, color: color || undefined, quantity }),
       );
-    } catch (error) {
-      setErrorMessage(getFriendlyErrorMessage(error));
+    } catch {
+      // sessionStorage can throw in some privacy modes — checkout's own
+      // buyNowRequested guard shows a clear "nothing to order" error
+      // instead of silently charging for the wrong thing in that case.
     }
+    router.push(`/${locale}/checkout?buyNow=1`);
   }
 
   const outOfStock = stock <= 0 || selectedComboOutOfStock;

@@ -4,8 +4,9 @@ import { getDictionary } from '@/i18n/get-dictionary';
 import type { Locale } from '@/i18n/config';
 import { serverFetchGraphQL } from '@/lib/graphql/server-fetch';
 import { GET_PRODUCT_STR, GET_PRODUCTS_STR } from '@/lib/graphql/server-queries';
-import { ProductGallery } from '@/components/product/ProductGallery';
+import { ProductGalleryForColor } from '@/components/product/ProductGalleryForColor';
 import { ProductActions } from '@/components/product/ProductActions';
+import { ProductColorProvider } from '@/lib/store/product-color-context';
 import { ProductReviews } from '@/components/product/ProductReviews';
 import { ProductCard, type ProductCardData } from '@/components/ui/ProductCard';
 import { Reveal } from '@/components/ui/Reveal';
@@ -76,9 +77,22 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
 
   return (
     <div className="container-app py-12">
+      {/* ProductColorProvider shares the selected color between the two
+          sibling client components below — ProductActions (the size/color
+          picker) writes to it, ProductGalleryForColor reads it to show that
+          color's dedicated photos, per the "picking blue should show the
+          blue shirt's photos" request. Initial color mirrors ProductActions'
+          own first-available-color logic loosely (just colors[0] here); if
+          that color turns out to be out of stock for the default size,
+          ProductActions corrects it on mount and the gallery updates then. */}
+      <ProductColorProvider initialColor={product.colors?.[0] ?? ''}>
       <div className="grid gap-12 lg:grid-cols-2">
         <Reveal>
-          <ProductGallery images={product.images ?? []} title={title} />
+          <ProductGalleryForColor
+            images={product.images ?? []}
+            colorImages={product.colorImages ?? []}
+            title={title}
+          />
         </Reveal>
 
         <Reveal delay={0.1}>
@@ -129,6 +143,8 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
             <div className="mt-8 border-t border-ink-900/10 pt-8">
               <ProductActions
                 productId={product.id}
+                title={title}
+                price={product.price}
                 sizes={product.sizes ?? []}
                 colors={product.colors ?? []}
                 stock={product.stock}
@@ -153,6 +169,7 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
           </div>
         </Reveal>
       </div>
+      </ProductColorProvider>
 
       <ProductReviews productId={product.id} locale={locale} dict={dict} />
 

@@ -38,6 +38,10 @@ export default function EditProductPage({ params }: { params: { locale: Locale; 
             sizes
             colors
             images
+            colorImages {
+              color
+              images
+            }
             variants {
               size
               color
@@ -106,6 +110,7 @@ export default function EditProductPage({ params }: { params: { locale: Locale; 
           sizes: product.sizes ?? [],
           colors: product.colors ?? [],
           images: product.images ?? [],
+          colorImages: (product.colorImages ?? []).map((ci: any) => ({ color: ci.color, images: ci.images ?? [] })),
           variants: (product.variants ?? []).map((v: any) => ({ size: v.size, color: v.color, stock: v.stock })),
           categoryId: product.categoryId,
           brandId: product.brandId,

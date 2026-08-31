@@ -6,8 +6,8 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQuery } from '@apollo/client';
 import { AlertCircle, Heart, Minus, Plus, ShoppingBag, X } from 'lucide-react';
-import { ADD_TO_CART, TOGGLE_WISHLIST } from '@/lib/graphql/mutations';
-import { GET_MY_CART, GET_MY_WISHLIST } from '@/lib/graphql/queries';
+import { TOGGLE_WISHLIST } from '@/lib/graphql/mutations';
+import { GET_MY_WISHLIST } from '@/lib/graphql/queries';
 import { useAuthStore } from '@/lib/store/auth-store';
 import { getFriendlyErrorMessage } from '@/lib/utils/graphql-error';
 import { translateColorName } from '@/lib/utils/colorNames';
@@ -24,6 +24,7 @@ interface QuickBuyProduct {
   descriptionRu?: string;
   price: number;
   images: string[];
+  colorImages?: { color: string; images: string[] }[];
   category?: { name: string; nameRu?: string };
   sizes?: string[];
   colors?: string[];
@@ -182,10 +183,6 @@ export function QuickBuyModal({ product, locale, dict, onClose }: QuickBuyModalP
   const selectedVariantStock = stockFor(size, color);
   const outOfStock = (product.stock ?? 1) <= 0 || (hasVariants && selectedVariantStock !== null && selectedVariantStock <= 0);
 
-  const [addToCart] = useMutation(ADD_TO_CART, {
-    refetchQueries: [{ query: GET_MY_CART }],
-  });
-
   // Self-contained wishlist toggle (mirrors ProductActions.tsx/ProductCard.tsx)
   // rather than lifting state from the card that opened this modal — keeps
   // this component droppable anywhere without a wishlist-state prop, and
@@ -211,15 +208,16 @@ export function QuickBuyModal({ product, locale, dict, onClose }: QuickBuyModalP
   const title = locale === 'ru' && product.titleRu ? product.titleRu : product.title;
   const description = locale === 'ru' && product.descriptionRu ? product.descriptionRu : product.description;
   const categoryName = locale === 'ru' && product.category?.nameRu ? product.category.nameRu : product.category?.name;
-  // There's no real per-color photo in the data model yet (variants only
-  // track size/color/stock, not images) — as a lightweight approximation,
-  // if the product has multiple photos we cycle through them by the
-  // selected color's position in the colors list, so picking a different
-  // color at least shows a different shot instead of a static image. Falls
-  // back to the first photo whenever that mapping doesn't apply.
+  // Real per-color photo when the admin uploaded one for the selected color
+  // (Product.colorImages — see ProductForm.tsx's "Rang bo'yicha rasmlar"
+  // section). Previously this just cycled through the general `images` list
+  // by the selected color's position, which only "worked" by coincidence —
+  // now it shows the color's actual photo, falling back to the product's
+  // first general photo when that color has none uploaded.
   const images = product.images?.length ? product.images : ['/placeholder-product.svg'];
-  const colorIndex = hasColorDim ? colors.indexOf(color) : -1;
-  const cover = colorIndex >= 0 && images[colorIndex] ? images[colorIndex] : images[0];
+  const colorImages = product.colorImages ?? [];
+  const colorEntry = hasColorDim ? colorImages.find((ci) => ci.color === color) : undefined;
+  const cover = colorEntry && colorEntry.images.length > 0 ? colorEntry.images[0] : images[0];
 
   async function handleConfirm() {
     if (!user) {
@@ -236,25 +234,28 @@ export function QuickBuyModal({ product, locale, dict, onClose }: QuickBuyModalP
     }
     setErrorMessage(null);
     setSubmitting(true);
+    // Bypasses the cart entirely — an earlier fix routed this through
+    // addToCart + `?items=<that row>`, but CartService.add() increments an
+    // EXISTING matching cart row instead of creating a second one (same
+    // product/size/color can only have one row per buyer), so "1-click buy"
+    // of 1 unit silently became "3" whenever 2 of that exact same size/
+    // color combo were already sitting in the cart for later — the quick
+    // purchase and the cart's leftover stock quietly merged into one order.
+    // Writing straight to sessionStorage and letting checkout read
+    // CreateOrderInput.buyNowProductId (see order.service.ts) keeps this
+    // purchase completely independent of whatever's already in the cart.
     try {
-      // Pushing to plain /checkout (no `?items=`) made checkout fall back to
-      // its "nothing selected -> show the WHOLE cart" default — so a "1-click
-      // buy" on a product while something else already sat in the cart sent
-      // the buyer to a payment page charging for both, not just the item
-      // they just picked. addToCart's response carries the resulting cart
-      // row's id (existing row if this exact product/size/color was already
-      // in the cart, a new one otherwise) — passing that as `?items=`
-      // scopes checkout to only that single row, same mechanism the cart
-      // page's own "checkout selected items" checkboxes already use.
-      const { data } = await addToCart({ variables: { input: { productId: product.id, size, color, quantity } } });
-      const cartItemId = data?.addToCart?.id;
-      router.push(
-        cartItemId ? `/${locale}/checkout?items=${encodeURIComponent(cartItemId)}` : `/${locale}/checkout`,
+      sessionStorage.setItem(
+        'checkout:buyNowItem',
+        JSON.stringify({ productId: product.id, title, price: product.price, size: size || undefined, color: color || undefined, quantity }),
       );
-    } catch (error) {
-      setErrorMessage(getFriendlyErrorMessage(error));
-      setSubmitting(false);
+    } catch {
+      // sessionStorage can throw in some privacy modes — checkout's own
+      // buyNowRequested guard shows a clear "nothing to order" error
+      // instead of silently charging for the wrong thing in that case.
     }
+    router.push(`/${locale}/checkout?buyNow=1`);
+    setSubmitting(false);
   }
 
   const modal = (
