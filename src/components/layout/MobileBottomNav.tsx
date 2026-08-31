@@ -72,13 +72,12 @@ export function MobileBottomNav({ locale, dict }: MobileBottomNavProps) {
       style={{ bottom: 'calc(env(safe-area-inset-bottom) + 0.75rem)' }}
     >
       <div
-        // Per explicit theme spec, same change and reasoning as
-        // Header.tsx — see the comment there. Light theme = white bg +
-        // ink text/icons, dark theme = black bg + cream text/icons,
-        // automatic via `.dark`. 92% opacity, light 8px backdrop-blur +
-        // transform-gpu/will-change-transform GPU-layer mitigation — MUST
-        // be re-verified on real iOS Safari after deploying.
-        className="transform-gpu will-change-transform mx-auto grid max-w-md grid-cols-5 rounded-full border border-black/10 bg-white/92 px-1 shadow-lg backdrop-blur-[8px] dark:border-white/10 dark:bg-[rgba(10,10,12,0.92)] bg-white"
+        // Same change and reasoning as Header.tsx — see the comment there.
+        // Light mode: fully solid white, blur off entirely. Dark mode:
+        // untouched from the prior explicit theme spec (black bg + cream
+        // text, light 8px backdrop-blur) — re-verify dark mode on real iOS
+        // Safari after deploying.
+        className="transform-gpu will-change-transform mx-auto grid max-w-md grid-cols-5 rounded-full border border-black/10 bg-white px-1 shadow-lg dark:border-white/10 dark:bg-[rgba(10,10,12,0.92)] dark:backdrop-blur-[8px]"
       >
         {items.map((item) => {
           const active = isActive(item.href);

@@ -72,21 +72,17 @@ export function Header({ locale, dict }: HeaderProps) {
     <header className="fixed inset-x-0 top-0 z-50 pt-3 sm:pt-4">
       <div className="container-app">
         <div
-          // Per explicit theme spec: light theme = white bg + ink text/
-          // icons; dark theme = black bg + cream text/icons; switches
-          // automatically with the site's `.dark` class (no JS). Opacity
-          // 92% (not 100%) — high enough that page content behind doesn't
-          // show through noticeably, while keeping a touch of glass rather
-          // than a flat, dead-solid bar. A light 8px backdrop-blur is back
-          // too (kept deliberately small, no backdrop-saturate) with
-          // transform-gpu + will-change-transform as the GPU-compositor-
-          // layer mitigation for iOS backdrop-filter cost — this is a
-          // meaningfully lighter setup than the 20px/heavy-blur version
-          // that originally caused the ~30s iOS Safari stall, but it IS
-          // real backdrop-blur again: re-verify on real iOS Safari after
-          // deploying, same as every earlier blur change in this file's
-          // history.
-          className="transform-gpu will-change-transform flex h-14 items-center justify-between gap-2 rounded-full border border-black/10 bg-white/92 px-4 shadow-lg backdrop-blur-[8px] transition-colors duration-300 sm:h-[68px] sm:px-6 dark:border-white/10 dark:bg-[rgba(10,10,12,0.92)] bg-white"
+          // Per explicit follow-up request: LIGHT mode is now fully solid
+          // white (bg-white, no opacity fraction) with blur turned OFF
+          // entirely — no backdrop-filter cost at all in light mode, so
+          // this is strictly safer for iOS than the previous 92%/8px-blur
+          // version. DARK mode is untouched from the prior explicit theme
+          // spec (black bg + cream text, light 8px backdrop-blur) since
+          // that spec was never contradicted — only light mode was called
+          // out. transform-gpu + will-change-transform stay as the
+          // GPU-layer mitigation for the blur that still exists in dark
+          // mode; re-verify dark mode on real iOS Safari after deploying.
+          className="transform-gpu will-change-transform flex h-14 items-center justify-between gap-2 rounded-full border border-black/10 bg-white px-4 shadow-lg transition-colors duration-300 sm:h-[68px] sm:px-6 dark:border-white/10 dark:bg-[rgba(10,10,12,0.92)] dark:backdrop-blur-[8px]"
         >
         <Link
           href={`/${locale}`}
