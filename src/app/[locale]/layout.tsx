@@ -34,6 +34,15 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const dict = await getDictionary(params.locale);
   return {
+    // Ijtimoiy tarmoqlarga (Telegram, Instagram va h.k.) havola
+    // tashlanganda Open Graph/Twitter rasm-manzillari nisbiy holda
+    // ("/logo.svg" kabi) beriladi — Next.js ularni to'liq URL'ga
+    // aylantirish uchun shu asosiy manzildan foydalanadi. Bu qiymat
+    // bo'lmasa, Next.js "http://localhost:3000" ga tushib qoladi va
+    // preview rasm/link ishlamay qoladi. Ishlab chiqarish domenini
+    // .env orqali (NEXT_PUBLIC_SITE_URL) ham almashtirish mumkin —
+    // masalan vaqtinchalik tunnel manzili bilan sinash uchun.
+    metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://wardrobestore.uz'),
     title: {
       default: `Wardrobe — ${dict.home.heroTitle}`,
       template: '%s — Wardrobe',
