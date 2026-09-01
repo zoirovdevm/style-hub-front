@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -68,11 +68,47 @@ export function ProductCard({
   const title = locale === 'ru' && product.titleRu ? product.titleRu : product.title;
   const categoryName =
     locale === 'ru' && product.category?.nameRu ? product.category.nameRu : product.category?.name;
-  // Relative path — resolves against whatever host the browser is on
+  // Relative paths — resolve against whatever host the browser is on
   // (localhost or a tunnel URL); next.config.js rewrites /uploads/* through
   // to the backend either way, so this works without any .env switching.
-  const cover = product.images?.[0] || '/placeholder-product.svg';
+  const images = product.images?.length ? product.images : ['/placeholder-product.svg'];
+  const hasMultipleImages = images.length > 1;
   const hasDiscount = product.oldPrice && product.oldPrice > product.price;
+
+  // Card image strip: on desktop, moving the mouse left-to-right across the
+  // photo previews each of the product's other photos in turn (the
+  // ASOS/Zalando-style hover scrub) instead of only ever showing the first
+  // one; on touch devices the same strip is a real horizontal swipe
+  // (native scroll-snap — see handleStripScroll, which just keeps the
+  // indicator bars in sync with wherever the shopper swiped to). Both
+  // share one underlying scrollable strip rather than being two separate
+  // implementations, so there's nothing to keep in sync between them.
+  const stripRef = useRef<HTMLDivElement>(null);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+
+  function handleImageMouseMove(e: React.MouseEvent<HTMLDivElement>) {
+    if (!hasMultipleImages) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const ratio = (e.clientX - rect.left) / rect.width;
+    const index = Math.min(images.length - 1, Math.max(0, Math.floor(ratio * images.length)));
+    if (index === activeImageIndex) return;
+    setActiveImageIndex(index);
+    stripRef.current?.scrollTo({ left: index * stripRef.current.clientWidth, behavior: 'smooth' });
+  }
+
+  function handleImageMouseLeave() {
+    if (!hasMultipleImages) return;
+    setActiveImageIndex(0);
+    stripRef.current?.scrollTo({ left: 0, behavior: 'smooth' });
+  }
+
+  function handleStripScroll(e: React.UIEvent<HTMLDivElement>) {
+    if (!hasMultipleImages) return;
+    const el = e.currentTarget;
+    if (el.clientWidth === 0) return;
+    const index = Math.round(el.scrollLeft / el.clientWidth);
+    if (index !== activeImageIndex) setActiveImageIndex(index);
+  }
 
   return (
     <motion.div whileHover={{ y: -6 }} transition={{ duration: 0.3 }} className="group relative">
@@ -131,33 +167,62 @@ export function ProductCard({
             instead of pre-fetching in the background) — only removes the
             competing background requests. */}
         <Link href={`/${locale}/product/${product.slug}`} className="block" prefetch={false}>
-          <div className="relative aspect-[3/4] overflow-hidden bg-ink-900/5">
-            {/* unoptimized RESTORED (2-chi qadam — orqaga qaytarildi): bu
-                joyda bir marta olib tashlangan edi (Next.js'ning o'z rasm
-                siqish/o'lchamini kichraytirish tizimini yoqish uchun), lekin
-                serverda `sharp` kutubxonasi o'rnatilmagan holda next/image
-                optimallashtirish endpoint'i haqiqiy rasm o'rniga XATOLIK
-                HTML sahifasini qaytarayotgani aniqlandi (tasdiqlangan:
-                `file` buyrug'i buni "HTML document" deb ko'rsatdi, rasm
-                emas) — ya'ni mahsulot rasmlari productionda buzilgan holda
-                turgan edi. Funksionallik/dizaynni saqlash ustuvor bo'lgani
-                uchun bu darhol orqaga qaytarildi: rasmlar yana asl (siqilmagan)
-                holida, lekin TO'G'RI ko'rinishda serverga qaytadi. Rasm
-                og'irligi muammosi hali ochiq — lekin uni faqat backend/
-                serverda `sharp` haqiqatan o'rnatilgani tasdiqlangandan
-                keyingina qayta yoqish kerak. */}
-            <Image
-              src={cover}
-              alt={title}
-              fill
-              sizes="(max-width: 768px) 50vw, 25vw"
-              className="object-cover transition-transform duration-700 group-hover:scale-105"
-              unoptimized
-            />
+          <div
+            className="relative aspect-[3/4] overflow-hidden bg-ink-900/5"
+            onMouseMove={handleImageMouseMove}
+            onMouseLeave={handleImageMouseLeave}
+          >
+            {/* unoptimized (Next.js image optimization endpoint returns a
+                broken/error response in production without `sharp`
+                installed on the server — see the long-standing note this
+                comment replaces). Each photo is now its own full-size slide
+                in a horizontal strip (flex + scroll-snap) instead of a
+                single swapped <Image>, so the same markup serves both the
+                desktop hover-scrub and the mobile swipe. */}
+            <div
+              ref={stripRef}
+              onScroll={handleStripScroll}
+              className={`no-scrollbar flex h-full w-full ${
+                hasMultipleImages ? 'snap-x snap-mandatory overflow-x-auto' : 'overflow-hidden'
+              }`}
+            >
+              {images.map((img, i) => (
+                <div key={img + i} className="relative h-full w-full flex-none snap-center">
+                  <Image
+                    src={img}
+                    alt={`${title} ${i + 1}`}
+                    fill
+                    sizes="(max-width: 768px) 50vw, 25vw"
+                    className="object-cover transition-transform duration-700 group-hover:scale-105"
+                    unoptimized
+                  />
+                </div>
+              ))}
+            </div>
+
             {hasDiscount && (
               <span className="absolute left-3 top-3 rounded-full bg-gold-500 px-2.5 py-1 text-[11px] font-bold text-ink-950">
                 -{Math.round(100 - (product.price / product.oldPrice!) * 100)}%
               </span>
+            )}
+
+            {/* Thin Instagram-story-style segment bars along the bottom
+                edge of the photo — only shown when there's more than one —
+                so it's visually clear the image is scrubbable/swipeable and
+                which one is currently shown. Bottom (not top, where the
+                discount badge and wishlist heart already sit) to avoid
+                overlapping either. */}
+            {hasMultipleImages && (
+              <div className="pointer-events-none absolute bottom-2 left-2 right-2 flex gap-1">
+                {images.map((_, i) => (
+                  <span
+                    key={i}
+                    className={`h-0.5 flex-1 rounded-full transition-colors duration-300 ${
+                      i === activeImageIndex ? 'bg-white' : 'bg-white/40'
+                    }`}
+                  />
+                ))}
+              </div>
             )}
           </div>
 

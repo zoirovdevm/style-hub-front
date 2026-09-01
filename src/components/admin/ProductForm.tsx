@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { useQuery } from '@apollo/client';
 import { UploadCloud } from 'lucide-react';
 import { GET_CATEGORIES, GET_BRANDS, GET_STORES } from '@/lib/graphql/queries';
-import { useAuthStore } from '@/lib/store/auth-store';
+import { uploadProductImage } from '@/lib/utils/uploadProductImage';
 import type { Dictionary } from '@/i18n/get-dictionary';
 
 export interface VariantValue {
@@ -121,7 +121,6 @@ export function ProductForm({
   const [uploading, setUploading] = useState(false);
   const [uploadingColorFor, setUploadingColorFor] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const accessToken = useAuthStore((s) => s.accessToken);
   const sizes = watch('sizes') ?? [];
   const colors = watch('colors') ?? [];
   const images = watch('images') ?? [];
@@ -193,19 +192,7 @@ export function ProductForm({
 
     setUploading(true);
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-
-      // Relative — next.config.js rewrites /upload/* through to the
-      // backend, so this works on localhost and a tunnel URL unchanged.
-      const res = await fetch('/upload/product-image', {
-        method: 'POST',
-        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
-        body: formData,
-      });
-
-      if (!res.ok) throw new Error('Upload failed');
-      const { url } = await res.json();
+      const url = await uploadProductImage(file);
       setValue('images', [...images, url]);
     } catch {
       // eslint-disable-next-line no-alert
@@ -294,15 +281,7 @@ export function ProductForm({
     setUploadingColorFor(color);
     try {
       for (const file of Array.from(files)) {
-        const formData = new FormData();
-        formData.append('file', file);
-        const res = await fetch('/upload/product-image', {
-          method: 'POST',
-          headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
-          body: formData,
-        });
-        if (!res.ok) throw new Error('Upload failed');
-        const { url } = await res.json();
+        const url = await uploadProductImage(file);
         addColorImage(color, url);
       }
     } catch {

@@ -105,6 +105,18 @@ h1 {
   @apply rounded-full bg-ink-900/20;
 }
 
+/* Hides the scrollbar on an horizontally-scrollable element while keeping
+   it scrollable (touch swipe / programmatic scrollTo still work) — used by
+   ProductCard's image strip so the mouse-hover photo preview doesn't show
+   a visible scrollbar track underneath it. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /*
  * Dark-mode safety net.
  * The site's design system leans on raw `text-ink-900`/`text-ink-950`

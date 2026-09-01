@@ -45,9 +45,14 @@ const authLink = setContext((_, { headers }) => {
 // days of inactivity), in which case the session is cleared so the app's
 // normal "please log in" state takes over instead of silently pretending
 // to still be authenticated.
+// Exported so plain REST calls that don't go through this Apollo Client
+// instance (e.g. the admin product-image upload endpoint — see
+// lib/utils/uploadProductImage.ts) can reuse the exact same refresh+retry
+// logic instead of just surfacing the expired-token failure as a generic
+// "something went wrong" error.
 let refreshPromise: Promise<string | null> | null = null;
 
-async function refreshAccessToken(): Promise<string | null> {
+export async function refreshAccessToken(): Promise<string | null> {
   const { refreshToken } = useAuthStore.getState();
   if (!refreshToken) return null;
 
