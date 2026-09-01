@@ -221,6 +221,14 @@ export function ProductCard({
             <div
               ref={stripRef}
               onScroll={handleStripScroll}
+              // touchAction: 'pan-x' is the important part on mobile — it's
+              // an explicit signal to the browser's touch-gesture recognizer
+              // that a horizontal drag starting on this element belongs to
+              // ITS OWN scrolling, not the page's vertical scroll. Without
+              // it, some mobile browsers can end up ambiguous about which
+              // direction "wins" on a touch-drag over a nested horizontal
+              // scroller and the swipe doesn't reliably register.
+              style={{ touchAction: 'pan-x' }}
               className={`no-scrollbar flex h-full w-full ${
                 hasMultipleImages ? 'snap-x snap-mandatory overflow-x-auto' : 'overflow-hidden'
               }`}
@@ -232,7 +240,18 @@ export function ProductCard({
                     alt={`${title} ${i + 1}`}
                     fill
                     sizes="(max-width: 768px) 50vw, 25vw"
-                    className="object-cover transition-transform duration-700 group-hover:scale-105"
+                    // object-position biased slightly below center: most
+                    // clothing photos on a plain background have a bit more
+                    // empty space above the garment than below (hanger/neck
+                    // room), so this crops a little more off the top instead
+                    // of splitting the crop evenly. It's a mild, generic
+                    // bias, not a fix for a specific photo — a source photo
+                    // with a LOT of built-in white space (like an over-wide
+                    // product shot) will still show some of that white
+                    // padding no matter what CSS does here, since object-fit
+                    // can only crop pixels that exist, not invent ones. The
+                    // real fix for those is a tighter-cropped source photo.
+                    className="object-cover object-[center_40%] transition-transform duration-700 group-hover:scale-105"
                     unoptimized
                   />
                 </div>
@@ -266,24 +285,32 @@ export function ProductCard({
           </div>
 
           <div className="space-y-1 px-4 pt-3">
-            {/* Category (left) and price (right) now share the TOP row —
-                price sits level with "Рубашка" instead of down next to the
-                title — and the price got a bigger font-size to read as the
-                dominant number in that row. Title moves to its own line
-                below. */}
+            {/* Category now gets its OWN full-width row instead of sharing
+                one with the price — sharing a row used to leave category
+                only whatever leftover width the price (plus, when
+                discounted, the stacked strikethrough old price above/below
+                it) didn't need, which on a narrow 2-column mobile card was
+                sometimes almost nothing: a category name would truncate
+                down to 2-3 letters and an ellipsis sitting right up against
+                the price, reading as garbled clutter rather than a label.
+                Price now shares its row with the title instead — title
+                truncates gracefully (it's already meant to), and price
+                never needs to since it has nothing competing for its
+                space. */}
+            {categoryName && (
+              <p className="truncate text-[11px] uppercase tracking-wider text-ink-900/40 dark:text-cream/40">
+                {categoryName}
+              </p>
+            )}
             <div className="flex items-start justify-between gap-2">
-              {categoryName ? (
-                <p className="min-w-0 truncate text-[11px] uppercase tracking-wider text-ink-900/40 dark:text-cream/40">{categoryName}</p>
-              ) : (
-                <span />
-              )}
+              <h3 className="min-w-0 flex-1 truncate text-sm font-semibold text-ink-950 dark:text-cream">{title}</h3>
               {/* Chegirma bo'lganda eski (chizilgan) narx endi joriy narx
                   bilan bitta qatorda emas, ustma-ust (yangi narx ustida,
                   eskisi ostida) joylashadi — ikkalasi bir qatorda yonma-yon
                   turgani, tor mobil kartalarda (2 ustunli grid) narxlar
                   uzun bo'lganda kartadan tashqariga chiqib, qo'shni
                   kartaning ustiga yozilib ketishiga sabab bo'lgan edi. */}
-              <div className="flex min-w-0 shrink flex-col items-end leading-tight">
+              <div className="flex shrink-0 flex-col items-end leading-tight">
                 <span className="whitespace-nowrap text-[15px] font-bold text-gold-600 dark:text-gold-400 sm:text-[17px]">
                   {formatPrice(product.price, locale)}
                 </span>
@@ -294,7 +321,6 @@ export function ProductCard({
                 )}
               </div>
             </div>
-            <h3 className="truncate text-sm font-semibold text-ink-950 dark:text-cream">{title}</h3>
             {/* Total stock, visible right on the card — same "N dona qoldi"
                 wording used on the product detail page, so a shopper can
                 gauge availability before even opening the product. Out of
