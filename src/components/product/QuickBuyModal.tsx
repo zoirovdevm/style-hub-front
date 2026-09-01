@@ -11,6 +11,7 @@ import { GET_MY_WISHLIST } from '@/lib/graphql/queries';
 import { useAuthStore } from '@/lib/store/auth-store';
 import { getFriendlyErrorMessage } from '@/lib/utils/graphql-error';
 import { translateColorName } from '@/lib/utils/colorNames';
+import { swatchColor } from '@/lib/utils/colorSwatch';
 import { formatPrice } from '@/lib/utils/format';
 import { useScrollLock } from '@/lib/hooks/use-scroll-lock';
 import type { Dictionary } from '@/i18n/get-dictionary';
@@ -39,57 +40,11 @@ interface QuickBuyModalProps {
   onClose: () => void;
 }
 
-// Product colors are stored as plain words (currently Uzbek — "Oq", "Qora",
-// "Ko'k", etc.), not hex codes, so there's nothing in the data itself to
-// paint a swatch with. This maps the known values (plus common
-// Uzbek/Russian/English synonyms, in case that ever broadens) to an actual
-// color for the circular swatch design — anything unrecognized falls back
-// to a neutral gray dot rather than breaking.
-const COLOR_SWATCHES: Record<string, string> = {
-  oq: '#f5f5f4',
-  white: '#f5f5f4',
-  белый: '#f5f5f4',
-  qora: '#18181b',
-  qora_rang: '#18181b',
-  black: '#18181b',
-  чёрный: '#18181b',
-  черный: '#18181b',
-  qizil: '#dc2626',
-  red: '#dc2626',
-  красный: '#dc2626',
-  "ko'k": '#1e3a5f',
-  kok: '#1e3a5f',
-  blue: '#1e3a5f',
-  navy: '#1e3a5f',
-  синий: '#1e3a5f',
-  jigarrang: '#8b5a2b',
-  brown: '#8b5a2b',
-  коричневый: '#8b5a2b',
-  yashil: '#16803c',
-  green: '#16803c',
-  зелёный: '#16803c',
-  зеленый: '#16803c',
-  bej: '#e3d5b8',
-  beige: '#e3d5b8',
-  бежевый: '#e3d5b8',
-  gray: '#9ca3af',
-  grey: '#9ca3af',
-  серый: '#9ca3af',
-  pink: '#f472b6',
-  розовый: '#f472b6',
-  yellow: '#eab308',
-  sariq: '#eab308',
-  жёлтый: '#eab308',
-  желтый: '#eab308',
-  orange: '#f97316',
-  оранжевый: '#f97316',
-  purple: '#a855f7',
-  фиолетовый: '#a855f7',
-};
-
-function swatchColor(name: string): string {
-  return COLOR_SWATCHES[name.trim().toLowerCase()] ?? '#9ca3af';
-}
+// swatchColor (color name -> hex) now comes from lib/utils/colorSwatch.ts —
+// this used to be its own local copy with slightly different hex values
+// than the admin form/shop filter's swatches, so the "same" color visibly
+// painted a different shade depending which part of the site you were on.
+// See that file's header comment for the full story.
 
 /**
  * The homepage's product cards don't have room for a full size/color

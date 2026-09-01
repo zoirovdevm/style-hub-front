@@ -6,6 +6,7 @@ import { useQuery } from '@apollo/client';
 import { UploadCloud } from 'lucide-react';
 import { GET_CATEGORIES, GET_BRANDS, GET_STORES } from '@/lib/graphql/queries';
 import { uploadProductImage } from '@/lib/utils/uploadProductImage';
+import { PRESET_COLORS as COLOR_PRESETS } from '@/lib/utils/colorSwatch';
 import type { Dictionary } from '@/i18n/get-dictionary';
 
 export interface VariantValue {
@@ -56,20 +57,12 @@ function isFootwearCategory(cat?: { name?: string; nameRu?: string; slug?: strin
   return /shoe|poyabzal|обув|krossov|кроссов|tufli|туфли|botin|ботин|sneaker|sandal|сандал|sapog|сапог/.test(haystack);
 }
 
-// Common ready-made swatches so the admin can add a color in one click
-// instead of typing it every time — a custom text field below still covers
-// anything not in this list.
-const COLOR_PRESETS = [
-  { name: 'Qora', hex: '#111114' },
-  { name: 'Oq', hex: '#f7f5f2' },
-  { name: 'Kulrang', hex: '#8b8b8b' },
-  { name: "Ko'k", hex: '#2b4a7a' },
-  { name: 'Qizil', hex: '#a83232' },
-  { name: 'Yashil', hex: '#3a6b45' },
-  { name: 'Sariq', hex: '#d8b969' },
-  { name: 'Jigarrang', hex: '#6b4a2f' },
-  { name: 'Bej', hex: '#d8c9a8' },
-];
+// COLOR_PRESETS (the common ready-made swatches so the admin can add a
+// color in one click instead of typing it every time — a custom text field
+// below still covers anything not in this list) is now imported as
+// PRESET_COLORS from lib/utils/colorSwatch.ts, aliased above, so this list
+// can never drift out of sync with what the shop filter sidebar / quick-buy
+// modal / product page color picker show for the same color name.
 
 function Required() {
   return <span className="text-red-500"> *</span>;

@@ -9,6 +9,7 @@ import { GET_MY_CART, GET_MY_WISHLIST } from '@/lib/graphql/queries';
 import { useAuthStore } from '@/lib/store/auth-store';
 import { getFriendlyErrorMessage } from '@/lib/utils/graphql-error';
 import { translateColorName } from '@/lib/utils/colorNames';
+import { swatchColor } from '@/lib/utils/colorSwatch';
 import { useProductColor } from '@/lib/store/product-color-context';
 import type { Dictionary } from '@/i18n/get-dictionary';
 import type { Locale } from '@/i18n/config';
@@ -221,7 +222,7 @@ export function ProductActions({ productId, title, price, sizes, colors, stock, 
                   onClick={() => available && setColor(c)}
                   disabled={!available}
                   title={!available ? dict.product.outOfStock : undefined}
-                  className={`rounded-full border px-4 py-2 text-xs font-semibold transition-colors ${
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-xs font-semibold transition-colors ${
                     !available
                       ? 'cursor-not-allowed border-ink-900/15 text-ink-900/30 line-through dark:border-cream/15 dark:text-cream/35'
                       : color === c
@@ -229,6 +230,10 @@ export function ProductActions({ productId, title, price, sizes, colors, stock, 
                         : 'border-ink-900/15 hover:border-ink-950 dark:border-cream/20 dark:text-cream dark:hover:border-cream'
                   }`}
                 >
+                  <span
+                    className="h-3 w-3 shrink-0 rounded-full border border-black/10"
+                    style={{ backgroundColor: swatchColor(c) }}
+                  />
                   {translateColorName(c, locale)}
                 </button>
               );

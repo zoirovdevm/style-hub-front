@@ -4,6 +4,7 @@ import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { translateColorName } from '@/lib/utils/colorNames';
+import { PRESET_COLORS } from '@/lib/utils/colorSwatch';
 import type { Dictionary } from '@/i18n/get-dictionary';
 
 const CLOTHING_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
@@ -21,18 +22,6 @@ function isFootwearCategory(cat?: { name: string; nameRu?: string; slug: string 
   // (boots), "sandal"/"сандалии", "sapog"/"сапоги".
   return /shoe|poyabzal|обув|krossov|кроссов|tufli|туфли|botin|ботин|sneaker|sandal|сандал|sapog|сапог/.test(haystack);
 }
-
-const COLORS = [
-  { name: 'Qora', hex: '#111114' },
-  { name: 'Oq', hex: '#f7f5f2' },
-  { name: 'Kulrang', hex: '#8b8b8b' },
-  { name: "Ko'k", hex: '#2b4a7a' },
-  { name: 'Qizil', hex: '#a83232' },
-  { name: 'Yashil', hex: '#3a6b45' },
-  { name: 'Sariq', hex: '#d8b969' },
-  { name: 'Jigarrang', hex: '#6b4a2f' },
-  { name: 'Bej', hex: '#d8c9a8' },
-];
 
 interface ShopFiltersProps {
   dict: Dictionary;
@@ -167,7 +156,7 @@ export function ShopFilters({ dict, categories, locale }: ShopFiltersProps) {
       <div>
         <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-ink-900/50 dark:text-cream/50">{dict.product.color}</h4>
         <div className="flex flex-wrap gap-2">
-          {COLORS.map((color) => (
+          {PRESET_COLORS.map((color) => (
             <button
               key={color.name}
               title={translateColorName(color.name, locale)}
