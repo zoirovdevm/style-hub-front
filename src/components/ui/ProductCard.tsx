@@ -75,31 +75,66 @@ export function ProductCard({
   const hasMultipleImages = images.length > 1;
   const hasDiscount = product.oldPrice && product.oldPrice > product.price;
 
-  // Card image strip: on desktop, moving the mouse left-to-right across the
-  // photo previews each of the product's other photos in turn (the
-  // ASOS/Zalando-style hover scrub) instead of only ever showing the first
-  // one; on touch devices the same strip is a real horizontal swipe
-  // (native scroll-snap — see handleStripScroll, which just keeps the
-  // indicator bars in sync with wherever the shopper swiped to). Both
-  // share one underlying scrollable strip rather than being two separate
-  // implementations, so there's nothing to keep in sync between them.
+  // Card image strip: right on the card, without opening the product —
+  // scrolling the mouse wheel (or a laptop trackpad's two-finger swipe)
+  // while hovering the photo moves through the product's other photos; on
+  // touch devices the same strip is a real horizontal swipe (native
+  // scroll-snap — see handleStripScroll, which just keeps the indicator
+  // bars in sync with wherever the shopper swiped to). All three share one
+  // underlying scrollable strip rather than being separate implementations.
   const stripRef = useRef<HTMLDivElement>(null);
+  const imageAreaRef = useRef<HTMLDivElement>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  // Mirrors activeImageIndex for the native wheel listener below, which is
+  // registered once (see that effect's dependency array) and would
+  // otherwise keep reading a stale index from its very first render.
+  const activeImageIndexRef = useRef(0);
+  useEffect(() => {
+    activeImageIndexRef.current = activeImageIndex;
+  }, [activeImageIndex]);
 
-  function handleImageMouseMove(e: React.MouseEvent<HTMLDivElement>) {
-    if (!hasMultipleImages) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const ratio = (e.clientX - rect.left) / rect.width;
-    const index = Math.min(images.length - 1, Math.max(0, Math.floor(ratio * images.length)));
-    if (index === activeImageIndex) return;
+  function scrollToImage(index: number) {
     setActiveImageIndex(index);
-    stripRef.current?.scrollTo({ left: index * stripRef.current.clientWidth, behavior: 'smooth' });
+    activeImageIndexRef.current = index;
+    stripRef.current?.scrollTo({ left: index * (stripRef.current?.clientWidth ?? 0), behavior: 'smooth' });
   }
+
+  useEffect(() => {
+    if (!hasMultipleImages) return;
+    const el = imageAreaRef.current;
+    if (!el) return;
+
+    // A native (non-passive) listener — React registers its own JSX
+    // onWheel as a passive listener for scroll performance, which means
+    // calling e.preventDefault() inside one is silently ignored (with a
+    // console warning); a plain addEventListener with passive:false is the
+    // only way to actually stop the page from scrolling while we're
+    // cycling this card's photos instead.
+    function handleWheel(e: WheelEvent) {
+      // A mostly-horizontal gesture (trackpad two-finger swipe) already
+      // scrolls the strip natively via scroll-snap — handleStripScroll
+      // below picks that up on its own, no need to also handle it here.
+      if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+
+      const direction = e.deltaY > 0 ? 1 : -1;
+      const next = activeImageIndexRef.current + direction;
+      // At the first/last photo, let the wheel event fall through to the
+      // page's own scroll instead of trapping it — otherwise a shopper
+      // couldn't scroll the page past a multi-photo card at all.
+      if (next < 0 || next > images.length - 1) return;
+
+      e.preventDefault();
+      scrollToImage(next);
+    }
+
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    return () => el.removeEventListener('wheel', handleWheel);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasMultipleImages, images.length]);
 
   function handleImageMouseLeave() {
     if (!hasMultipleImages) return;
-    setActiveImageIndex(0);
-    stripRef.current?.scrollTo({ left: 0, behavior: 'smooth' });
+    scrollToImage(0);
   }
 
   function handleStripScroll(e: React.UIEvent<HTMLDivElement>) {
@@ -107,7 +142,10 @@ export function ProductCard({
     const el = e.currentTarget;
     if (el.clientWidth === 0) return;
     const index = Math.round(el.scrollLeft / el.clientWidth);
-    if (index !== activeImageIndex) setActiveImageIndex(index);
+    if (index !== activeImageIndex) {
+      setActiveImageIndex(index);
+      activeImageIndexRef.current = index;
+    }
   }
 
   return (
@@ -168,8 +206,8 @@ export function ProductCard({
             competing background requests. */}
         <Link href={`/${locale}/product/${product.slug}`} className="block" prefetch={false}>
           <div
+            ref={imageAreaRef}
             className="relative aspect-[3/4] overflow-hidden bg-ink-900/5"
-            onMouseMove={handleImageMouseMove}
             onMouseLeave={handleImageMouseLeave}
           >
             {/* unoptimized (Next.js image optimization endpoint returns a
@@ -177,8 +215,9 @@ export function ProductCard({
                 installed on the server — see the long-standing note this
                 comment replaces). Each photo is now its own full-size slide
                 in a horizontal strip (flex + scroll-snap) instead of a
-                single swapped <Image>, so the same markup serves both the
-                desktop hover-scrub and the mobile swipe. */}
+                single swapped <Image>, so the same markup serves the
+                desktop wheel-scroll, trackpad swipe, and mobile touch
+                swipe. */}
             <div
               ref={stripRef}
               onScroll={handleStripScroll}

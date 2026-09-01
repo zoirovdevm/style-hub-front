@@ -1,6 +1,27 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // ROOT-CAUSE FIX for "admin add mahsulot qo'shsam, Bosh sahifada
+  // ko'rinmayapti, faqat F5 bossam chiqadi": Home/Shop/product-detail all
+  // already fetch their data with `revalidate: 0` (see server-fetch.ts),
+  // so the SERVER always has fresh data on every request. But Next.js
+  // 14.2's App Router also has a separate, client-side "Router Cache" that
+  // caches the already-rendered page for each route the browser visits —
+  // for a dynamic route that has a `loading.tsx` boundary (this project's
+  // app/[locale]/loading.tsx covers Home, Shop, etc.), that client cache's
+  // default lifetime is 30 seconds. So: admin adds a product, clicks back
+  // to the storefront, clicks "Bosh sahifa" in the navbar within that 30s
+  // window — the browser reuses its OWN stale cached copy of Home instead
+  // of asking the (already-fresh) server again, and only a hard reload
+  // (F5, which bypasses the Router Cache entirely) shows the new product.
+  // Setting `dynamic: 0` here removes that client-side staleness window
+  // for every dynamically-rendered route, so a normal <Link> navigation
+  // behaves the same as a hard refresh for these pages.
+  experimental: {
+    staleTimes: {
+      dynamic: 0,
+    },
+  },
   // Production build paytida TypeScript/ESLint xatolari build'ni
   // to'xtatmasligi uchun (dev rejimda sayt ishlaydi, bu tekshiruvlar
   // faqat build vaqtida qattiqlashadi).
