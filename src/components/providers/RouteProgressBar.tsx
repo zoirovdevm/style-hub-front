@@ -2,7 +2,11 @@
 
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { useShopLoadingStore } from '@/lib/store/shop-loading-store';
+import { useNavLoadingStore } from '@/lib/store/shop-loading-store';
+
+// Root-only path ("/uz", "/ru", with or without a trailing slash) — the
+// Home page, and nothing nested under it (so "/uz/shop" etc. don't match).
+const HOME_PATH_RE = /^\/(uz|ru)\/?$/i;
 
 /**
  * Yengil, tashqi kutubxonasiz global "sahifa yuklanmoqda" progress-chizig'i.
@@ -63,15 +67,17 @@ function RouteProgressBarInner() {
       if (url.origin !== window.location.origin) return;
       if (url.pathname + url.search === window.location.pathname + window.location.search) return;
 
-      // Entering /shop from anywhere else (this click is on a real <a>,
-      // e.g. the navbar's "Магазин" link) — hand off to
-      // ShopLoadingOverlay's full-grid skeleton instead of just this thin
+      // Entering /shop or Home from anywhere else (this click is on a real
+      // <a>, e.g. the navbar's "Магазин"/"Главная" link) — hand off to
+      // NavLoadingOverlay's full-page skeleton instead of just this thin
       // top line. Filter/sort/pagination clicks on the shop page itself
       // go through router.push() directly (no <a> to catch here), so
-      // ShopFilters/SortDropdown/Pagination call shop-loading-store's
-      // start() themselves — see those files.
+      // ShopFilters/SortDropdown/Pagination call the store's start()
+      // themselves — see those files.
       if (url.pathname.endsWith('/shop')) {
-        useShopLoadingStore.getState().start();
+        useNavLoadingStore.getState().start('shop');
+      } else if (HOME_PATH_RE.test(url.pathname)) {
+        useNavLoadingStore.getState().start('home');
       }
 
       clearTimers();
@@ -116,13 +122,13 @@ function RouteProgressBarInner() {
       return;
     }
     setWidth((w) => (w > 0 ? 100 : w));
-    // Real content for wherever we just landed (shop grid included) is
-    // ready the moment pathname/searchParams themselves have updated —
-    // that's this exact effect firing. Clearing shop-loading-store here,
-    // not on a timer, is what makes ShopLoadingOverlay disappear in the
-    // same instant the fresh grid is actually there to reveal, however
-    // long the fetch itself took.
-    useShopLoadingStore.getState().finish();
+    // Real content for wherever we just landed is ready the moment
+    // pathname/searchParams themselves have updated — that's this exact
+    // effect firing. Clearing the store here, not on a timer, is what
+    // makes NavLoadingOverlay disappear in the same instant the fresh
+    // page is actually there to reveal, however long the fetch itself
+    // took.
+    useNavLoadingStore.getState().finish();
     const hide = setTimeout(() => {
       setVisible(false);
       setWidth(0);

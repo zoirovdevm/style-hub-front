@@ -17,25 +17,40 @@ import { create } from 'zustand';
  * data fetch itself is written.
  *
  * This store sidesteps that entirely: it doesn't wait on any server
- * signal. `start()` is called the INSTANT a shop-bound click happens
+ * signal. `start()` is called the INSTANT a qualifying click happens
  * (mirroring RouteProgressBar's own proven click-capture technique — see
- * that file), synchronously swapping the shop content area over to a
- * skeleton BEFORE the browser has sent a single byte of the new request.
- * `finish()` fires once Next.js's router reports the URL has actually
- * changed (pathname or query — covers both entering /shop fresh and
- * changing filters/sort/page while already there), which is exactly the
- * moment the freshly-fetched real content is ready to paint. Purely
- * client-side cause and effect — completely unaffected by however the
- * server/proxy chooses to deliver its response.
+ * that file), synchronously swapping the target page's content area over
+ * to a skeleton BEFORE the browser has sent a single byte of the new
+ * request. `finish()` fires once Next.js's router reports the URL has
+ * actually changed (pathname or query — covers both entering a fresh
+ * page and changing filters/sort/page while already on it), which is
+ * exactly the moment the freshly-fetched real content is ready to paint.
+ * Purely client-side cause and effect — completely unaffected by however
+ * the server/proxy chooses to deliver its response.
+ *
+ * Originally shop-only (hence the filename); generalized to carry WHICH
+ * page's skeleton to show (`target`) so the same mechanism now also
+ * covers Home — see NavLoadingOverlay.tsx, which picks the matching
+ * skeleton component for whatever `target` is currently set.
+ *
+ * NOTE: this only ever fires from a CLIENT-SIDE navigation (a click this
+ * session's own JS saw happen). A hard refresh / typed URL / bookmark
+ * has no click for anything here to react to, so neither this store nor
+ * NavLoadingOverlay can help there — that's what ProductCard's own
+ * per-image shimmer (loads-until-the-actual-photo-file-has-downloaded)
+ * is for instead, since that's driven by the browser's native image
+ * `load` event, not by navigation at all.
  */
-interface ShopLoadingState {
-  pending: boolean;
-  start: () => void;
+export type NavLoadingTarget = 'shop' | 'home';
+
+interface NavLoadingState {
+  target: NavLoadingTarget | null;
+  start: (target: NavLoadingTarget) => void;
   finish: () => void;
 }
 
-export const useShopLoadingStore = create<ShopLoadingState>((set) => ({
-  pending: false,
-  start: () => set({ pending: true }),
-  finish: () => set({ pending: false }),
+export const useNavLoadingStore = create<NavLoadingState>((set) => ({
+  target: null,
+  start: (target) => set({ target }),
+  finish: () => set({ target: null }),
 }));

@@ -85,6 +85,23 @@ export function ProductCard({
   const stripRef = useRef<HTMLDivElement>(null);
   const imageAreaRef = useRef<HTMLDivElement>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  // ROOT-CAUSE FIX for "hard refresh qilsam rasimlar asta ochiladi, loader
+  // buni qamramaydi": the product DATA (title/price/image URLs) can be
+  // ready long before the actual photo FILES have finished downloading —
+  // those are two separate things, and no page-level loading state (this
+  // site's own shop/loading.tsx, or the client-driven navigation overlay
+  // in providers/ShopLoadingOverlay.tsx) can cover the second one, since
+  // both only ever track when the DATA arrives, not when every <img> on
+  // the resulting page has actually painted real pixels. A hard refresh
+  // (typed URL, F5, no prior click) is exactly where that gap shows up
+  // worst — no in-app navigation loader runs at all, so a card would
+  // otherwise render onto the page with a blank/empty area for however
+  // long its photo takes to download over the network. Tracking each
+  // slide's own `<img>` load event and shimmering it individually until
+  // THAT fires closes the gap directly, for every card everywhere
+  // (Home, Shop, Categories, Wishlist), regardless of how the surrounding
+  // page got there.
+  const [loadedImages, setLoadedImages] = useState<Record<number, boolean>>({});
   // Mirrors activeImageIndex for the native wheel listener below, which is
   // registered once (see that effect's dependency array) and would
   // otherwise keep reading a stale index from its very first render.
@@ -238,6 +255,16 @@ export function ProductCard({
             >
               {images.map((img, i) => (
                 <div key={img + i} className="relative h-full w-full flex-none snap-center">
+                  {/* Shimmer sits UNDER the <Image> (not conditionally
+                      unmounted) and just fades out once that exact photo
+                      has loaded — keeping it mounted the whole time avoids
+                      a blank flash between "shimmer removed" and "image
+                      painted" on a slow connection. Pointer-events-none so
+                      it never blocks the swipe/click handlers above it
+                      while visible. */}
+                  {!loadedImages[i] && (
+                    <div className="skeleton-shimmer pointer-events-none absolute inset-0" />
+                  )}
                   <Image
                     src={img}
                     alt={`${title} ${i + 1}`}
@@ -254,7 +281,17 @@ export function ProductCard({
                     // padding no matter what CSS does here, since object-fit
                     // can only crop pixels that exist, not invent ones. The
                     // real fix for those is a tighter-cropped source photo.
-                    className="object-cover object-[center_40%] transition-transform duration-700 md:group-hover:scale-105"
+                    className={`object-cover object-[center_40%] transition-[opacity,transform] duration-700 md:group-hover:scale-105 ${
+                      loadedImages[i] ? 'opacity-100' : 'opacity-0'
+                    }`}
+                    // Fires once THIS photo's bytes have actually finished
+                    // downloading and decoded — `unoptimized` below means
+                    // this is a plain <img> under the hood, so the native
+                    // load event fires reliably (including from the
+                    // browser's own disk/memory cache on a repeat visit,
+                    // where it fires almost instantly, so a warm-cache
+                    // photo never sits behind a needless shimmer).
+                    onLoad={() => setLoadedImages((prev) => (prev[i] ? prev : { ...prev, [i]: true }))}
                     unoptimized
                   />
                 </div>

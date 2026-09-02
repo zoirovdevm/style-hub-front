@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { translateColorName } from '@/lib/utils/colorNames';
 import { PRESET_COLORS } from '@/lib/utils/colorSwatch';
-import { useShopLoadingStore } from '@/lib/store/shop-loading-store';
+import { useNavLoadingStore } from '@/lib/store/shop-loading-store';
 import type { Dictionary } from '@/i18n/get-dictionary';
 
 const CLOTHING_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
@@ -56,10 +56,10 @@ export function ShopFilters({ dict, categories, locale }: ShopFiltersProps) {
     params.set('page', '1');
     // Filter clicks change the URL via router.push() directly (no <a> tag
     // involved), so RouteProgressBar's own click-capture listener never
-    // sees them — signal shop-loading-store ourselves so the skeleton
+    // sees them — signal the loading store ourselves so the skeleton
     // overlay still takes over immediately instead of the old grid just
     // sitting there until the new one lands.
-    useShopLoadingStore.getState().start();
+    useNavLoadingStore.getState().start('shop');
     router.push(`${pathname}?${params.toString()}`, { scroll: false });
   }
 
