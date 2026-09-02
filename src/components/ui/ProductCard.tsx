@@ -190,7 +190,7 @@ export function ProductCard({
           therefore the card's overall width/height) is untouched — only the
           wrapper/padding/radius around it changed. rounded-xl = 0.75rem
           (12px), per request — also matched by the quick-buy button below. */}
-      <div className="overflow-hidden rounded-xl border border-ink-900/8 bg-white transition-shadow duration-300 hover:shadow-soft dark:border-cream/10 dark:bg-ink-900">
+      <div className="overflow-hidden rounded-xl border border-ink-900/8 bg-white transition-shadow duration-300 md:hover:shadow-soft dark:border-cream/10 dark:bg-ink-900">
         {/* prefetch={false}: a product grid can render 8-20+ of these cards
             at once, and Next.js's default Link behavior background-fetches
             each one's route data as it scrolls into view. On a fast/low-
@@ -221,15 +221,18 @@ export function ProductCard({
             <div
               ref={stripRef}
               onScroll={handleStripScroll}
-              // touchAction: 'pan-x' is the important part on mobile — it's
-              // an explicit signal to the browser's touch-gesture recognizer
-              // that a horizontal drag starting on this element belongs to
-              // ITS OWN scrolling, not the page's vertical scroll. Without
-              // it, some mobile browsers can end up ambiguous about which
-              // direction "wins" on a touch-drag over a nested horizontal
-              // scroller and the swipe doesn't reliably register.
-              style={{ touchAction: 'pan-x' }}
-              className={`no-scrollbar flex h-full w-full ${
+              // touch-pan-x (md and up only) explicitly tells the browser's
+              // touch-gesture recognizer that a horizontal drag starting on
+              // this element belongs to ITS OWN scrolling — helps
+              // ambiguous diagonal swipes register reliably on touch
+              // laptops/tablets. On phones we deliberately leave this at
+              // the browser default (touch-auto) instead: pan-x was
+              // blocking VERTICAL touch scrolling that started on top of a
+              // product photo, so scrolling the page itself would get
+              // stuck on any card with more than one photo — auto lets the
+              // browser pick horizontal-vs-vertical per gesture instead,
+              // same as any normal nested horizontal scroller.
+              className={`no-scrollbar flex h-full w-full touch-auto md:touch-pan-x ${
                 hasMultipleImages ? 'snap-x snap-mandatory overflow-x-auto' : 'overflow-hidden'
               }`}
             >
@@ -251,7 +254,7 @@ export function ProductCard({
                     // padding no matter what CSS does here, since object-fit
                     // can only crop pixels that exist, not invent ones. The
                     // real fix for those is a tighter-cropped source photo.
-                    className="object-cover object-[center_40%] transition-transform duration-700 group-hover:scale-105"
+                    className="object-cover object-[center_40%] transition-transform duration-700 md:group-hover:scale-105"
                     unoptimized
                   />
                 </div>
