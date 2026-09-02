@@ -13,7 +13,7 @@ interface ShopPageProps {
   searchParams: Record<string, string | undefined>;
 }
 
-const LIMIT = 12;
+const LIMIT = 30;
 
 export default async function ShopPage({ params, searchParams }: ShopPageProps) {
   const { locale } = params;
