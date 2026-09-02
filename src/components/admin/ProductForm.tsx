@@ -57,6 +57,26 @@ function isFootwearCategory(cat?: { name?: string; nameRu?: string; slug?: strin
   return /shoe|poyabzal|обув|krossov|кроссов|tufli|туфли|botin|ботин|sneaker|sandal|сандал|sapog|сапог/.test(haystack);
 }
 
+// ROOT-CAUSE FIX for "aksessuar/kosmetika qo'shmoqchiman, lekin u yerda
+// o'lcham kirmaydi": clothing sizes (XS-XXL) and shoe sizes (36-45) were
+// the ONLY two options the size picker ever showed — for a category like
+// accessories or cosmetics, where no size genuinely applies, the admin
+// still saw a full row of size buttons with nothing telling them it was
+// safe to just leave all of them unselected (the backend already fully
+// supports an empty `sizes` array — see product.input.ts — this was a
+// pure UI-confusion problem, not a validation one). For these categories
+// the size section is hidden entirely instead of showing options that
+// would never make sense to pick. Detected the same way as
+// isFootwearCategory — from the category's own name/nameRu/slug.
+function isSizelessCategory(cat?: { name?: string; nameRu?: string; slug?: string }): boolean {
+  if (!cat) return false;
+  const haystack = `${cat.name ?? ''} ${cat.nameRu ?? ''} ${cat.slug ?? ''}`.toLowerCase();
+  // "Aksessuar"/"аксессуары" (accessories), "kosmetika"/"косметика"
+  // (cosmetics), "parfyum(eriya)"/"парфюм(ерия)" (perfume) — none of these
+  // come in a clothing or shoe size.
+  return /aksessuar|аксессуар|kosmetika|косметик|parfyum|парфюм|parfum/.test(haystack);
+}
+
 // COLOR_PRESETS (the common ready-made swatches so the admin can add a
 // color in one click instead of typing it every time — a custom text field
 // below still covers anything not in this list) is now imported as
@@ -178,6 +198,21 @@ export function ProductForm({
   const selectedCategoryId = watch('categoryId');
   const selectedCategory = categories.find((c: any) => c.id === selectedCategoryId);
   const SIZE_OPTIONS = isFootwearCategory(selectedCategory) ? SHOE_SIZE_OPTIONS : CLOTHING_SIZE_OPTIONS;
+  // No category picked yet defaults to `true` (same as the size picker's
+  // own long-standing default) — only actually hides once a known
+  // sizeless category (accessories, cosmetics, ...) is selected.
+  const showSizes = !isSizelessCategory(selectedCategory);
+
+  // Switching TO a sizeless category (or starting a new product already
+  // pointed at one) clears out any sizes picked earlier — otherwise a
+  // hidden, forgotten-about `sizes` value could still ride along on
+  // submit even though the picker that set it is no longer on screen.
+  useEffect(() => {
+    if (!showSizes && sizes.length > 0) {
+      setValue('sizes', [], { shouldDirty: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showSizes]);
 
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -431,25 +466,32 @@ export function ProductForm({
 
         {/* ── O'lcham va rang ── */}
         <div className="card-surface space-y-5 p-6">
-          <div>
-            <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-ink-900/50">
-              {dict.product.size} — {dict.admin.sizesHint}
-            </h3>
-            <div className="flex flex-wrap gap-2">
-              {SIZE_OPTIONS.map((size) => (
-                <button
-                  type="button"
-                  key={size}
-                  onClick={() => toggleSize(size)}
-                  className={`h-10 min-w-10 rounded-lg border px-3 text-sm font-semibold transition-colors ${
-                    sizes.includes(size) ? 'border-ink-950 bg-ink-950 text-cream' : 'border-ink-900/15 hover:border-ink-950'
-                  }`}
-                >
-                  {size}
-                </button>
-              ))}
+          {showSizes ? (
+            <div>
+              <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-ink-900/50">
+                {dict.product.size} — {dict.admin.sizesHint}
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {SIZE_OPTIONS.map((size) => (
+                  <button
+                    type="button"
+                    key={size}
+                    onClick={() => toggleSize(size)}
+                    className={`h-10 min-w-10 rounded-lg border px-3 text-sm font-semibold transition-colors ${
+                      sizes.includes(size) ? 'border-ink-950 bg-ink-950 text-cream' : 'border-ink-900/15 hover:border-ink-950'
+                    }`}
+                  >
+                    {size}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          ) : (
+            // Aksessuar/kosmetika kabi toifalarda kiyim/poyabzal o'lchami
+            // umuman mavjud emas — shu sababli bu yerda tanlov ko'rsatmay,
+            // faqat qisqa izoh beriladi.
+            <p className="text-xs text-ink-900/40">{dict.admin.noSizeForCategory}</p>
+          )}
 
           <div>
             <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-ink-900/50">
