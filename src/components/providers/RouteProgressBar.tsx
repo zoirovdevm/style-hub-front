@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
+import { useShopLoadingStore } from '@/lib/store/shop-loading-store';
 
 /**
  * Yengil, tashqi kutubxonasiz global "sahifa yuklanmoqda" progress-chizig'i.
@@ -62,6 +63,17 @@ function RouteProgressBarInner() {
       if (url.origin !== window.location.origin) return;
       if (url.pathname + url.search === window.location.pathname + window.location.search) return;
 
+      // Entering /shop from anywhere else (this click is on a real <a>,
+      // e.g. the navbar's "Магазин" link) — hand off to
+      // ShopLoadingOverlay's full-grid skeleton instead of just this thin
+      // top line. Filter/sort/pagination clicks on the shop page itself
+      // go through router.push() directly (no <a> to catch here), so
+      // ShopFilters/SortDropdown/Pagination call shop-loading-store's
+      // start() themselves — see those files.
+      if (url.pathname.endsWith('/shop')) {
+        useShopLoadingStore.getState().start();
+      }
+
       clearTimers();
       setVisible(true);
       setWidth(15);
@@ -104,6 +116,13 @@ function RouteProgressBarInner() {
       return;
     }
     setWidth((w) => (w > 0 ? 100 : w));
+    // Real content for wherever we just landed (shop grid included) is
+    // ready the moment pathname/searchParams themselves have updated —
+    // that's this exact effect firing. Clearing shop-loading-store here,
+    // not on a timer, is what makes ShopLoadingOverlay disappear in the
+    // same instant the fresh grid is actually there to reveal, however
+    // long the fetch itself took.
+    useShopLoadingStore.getState().finish();
     const hide = setTimeout(() => {
       setVisible(false);
       setWidth(0);

@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { useShopLoadingStore } from '@/lib/store/shop-loading-store';
 import type { Dictionary } from '@/i18n/get-dictionary';
 
 export function SortDropdown({ dict }: { dict: Dictionary }) {
@@ -20,6 +21,9 @@ export function SortDropdown({ dict }: { dict: Dictionary }) {
   function handleChange(value: string) {
     const params = new URLSearchParams(searchParams.toString());
     params.set('sort', value);
+    // Same reasoning as ShopFilters/Pagination: a <select onChange>, not
+    // an <a> — RouteProgressBar's click listener never fires for this.
+    useShopLoadingStore.getState().start();
     router.push(`${pathname}?${params.toString()}`, { scroll: false });
   }
 

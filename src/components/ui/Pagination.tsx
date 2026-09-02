@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { useShopLoadingStore } from '@/lib/store/shop-loading-store';
 
 export function Pagination({ page, totalPages }: { page: number; totalPages: number }) {
   const router = useRouter();
@@ -12,6 +13,10 @@ export function Pagination({ page, totalPages }: { page: number; totalPages: num
   function goTo(p: number) {
     const params = new URLSearchParams(searchParams.toString());
     params.set('page', String(p));
+    // Same reasoning as ShopFilters: a plain <button onClick> triggers
+    // this, not an <a>, so RouteProgressBar never sees it — signal the
+    // skeleton overlay ourselves.
+    useShopLoadingStore.getState().start();
     router.push(`${pathname}?${params.toString()}`, { scroll: true });
   }
 

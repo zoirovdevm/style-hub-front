@@ -6,6 +6,7 @@ import { ThemeInitializer } from './ThemeInitializer';
 import { PresenceProvider } from '@/lib/hooks/use-presence';
 import { PresenceBeacon } from './PresenceBeacon';
 import { RouteProgressBar } from './RouteProgressBar';
+import { ShopLoadingOverlay } from './ShopLoadingOverlay';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -13,6 +14,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <ApolloClientProvider>
         <PresenceProvider>
           <RouteProgressBar />
+          <ShopLoadingOverlay />
           <PresenceBeacon />
           <ThemeInitializer />
           {children}
