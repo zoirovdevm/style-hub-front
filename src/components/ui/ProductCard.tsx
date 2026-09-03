@@ -344,9 +344,15 @@ export function ProductCard({
                 a bubble-phase preventDefault/stopPropagation here would
                 cancel the actual navigation a moment later. A plain click
                 on a dot just falls through to the Link and opens the
-                product, same as clicking anywhere else on the photo. */}
+                product, same as clicking anywhere else on the photo.
+                md:hidden: on desktop the dots disappear entirely — the
+                hover-scrub effect above is the ONLY thing that shows which
+                photo is active there (matching the Uzum reference exactly,
+                no visible indicator at all). They stay visible on mobile/
+                tablet (below md), where there's no hover and the dots are
+                the only cue of which photo a swipe landed on. */}
             {hasMultipleImages && (
-              <div className="pointer-events-none absolute inset-x-2 bottom-2 flex items-center justify-center gap-1.5">
+              <div className="pointer-events-none absolute inset-x-2 bottom-2 flex items-center justify-center gap-1.5 md:hidden">
                 {images.map((_, i) => {
                   const isActive = i === activeImageIndex;
                   return (
