@@ -27,6 +27,7 @@ export default async function ShopPage({ params, searchParams }: ShopPageProps) 
     colors: searchParams.colors ? searchParams.colors.split(',') : undefined,
     minPrice: searchParams.minPrice ? Number(searchParams.minPrice) : undefined,
     maxPrice: searchParams.maxPrice ? Number(searchParams.maxPrice) : undefined,
+    gender: searchParams.gender || undefined,
     sort: searchParams.sort || 'NEWEST',
     page,
     limit: LIMIT,

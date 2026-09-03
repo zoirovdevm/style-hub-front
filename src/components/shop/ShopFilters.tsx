@@ -45,6 +45,7 @@ export function ShopFilters({ dict, categories, locale }: ShopFiltersProps) {
   const [expanded, setExpanded] = useState(false);
 
   const activeCategory = searchParams.get('category');
+  const activeGender = searchParams.get('gender');
   const activeSizes = searchParams.get('sizes')?.split(',').filter(Boolean) ?? [];
   const activeColors = searchParams.get('colors')?.split(',').filter(Boolean) ?? [];
   const activeCategoryObj = categories.find((c) => c.slug === activeCategory);
@@ -103,6 +104,47 @@ export function ShopFilters({ dict, categories, locale }: ShopFiltersProps) {
           placeholder={dict.product.searchPlaceholder}
           className="w-full rounded-lg border border-ink-900/15 px-3 py-2 text-sm outline-none focus:border-ink-950 dark:border-cream/15 dark:bg-ink-800 dark:text-cream"
         />
+      </div>
+
+      <div>
+        <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-ink-900/50 dark:text-cream/50">{dict.product.gender}</h4>
+        {/* Bitta tanlov (Barchasi/Erkaklar/Ayollar) — kategoriya ro'yxati
+            bilan bir xil border-l-2 + gold accent uslubi. Unisex tovarlar
+            bu yerda alohida ko'rsatilmaydi (backend Erkaklar/Ayollar
+            tanlanganda ularni ham avtomatik qo'shib beradi — hali qo'lda
+            qayta belgilanmagan tovarlar bo'sh sahifa ko'rsatmasin uchun). */}
+        <div className="flex flex-col gap-1">
+          <button
+            onClick={() => updateParams((p) => p.delete('gender'))}
+            className={`rounded-lg border-l-2 px-3 py-2 text-left text-sm transition-colors ${
+              !activeGender
+                ? 'border-gold-500 bg-gold-500/10 font-bold text-gold-600 dark:text-gold-400'
+                : 'border-transparent text-ink-900/60 hover:bg-ink-900/5 hover:text-ink-950 dark:text-cream/60 dark:hover:bg-cream/5 dark:hover:text-cream'
+            }`}
+          >
+            {dict.product.genderAll}
+          </button>
+          <button
+            onClick={() => updateParams((p) => p.set('gender', 'MALE'))}
+            className={`rounded-lg border-l-2 px-3 py-2 text-left text-sm transition-colors ${
+              activeGender === 'MALE'
+                ? 'border-gold-500 bg-gold-500/10 font-bold text-gold-600 dark:text-gold-400'
+                : 'border-transparent text-ink-900/60 hover:bg-ink-900/5 hover:text-ink-950 dark:text-cream/60 dark:hover:bg-cream/5 dark:hover:text-cream'
+            }`}
+          >
+            {dict.product.genderMale}
+          </button>
+          <button
+            onClick={() => updateParams((p) => p.set('gender', 'FEMALE'))}
+            className={`rounded-lg border-l-2 px-3 py-2 text-left text-sm transition-colors ${
+              activeGender === 'FEMALE'
+                ? 'border-gold-500 bg-gold-500/10 font-bold text-gold-600 dark:text-gold-400'
+                : 'border-transparent text-ink-900/60 hover:bg-ink-900/5 hover:text-ink-950 dark:text-cream/60 dark:hover:bg-cream/5 dark:hover:text-cream'
+            }`}
+          >
+            {dict.product.genderFemale}
+          </button>
+        </div>
       </div>
 
       <div>

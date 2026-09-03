@@ -39,6 +39,7 @@ export interface ProductFormValues {
   brandId?: string;
   storeId?: string;
   isFeatured?: boolean;
+  gender: 'MALE' | 'FEMALE' | 'UNISEX';
 }
 
 const CLOTHING_SIZE_OPTIONS = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
@@ -125,6 +126,7 @@ export function ProductForm({
       variants: [],
       stock: 0,
       price: 0,
+      gender: 'UNISEX',
       ...defaultValues,
     },
   });
@@ -820,6 +822,21 @@ export function ProductForm({
               ))}
             </select>
             <p className="mt-1 text-xs text-ink-900/40">{dict.admin.storeHint}</p>
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-ink-900/60">{dict.product.gender}</label>
+            {/* Har doim aniq bir qiymatga ega (default UNISEX), shuning
+                uchun bo'sh "— Tanlang —" variantiga hojat yo'q — categoryId/
+                brandId select'laridan farqli o'laroq. */}
+            <select
+              {...register('gender')}
+              className="w-full rounded-xl border border-ink-900/15 px-4 py-3 text-sm outline-none focus:border-ink-950"
+            >
+              <option value="MALE">{dict.product.genderMale}</option>
+              <option value="FEMALE">{dict.product.genderFemale}</option>
+              <option value="UNISEX">{dict.product.genderUnisex}</option>
+            </select>
           </div>
 
           <label className="flex items-center gap-2 text-sm">

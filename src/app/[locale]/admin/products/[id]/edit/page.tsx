@@ -51,6 +51,7 @@ export default function EditProductPage({ params }: { params: { locale: Locale; 
             categoryId
             brandId
             storeId
+            gender
           }
         }
       }
@@ -116,6 +117,7 @@ export default function EditProductPage({ params }: { params: { locale: Locale; 
           brandId: product.brandId,
           storeId: product.storeId,
           isFeatured: product.isFeatured,
+          gender: product.gender ?? 'UNISEX',
         }}
         onSubmit={handleSubmit}
         submitting={submitting}

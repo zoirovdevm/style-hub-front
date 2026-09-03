@@ -32,6 +32,7 @@ export const PRODUCT_FIELDS = gql`
     viewCount
     soldCount
     createdAt
+    gender
     category {
       id
       name

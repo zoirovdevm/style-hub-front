@@ -22,6 +22,7 @@ export const PRODUCT_FIELDS_STR = `
     viewCount
     soldCount
     createdAt
+    gender
     category { id name nameRu slug }
     brand { id name slug }
   }
