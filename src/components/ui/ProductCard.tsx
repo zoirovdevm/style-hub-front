@@ -11,6 +11,7 @@ import { TOGGLE_WISHLIST } from '@/lib/graphql/mutations';
 import { GET_MY_WISHLIST } from '@/lib/graphql/queries';
 import { useAuthStore } from '@/lib/store/auth-store';
 import { formatPrice } from '@/lib/utils/format';
+import { useHoverScrubImages } from '@/lib/hooks/use-hover-scrub-images';
 import { QuickBuyModal } from '@/components/product/QuickBuyModal';
 import type { Dictionary } from '@/i18n/get-dictionary';
 import type { Locale } from '@/i18n/config';
@@ -154,6 +155,20 @@ export function ProductCard({
     scrollToImage(0);
   }
 
+  // Uzum Market-style hover scrubbing: the whole image area is invisibly
+  // split into `images.length` equal left-to-right zones (see the hook
+  // itself — no extra DOM, just math against the container's rect on every
+  // pointer move), and whichever zone the (real mouse) cursor is over
+  // becomes the shown photo. `null` (pointer left the area, or wasn't a
+  // mouse) falls back to the same "reset to the first photo" behavior
+  // handleImageMouseLeave already does — one shared definition of
+  // "default" instead of two. Returns `undefined` when there's only one
+  // photo, so spreading it below attaches nothing and this never
+  // interferes with a single-image card.
+  const scrubHandlers = useHoverScrubImages(images.length, (index) => {
+    scrollToImage(index ?? 0);
+  });
+
   function handleStripScroll(e: React.UIEvent<HTMLDivElement>) {
     if (!hasMultipleImages) return;
     const el = e.currentTarget;
@@ -226,6 +241,7 @@ export function ProductCard({
             ref={imageAreaRef}
             className="relative aspect-[3/4] overflow-hidden bg-ink-900/5"
             onMouseLeave={handleImageMouseLeave}
+            {...scrubHandlers}
           >
             {/* unoptimized (Next.js image optimization endpoint returns a
                 broken/error response in production without `sharp`
@@ -304,22 +320,63 @@ export function ProductCard({
               </span>
             )}
 
-            {/* Thin Instagram-story-style segment bars along the bottom
-                edge of the photo — only shown when there's more than one —
-                so it's visually clear the image is scrubbable/swipeable and
-                which one is currently shown. Bottom (not top, where the
-                discount badge and wishlist heart already sit) to avoid
-                overlapping either. */}
+            {/* Round dot indicators along the bottom edge of the photo —
+                only shown when there's more than one. Bottom (not top,
+                where the discount badge and wishlist heart already sit) to
+                avoid overlapping either.
+                Mouse hover is deliberately NOT wired here anymore — the
+                whole image area above now does Uzum-style hover scrubbing
+                (see scrubHandlers/useHoverScrubImages: it invisibly splits
+                the FULL container into images.length equal zones and
+                previews whichever one the cursor is over), which already
+                covers "hovering near a dot shows roughly that photo" as a
+                side effect of covering the entire image. Wiring the dot's
+                own onMouseEnter too would just fight that for the same
+                state on every mouse move. Keyboard focus is kept as its
+                OWN, separate path — Tab-ing to a dot still previews that
+                exact photo — since the segment-scrub above is pointer-only
+                and has no keyboard equivalent otherwise.
+                Deliberately NO onClick: this sits inside the card's <Link>
+                (see the wishlist heart's comment above for why a *click*
+                target nested in the Link is risky) — RouteProgressBar's
+                capture-phase document listener would flash the top loading
+                bar the instant the click lands inside the <a>, even though
+                a bubble-phase preventDefault/stopPropagation here would
+                cancel the actual navigation a moment later. A plain click
+                on a dot just falls through to the Link and opens the
+                product, same as clicking anywhere else on the photo. */}
             {hasMultipleImages && (
-              <div className="pointer-events-none absolute bottom-2 left-2 right-2 flex gap-1">
-                {images.map((_, i) => (
-                  <span
-                    key={i}
-                    className={`h-0.5 flex-1 rounded-full transition-colors duration-300 ${
-                      i === activeImageIndex ? 'bg-white' : 'bg-white/40'
-                    }`}
-                  />
-                ))}
+              <div className="pointer-events-none absolute inset-x-2 bottom-2 flex items-center justify-center gap-1.5">
+                {images.map((_, i) => {
+                  const isActive = i === activeImageIndex;
+                  return (
+                    <span
+                      key={i}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`${title} — ${i + 1}/${images.length}`}
+                      aria-current={isActive}
+                      onFocus={() => scrollToImage(i)}
+                      // pointer-events-auto: the row itself is
+                      // pointer-events-none (so it never steals hover from
+                      // the segment-scrub container above/behind it) but
+                      // each dot re-enables its own pointer events just
+                      // enough to stay a real Tab stop and to get its own
+                      // focus-visible ring — NOT for hover (see comment
+                      // above), which is why there's no onMouseEnter here.
+                      // active: (real mouse-down) and focus-visible: (Tab)
+                      // are their own distinct states on top of the
+                      // isActive one above — a press-feedback shrink and a
+                      // keyboard focus ring respectively — so all three
+                      // (default, focus, active/selected) stay visually
+                      // distinguishable instead of one silently overriding
+                      // another.
+                      className={`pointer-events-auto h-1.5 w-1.5 shrink-0 cursor-pointer rounded-full outline-none transition-all duration-300 focus-visible:ring-2 focus-visible:ring-gold-400 focus-visible:ring-offset-1 active:scale-90 ${
+                        isActive ? 'scale-125 bg-gold-500' : 'bg-white/50 hover:scale-110 hover:bg-white/90'
+                      }`}
+                    />
+                  );
+                })}
               </div>
             )}
           </div>
