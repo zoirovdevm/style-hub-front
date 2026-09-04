@@ -1,8 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useSearchParams } from 'next/navigation';
-import { Suspense } from 'react';
+import { usePathname } from 'next/navigation';
 import { Heart, ShoppingBag, User2, LogIn } from 'lucide-react';
 import { useQuery } from '@apollo/client';
 import { GET_MY_CART, GET_MY_WISHLIST } from '@/lib/graphql/queries';
@@ -15,102 +14,6 @@ import type { Dictionary } from '@/i18n/get-dictionary';
 interface HeaderProps {
   locale: Locale;
   dict: Dictionary;
-}
-
-// Har bir nav link — "Erkaklar"/"Ayollar" ikkalasi ham /shop'ga o'zining
-// ?gender= qiymati bilan yo'naltiradi (genderValue), qolgan barcha havolalar
-// oddiy sahifalar (genderValue: null). Bitta joyda saqlanadi — shu ro'yxatni
-// ham asosiy (useSearchParams'li) versiya, ham quyidagi Suspense fallback
-// ishlatadi, shunda ikkalasi bir-biridan farq qilib ketmaydi.
-function buildNavLinks(locale: Locale, dict: Dictionary) {
-  return [
-    { href: `/${locale}`, label: dict.nav.home, genderValue: null as string | null },
-    { href: `/${locale}/shop`, label: dict.nav.shop, genderValue: null },
-    { href: `/${locale}/shop?gender=MALE`, label: dict.nav.men, genderValue: 'MALE' },
-    { href: `/${locale}/shop?gender=FEMALE`, label: dict.nav.women, genderValue: 'FEMALE' },
-    { href: `/${locale}/categories`, label: dict.nav.categories, genderValue: null },
-    { href: `/${locale}/about`, label: dict.nav.about, genderValue: null },
-    { href: `/${locale}/contact`, label: dict.nav.contact, genderValue: null },
-  ];
-}
-
-function navLinkClassName(active: boolean) {
-  return `relative py-1 text-sm font-medium transition-colors ${
-    active
-      ? 'font-semibold text-gold-600 dark:text-gold-400'
-      : 'text-ink-900/70 hover:text-ink-950 dark:text-cream/70 dark:hover:text-cream'
-  }`;
-}
-
-// "Do'kon" sahifasi endi 3 xil holatda faol bo'lishi mumkin: oddiy /shop,
-// yoki ?gender=MALE/FEMALE bilan — shuning uchun faqat pathname'ga qarab
-// bo'lmaydi, aks holda "Do'kon", "Erkaklar" va "Ayollar" barchasi bir vaqtda
-// yorishib ketardi. `activeGender` — hozirgi URL'dagi ?gender qiymati
-// (Erkaklar/Ayollar sahifalarida useSearchParams orqali olinadi; boshqa
-// sahifalarda har doim null bo'lgani uchun oddiy pathname solishtiruvi
-// yetarli).
-function isLinkActive(
-  link: { href: string; genderValue: string | null },
-  locale: Locale,
-  pathname: string | null,
-  activeGender: string | null,
-) {
-  const isShopRoute = pathname === `/${locale}/shop` || (pathname?.startsWith(`/${locale}/shop/`) ?? false);
-  if (link.genderValue) return isShopRoute && activeGender === link.genderValue;
-  if (link.href === `/${locale}/shop`) return isShopRoute && !activeGender;
-  if (link.href === `/${locale}`) return pathname === link.href;
-  return pathname === link.href || (pathname?.startsWith(`${link.href}/`) ?? false);
-}
-
-// useSearchParams() qism — Next.js buni Suspense chegarasi ichida talab
-// qiladi, aks holda butun sahifa statik generatsiyadan chiqib ketadi.
-// Header saytning har bir sahifasida ko'rinadigani uchun bu talabni FAQAT
-// shu kichik nav qismiga (butun Header'ga emas) cheklab qo'yamiz — pastdagi
-// <Suspense fallback={<StaticNavLinks />}> shuni ta'minlaydi.
-function DynamicNavLinks({ locale, dict, pathname }: { locale: Locale; dict: Dictionary; pathname: string | null }) {
-  const searchParams = useSearchParams();
-  const activeGender = searchParams.get('gender');
-  const navLinks = buildNavLinks(locale, dict);
-
-  return (
-    <>
-      {navLinks.map((link) => {
-        const active = isLinkActive(link, locale, pathname, activeGender);
-        return (
-          <Link
-            key={link.href}
-            href={link.href}
-            prefetch={false}
-            aria-current={active ? 'page' : undefined}
-            className={navLinkClassName(active)}
-          >
-            {link.label}
-            {active && <span className="absolute inset-x-0 -bottom-1 h-0.5 rounded-full bg-gold-500" />}
-          </Link>
-        );
-      })}
-    </>
-  );
-}
-
-// Suspense fallback — gender query hali "ko'rinmaydi" (useSearchParams yo'q),
-// shuning uchun Erkaklar/Ayollar oddiy (faol bo'lmagan) holatda chiqadi.
-// Amalda bu faqat ilk server-render/hydratsiya oralig'ida ko'rinadi.
-function StaticNavLinks({ locale, dict, pathname }: { locale: Locale; dict: Dictionary; pathname: string | null }) {
-  const navLinks = buildNavLinks(locale, dict);
-  return (
-    <>
-      {navLinks.map((link) => {
-        const active = isLinkActive(link, locale, pathname, null);
-        return (
-          <Link key={link.href} href={link.href} prefetch={false} className={navLinkClassName(active)}>
-            {link.label}
-            {active && <span className="absolute inset-x-0 -bottom-1 h-0.5 rounded-full bg-gold-500" />}
-          </Link>
-        );
-      })}
-    </>
-  );
 }
 
 // On mobile, MobileBottomNav (Home/Shop/Cart/Wishlist/Profile) already
@@ -135,9 +38,22 @@ export function Header({ locale, dict }: HeaderProps) {
   // now" contrast switch (useNavbarContrast), which is no longer called
   // here. Every nav item below already carries its own `dark:text-cream`-
   // style pairing, so theme changes propagate automatically with no JS.
-  // The nav items themselves (incl. the "Erkaklar"/"Ayollar" gender links
-  // and their active-state logic) live in DynamicNavLinks/StaticNavLinks
-  // above — see the comment there for why.
+  const navLinks = [
+    { href: `/${locale}`, label: dict.nav.home },
+    { href: `/${locale}/shop`, label: dict.nav.shop },
+    { href: `/${locale}/categories`, label: dict.nav.categories },
+    { href: `/${locale}/about`, label: dict.nav.about },
+    { href: `/${locale}/contact`, label: dict.nav.contact },
+  ];
+
+  // Home ("/uz") must match exactly — every other route also starts with
+  // "/uz", so a prefix check there would keep Home permanently highlighted.
+  // Every other link matches its own page and anything nested under it
+  // (e.g. "/uz/shop/some-product" still highlights "Shop").
+  function isActiveLink(href: string) {
+    if (href === `/${locale}`) return pathname === href;
+    return pathname === href || (pathname?.startsWith(`${href}/`) ?? false);
+  }
 
   return (
     // `fixed` (not `sticky`) — this floats the pill ON TOP of the page
@@ -184,9 +100,27 @@ export function Header({ locale, dict }: HeaderProps) {
         </Link>
 
         <nav className="hidden items-center gap-8 lg:flex">
-          <Suspense fallback={<StaticNavLinks locale={locale} dict={dict} pathname={pathname} />}>
-            <DynamicNavLinks locale={locale} dict={dict} pathname={pathname} />
-          </Suspense>
+          {navLinks.map((link) => {
+            const active = isActiveLink(link.href);
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                prefetch={false}
+                aria-current={active ? 'page' : undefined}
+                className={`relative py-1 text-sm font-medium transition-colors ${
+                  active
+                    ? 'font-semibold text-gold-600 dark:text-gold-400'
+                    : 'text-ink-900/70 hover:text-ink-950 dark:text-cream/70 dark:hover:text-cream'
+                }`}
+              >
+                {link.label}
+                {active && (
+                  <span className="absolute inset-x-0 -bottom-1 h-0.5 rounded-full bg-gold-500" />
+                )}
+              </Link>
+            );
+          })}
         </nav>
 
         <div className="flex shrink-0 items-center gap-2 sm:gap-4">

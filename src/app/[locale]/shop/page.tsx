@@ -1,7 +1,7 @@
 import { getDictionary } from '@/i18n/get-dictionary';
 import type { Locale } from '@/i18n/config';
 import { serverFetchGraphQL } from '@/lib/graphql/server-fetch';
-import { GET_PRODUCTS_STR, GET_CATEGORIES_STR } from '@/lib/graphql/server-queries';
+import { GET_PRODUCTS_STR, GET_CATEGORIES_STR, GET_GENDERS_STR } from '@/lib/graphql/server-queries';
 import { ProductCard, type ProductCardData } from '@/components/ui/ProductCard';
 import { ShopFilters } from '@/components/shop/ShopFilters';
 import { SortDropdown } from '@/components/shop/SortDropdown';
@@ -27,19 +27,20 @@ export default async function ShopPage({ params, searchParams }: ShopPageProps) 
     colors: searchParams.colors ? searchParams.colors.split(',') : undefined,
     minPrice: searchParams.minPrice ? Number(searchParams.minPrice) : undefined,
     maxPrice: searchParams.maxPrice ? Number(searchParams.maxPrice) : undefined,
-    gender: searchParams.gender || undefined,
+    genderSlug: searchParams.gender || undefined,
     sort: searchParams.sort || 'NEWEST',
     page,
     limit: LIMIT,
   };
 
-  const [productsData, categoriesData] = await Promise.all([
+  const [productsData, categoriesData, gendersData] = await Promise.all([
     serverFetchGraphQL<{ products: { list: ProductCardData[]; total: number } }>(
       GET_PRODUCTS_STR,
       { filter },
       0,
     ).catch(() => ({ products: { list: [], total: 0 } })),
     serverFetchGraphQL<{ categories: any[] }>(GET_CATEGORIES_STR, undefined, 0).catch(() => ({ categories: [] })),
+    serverFetchGraphQL<{ genders: any[] }>(GET_GENDERS_STR, undefined, 0).catch(() => ({ genders: [] })),
   ]);
 
   const products = productsData.products.list ?? [];
@@ -53,7 +54,12 @@ export default async function ShopPage({ params, searchParams }: ShopPageProps) 
       </Reveal>
 
       <div className="mt-8 flex flex-col gap-10 lg:flex-row">
-        <ShopFilters dict={dict} categories={categoriesData.categories ?? []} locale={locale} />
+        <ShopFilters
+          dict={dict}
+          categories={categoriesData.categories ?? []}
+          genders={gendersData.genders ?? []}
+          locale={locale}
+        />
 
         <div className="flex-1">
           <div className="mb-6 flex items-center justify-between">

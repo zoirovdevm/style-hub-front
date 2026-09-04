@@ -235,6 +235,15 @@ export const CREATE_BRAND = gql`
   }
 `;
 
+export const CREATE_GENDER = gql`
+  mutation CreateGender($input: CreateGenderInput!) {
+    createGender(input: $input) {
+      id
+      slug
+    }
+  }
+`;
+
 export const CREATE_STORE = gql`
   mutation CreateStore($input: CreateStoreInput!) {
     createStore(input: $input) {

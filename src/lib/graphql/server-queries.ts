@@ -22,7 +22,7 @@ export const PRODUCT_FIELDS_STR = `
     viewCount
     soldCount
     createdAt
-    gender
+    gender { id name slug }
     category { id name nameRu slug }
     brand { id name slug }
   }
@@ -61,6 +61,12 @@ export const GET_CATEGORIES_STR = `
 export const GET_BRANDS_STR = `
   query GetBrands {
     brands { id name slug logo }
+  }
+`;
+
+export const GET_GENDERS_STR = `
+  query GetGenders {
+    genders { id name slug }
   }
 `;
 

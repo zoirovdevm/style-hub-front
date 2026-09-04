@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { useQuery, useMutation } from '@apollo/client';
 import { Plus, Trash2, Pencil, Check, X } from 'lucide-react';
-import { GET_CATEGORIES, GET_BRANDS } from '@/lib/graphql/queries';
-import { CREATE_CATEGORY, CREATE_BRAND, UPDATE_CATEGORY } from '@/lib/graphql/mutations';
+import { GET_CATEGORIES, GET_BRANDS, GET_GENDERS } from '@/lib/graphql/queries';
+import { CREATE_CATEGORY, CREATE_BRAND, CREATE_GENDER, UPDATE_CATEGORY } from '@/lib/graphql/mutations';
 import { gql } from '@apollo/client';
 import type { Locale } from '@/i18n/config';
 import uzDict from '@/i18n/dictionaries/uz.json';
@@ -20,6 +20,11 @@ const REMOVE_BRAND = gql`
     removeBrand(id: $id)
   }
 `;
+const REMOVE_GENDER = gql`
+  mutation RemoveGender($id: ID!) {
+    removeGender(id: $id)
+  }
+`;
 
 export default function AdminCategoriesPage({ params }: { params: { locale: Locale } }) {
   const { locale } = params;
@@ -31,16 +36,20 @@ export default function AdminCategoriesPage({ params }: { params: { locale: Loca
     refetch: refetchCategories,
   } = useQuery(GET_CATEGORIES);
   const { data: brandsData, loading: brandsLoading, refetch: refetchBrands } = useQuery(GET_BRANDS);
+  const { data: gendersData, loading: gendersLoading, refetch: refetchGenders } = useQuery(GET_GENDERS);
 
   const [createCategory] = useMutation(CREATE_CATEGORY);
   const [updateCategory] = useMutation(UPDATE_CATEGORY);
   const [createBrand] = useMutation(CREATE_BRAND);
+  const [createGender] = useMutation(CREATE_GENDER);
   const [removeCategory] = useMutation(REMOVE_CATEGORY);
   const [removeBrand] = useMutation(REMOVE_BRAND);
+  const [removeGender] = useMutation(REMOVE_GENDER);
 
   const [categoryName, setCategoryName] = useState('');
   const [categoryNameRu, setCategoryNameRu] = useState('');
   const [brandName, setBrandName] = useState('');
+  const [genderName, setGenderName] = useState('');
 
   // Inline editing for an existing category's name/nameRu — added because
   // categories previously could only be typed once at creation with no way
@@ -83,10 +92,17 @@ export default function AdminCategoriesPage({ params }: { params: { locale: Loca
     refetchBrands();
   }
 
+  async function handleAddGender() {
+    if (!genderName.trim()) return;
+    await createGender({ variables: { input: { name: genderName.trim() } } });
+    setGenderName('');
+    refetchGenders();
+  }
+
   // Gate on the very first load of either query only — once both have
   // loaded once, a create/delete's refetch keeps showing the existing lists
   // instead of the page blanking out.
-  if ((!categoriesData && categoriesLoading) || (!brandsData && brandsLoading)) {
+  if ((!categoriesData && categoriesLoading) || (!brandsData && brandsLoading) || (!gendersData && gendersLoading)) {
     return (
       <div className="flex h-64 items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-ink-900/10 border-t-ink-950" />
@@ -97,10 +113,10 @@ export default function AdminCategoriesPage({ params }: { params: { locale: Loca
   return (
     <div className="space-y-6">
       <h1 className="section-title">
-        {dict.admin.categories} & {dict.admin.brands}
+        {dict.admin.categories} & {dict.admin.brands} & {dict.admin.genders}
       </h1>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-3">
         <div className="card-surface space-y-4 p-6">
           <h2 className="text-sm font-bold uppercase tracking-wider">{dict.admin.categories}</h2>
           <div className="flex flex-wrap gap-2">
@@ -201,6 +217,40 @@ export default function AdminCategoriesPage({ params }: { params: { locale: Loca
                     refetchBrands();
                   }}
                   className="text-ink-900/30 hover:text-red-500"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Brend bilan bir xil naqsh: admin shu yerda nom kiritib o'zi
+            yaratadi (masalan "Erkaklar", "Ayollar"), keyin tovar
+            qo'shish/tahrirlash formasida shu ro'yxatdan tanlanadi. */}
+        <div className="card-surface space-y-4 p-6">
+          <h2 className="text-sm font-bold uppercase tracking-wider">{dict.admin.genders}</h2>
+          <div className="flex gap-2">
+            <input
+              value={genderName}
+              onChange={(e) => setGenderName(e.target.value)}
+              placeholder={dict.admin.genderNamePlaceholder}
+              className="flex-1 rounded-xl border border-ink-900/15 px-4 py-3 text-sm text-ink-950 outline-none focus:border-ink-950 dark:border-cream/15 dark:bg-ink-900 dark:text-cream dark:placeholder:text-cream/40 dark:focus:border-cream"
+            />
+            <button onClick={handleAddGender} className="btn-primary !px-4">
+              <Plus size={16} />
+            </button>
+          </div>
+          <div className="space-y-2">
+            {gendersData?.genders?.map((gender: any) => (
+              <div key={gender.id} className="flex items-center justify-between rounded-xl border border-ink-900/5 px-4 py-3 text-sm dark:border-cream/10">
+                <span>{gender.name}</span>
+                <button
+                  onClick={async () => {
+                    await removeGender({ variables: { id: gender.id } });
+                    refetchGenders();
+                  }}
+                  className="text-ink-900/30 hover:text-red-500 dark:text-cream/30"
                 >
                   <Trash2 size={14} />
                 </button>

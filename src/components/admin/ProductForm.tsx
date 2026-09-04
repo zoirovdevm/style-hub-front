@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useQuery } from '@apollo/client';
 import { UploadCloud } from 'lucide-react';
-import { GET_CATEGORIES, GET_BRANDS, GET_STORES } from '@/lib/graphql/queries';
+import { GET_CATEGORIES, GET_BRANDS, GET_STORES, GET_GENDERS } from '@/lib/graphql/queries';
 import { uploadProductImage } from '@/lib/utils/uploadProductImage';
 import { PRESET_COLORS as COLOR_PRESETS } from '@/lib/utils/colorSwatch';
 import type { Dictionary } from '@/i18n/get-dictionary';
@@ -39,7 +39,9 @@ export interface ProductFormValues {
   brandId?: string;
   storeId?: string;
   isFeatured?: boolean;
-  gender: 'MALE' | 'FEMALE' | 'UNISEX';
+  // Erkaklar/Ayollar va h.k. — Brend bilan bir xil ixtiyoriy tanlov, admin
+  // o'zi admin/categories sahifasida yaratgan ro'yxatdan.
+  genderId?: string;
 }
 
 const CLOTHING_SIZE_OPTIONS = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
@@ -108,6 +110,7 @@ export function ProductForm({
   const { data: categoriesData } = useQuery(GET_CATEGORIES);
   const { data: brandsData } = useQuery(GET_BRANDS);
   const { data: storesData } = useQuery(GET_STORES);
+  const { data: gendersData } = useQuery(GET_GENDERS);
 
   const {
     register,
@@ -126,7 +129,6 @@ export function ProductForm({
       variants: [],
       stock: 0,
       price: 0,
-      gender: 'UNISEX',
       ...defaultValues,
     },
   });
@@ -826,16 +828,19 @@ export function ProductForm({
 
           <div>
             <label className="mb-1.5 block text-xs font-semibold text-ink-900/60">{dict.product.gender}</label>
-            {/* Har doim aniq bir qiymatga ega (default UNISEX), shuning
-                uchun bo'sh "— Tanlang —" variantiga hojat yo'q — categoryId/
-                brandId select'laridan farqli o'laroq. */}
+            {/* Brend select'i bilan bir xil naqsh: ro'yxat admin/categories
+                sahifasida admin o'zi yaratgan yozuvlardan keladi — qattiq
+                belgilangan qiymatlar yo'q. */}
             <select
-              {...register('gender')}
+              {...register('genderId')}
               className="w-full rounded-xl border border-ink-900/15 px-4 py-3 text-sm outline-none focus:border-ink-950"
             >
-              <option value="MALE">{dict.product.genderMale}</option>
-              <option value="FEMALE">{dict.product.genderFemale}</option>
-              <option value="UNISEX">{dict.product.genderUnisex}</option>
+              <option value="">{dict.admin.noneOption}</option>
+              {gendersData?.genders?.map((g: any) => (
+                <option key={g.id} value={g.id}>
+                  {g.name}
+                </option>
+              ))}
             </select>
           </div>
 

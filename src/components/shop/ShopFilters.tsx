@@ -27,10 +27,14 @@ function isFootwearCategory(cat?: { name: string; nameRu?: string; slug: string 
 interface ShopFiltersProps {
   dict: Dictionary;
   categories: { slug: string; name: string; nameRu?: string }[];
+  // Brend kabi — admin panelda o'zi yaratgan ro'yxat (masalan "Erkaklar",
+  // "Ayollar"). Qattiq belgilangan qiymatlar emas, shuning uchun bitta nom
+  // maydoni yetarli (Category'dan farqli, bu yerda nameRu yo'q).
+  genders: { slug: string; name: string }[];
   locale: 'uz' | 'ru';
 }
 
-export function ShopFilters({ dict, categories, locale }: ShopFiltersProps) {
+export function ShopFilters({ dict, categories, genders, locale }: ShopFiltersProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -106,46 +110,41 @@ export function ShopFilters({ dict, categories, locale }: ShopFiltersProps) {
         />
       </div>
 
-      <div>
-        <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-ink-900/50 dark:text-cream/50">{dict.product.gender}</h4>
-        {/* Bitta tanlov (Barchasi/Erkaklar/Ayollar) — kategoriya ro'yxati
-            bilan bir xil border-l-2 + gold accent uslubi. Unisex tovarlar
-            bu yerda alohida ko'rsatilmaydi (backend Erkaklar/Ayollar
-            tanlanganda ularni ham avtomatik qo'shib beradi — hali qo'lda
-            qayta belgilanmagan tovarlar bo'sh sahifa ko'rsatmasin uchun). */}
-        <div className="flex flex-col gap-1">
-          <button
-            onClick={() => updateParams((p) => p.delete('gender'))}
-            className={`rounded-lg border-l-2 px-3 py-2 text-left text-sm transition-colors ${
-              !activeGender
-                ? 'border-gold-500 bg-gold-500/10 font-bold text-gold-600 dark:text-gold-400'
-                : 'border-transparent text-ink-900/60 hover:bg-ink-900/5 hover:text-ink-950 dark:text-cream/60 dark:hover:bg-cream/5 dark:hover:text-cream'
-            }`}
-          >
-            {dict.product.genderAll}
-          </button>
-          <button
-            onClick={() => updateParams((p) => p.set('gender', 'MALE'))}
-            className={`rounded-lg border-l-2 px-3 py-2 text-left text-sm transition-colors ${
-              activeGender === 'MALE'
-                ? 'border-gold-500 bg-gold-500/10 font-bold text-gold-600 dark:text-gold-400'
-                : 'border-transparent text-ink-900/60 hover:bg-ink-900/5 hover:text-ink-950 dark:text-cream/60 dark:hover:bg-cream/5 dark:hover:text-cream'
-            }`}
-          >
-            {dict.product.genderMale}
-          </button>
-          <button
-            onClick={() => updateParams((p) => p.set('gender', 'FEMALE'))}
-            className={`rounded-lg border-l-2 px-3 py-2 text-left text-sm transition-colors ${
-              activeGender === 'FEMALE'
-                ? 'border-gold-500 bg-gold-500/10 font-bold text-gold-600 dark:text-gold-400'
-                : 'border-transparent text-ink-900/60 hover:bg-ink-900/5 hover:text-ink-950 dark:text-cream/60 dark:hover:bg-cream/5 dark:hover:text-cream'
-            }`}
-          >
-            {dict.product.genderFemale}
-          </button>
+      {/* Kategoriya bo'limi bilan bir xil naqsh: ro'yxat to'liq admin
+          tomonidan yaratiladi (Brend kabi — admin/categories sahifasi),
+          shuning uchun MALE/FEMALE kabi qattiq belgilangan qiymatlar yo'q.
+          Admin hali birorta ham yozuv qo'shmagan bo'lsa, bo'lim umuman
+          ko'rinmaydi. */}
+      {genders.length > 0 && (
+        <div>
+          <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-ink-900/50 dark:text-cream/50">{dict.product.gender}</h4>
+          <div className="flex flex-col gap-1">
+            <button
+              onClick={() => updateParams((p) => p.delete('gender'))}
+              className={`rounded-lg border-l-2 px-3 py-2 text-left text-sm transition-colors ${
+                !activeGender
+                  ? 'border-gold-500 bg-gold-500/10 font-bold text-gold-600 dark:text-gold-400'
+                  : 'border-transparent text-ink-900/60 hover:bg-ink-900/5 hover:text-ink-950 dark:text-cream/60 dark:hover:bg-cream/5 dark:hover:text-cream'
+              }`}
+            >
+              {dict.product.genderAll}
+            </button>
+            {genders.map((g) => (
+              <button
+                key={g.slug}
+                onClick={() => updateParams((p) => p.set('gender', g.slug))}
+                className={`rounded-lg border-l-2 px-3 py-2 text-left text-sm transition-colors ${
+                  activeGender === g.slug
+                    ? 'border-gold-500 bg-gold-500/10 font-bold text-gold-600 dark:text-gold-400'
+                    : 'border-transparent text-ink-900/60 hover:bg-ink-900/5 hover:text-ink-950 dark:text-cream/60 dark:hover:bg-cream/5 dark:hover:text-cream'
+                }`}
+              >
+                {g.name}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       <div>
         <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-ink-900/50 dark:text-cream/50">{dict.nav.categories}</h4>

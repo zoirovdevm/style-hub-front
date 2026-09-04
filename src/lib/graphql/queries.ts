@@ -32,7 +32,11 @@ export const PRODUCT_FIELDS = gql`
     viewCount
     soldCount
     createdAt
-    gender
+    gender {
+      id
+      name
+      slug
+    }
     category {
       id
       name
@@ -97,6 +101,18 @@ export const GET_BRANDS = gql`
       name
       slug
       logo
+    }
+  }
+`;
+
+// Erkaklar/Ayollar va h.k. — admin panelda Brend bilan bir xil tarzda
+// (admin/categories sahifasida) yaratiladigan ro'yxat.
+export const GET_GENDERS = gql`
+  query GetGenders {
+    genders {
+      id
+      name
+      slug
     }
   }
 `;
