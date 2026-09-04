@@ -35,6 +35,7 @@ export const PRODUCT_FIELDS = gql`
     gender {
       id
       name
+      nameRu
       slug
     }
     category {
@@ -112,6 +113,7 @@ export const GET_GENDERS = gql`
     genders {
       id
       name
+      nameRu
       slug
     }
   }

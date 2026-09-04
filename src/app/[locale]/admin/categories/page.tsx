@@ -50,6 +50,7 @@ export default function AdminCategoriesPage({ params }: { params: { locale: Loca
   const [categoryNameRu, setCategoryNameRu] = useState('');
   const [brandName, setBrandName] = useState('');
   const [genderName, setGenderName] = useState('');
+  const [genderNameRu, setGenderNameRu] = useState('');
 
   // Inline editing for an existing category's name/nameRu — added because
   // categories previously could only be typed once at creation with no way
@@ -94,8 +95,11 @@ export default function AdminCategoriesPage({ params }: { params: { locale: Loca
 
   async function handleAddGender() {
     if (!genderName.trim()) return;
-    await createGender({ variables: { input: { name: genderName.trim() } } });
+    await createGender({
+      variables: { input: { name: genderName.trim(), nameRu: genderNameRu.trim() || undefined } },
+    });
     setGenderName('');
+    setGenderNameRu('');
     refetchGenders();
   }
 
@@ -230,11 +234,20 @@ export default function AdminCategoriesPage({ params }: { params: { locale: Loca
             qo'shish/tahrirlash formasida shu ro'yxatdan tanlanadi. */}
         <div className="card-surface space-y-4 p-6">
           <h2 className="text-sm font-bold uppercase tracking-wider">{dict.admin.genders}</h2>
-          <div className="flex gap-2">
+          {/* Category kartasidagi bilan bir xil: o'zbekcha nom (majburiy) +
+              ruscha nom (ixtiyoriy) — shunda ruscha sahifada "Erkaklar"
+              o'rniga "Мужчинам" ko'rinadi. */}
+          <div className="flex flex-wrap gap-2">
             <input
               value={genderName}
               onChange={(e) => setGenderName(e.target.value)}
               placeholder={dict.admin.genderNamePlaceholder}
+              className="flex-1 rounded-xl border border-ink-900/15 px-4 py-3 text-sm text-ink-950 outline-none focus:border-ink-950 dark:border-cream/15 dark:bg-ink-900 dark:text-cream dark:placeholder:text-cream/40 dark:focus:border-cream"
+            />
+            <input
+              value={genderNameRu}
+              onChange={(e) => setGenderNameRu(e.target.value)}
+              placeholder={dict.admin.genderNameRuPlaceholder}
               className="flex-1 rounded-xl border border-ink-900/15 px-4 py-3 text-sm text-ink-950 outline-none focus:border-ink-950 dark:border-cream/15 dark:bg-ink-900 dark:text-cream dark:placeholder:text-cream/40 dark:focus:border-cream"
             />
             <button onClick={handleAddGender} className="btn-primary !px-4">
@@ -244,7 +257,10 @@ export default function AdminCategoriesPage({ params }: { params: { locale: Loca
           <div className="space-y-2">
             {gendersData?.genders?.map((gender: any) => (
               <div key={gender.id} className="flex items-center justify-between rounded-xl border border-ink-900/5 px-4 py-3 text-sm dark:border-cream/10">
-                <span>{gender.name}</span>
+                <div>
+                  <span>{gender.name}</span>
+                  {gender.nameRu && <span className="ml-2 text-xs text-ink-900/40 dark:text-cream/40">({gender.nameRu})</span>}
+                </div>
                 <button
                   onClick={async () => {
                     await removeGender({ variables: { id: gender.id } });

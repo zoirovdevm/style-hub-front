@@ -326,6 +326,7 @@
     "categoryNameRuPlaceholder": "Название на русском (необязательно)",
     "brandNamePlaceholder": "Например: Urban Edge",
     "genderNamePlaceholder": "Например: Мужчинам",
+    "genderNameRuPlaceholder": "Русское название (необязательно)",
     "orderItems": "Товары",
     "paymentStatus": "Оплата",
     "paid": "Оплачено",

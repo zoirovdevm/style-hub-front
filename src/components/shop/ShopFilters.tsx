@@ -28,9 +28,8 @@ interface ShopFiltersProps {
   dict: Dictionary;
   categories: { slug: string; name: string; nameRu?: string }[];
   // Brend kabi — admin panelda o'zi yaratgan ro'yxat (masalan "Erkaklar",
-  // "Ayollar"). Qattiq belgilangan qiymatlar emas, shuning uchun bitta nom
-  // maydoni yetarli (Category'dan farqli, bu yerda nameRu yo'q).
-  genders: { slug: string; name: string }[];
+  // "Ayollar"), Category kabi ixtiyoriy ruscha nom bilan.
+  genders: { slug: string; name: string; nameRu?: string }[];
   locale: 'uz' | 'ru';
 }
 
@@ -139,7 +138,7 @@ export function ShopFilters({ dict, categories, genders, locale }: ShopFiltersPr
                     : 'border-transparent text-ink-900/60 hover:bg-ink-900/5 hover:text-ink-950 dark:text-cream/60 dark:hover:bg-cream/5 dark:hover:text-cream'
                 }`}
               >
-                {g.name}
+                {locale === 'ru' && g.nameRu ? g.nameRu : g.name}
               </button>
             ))}
           </div>
