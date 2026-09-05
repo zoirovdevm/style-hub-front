@@ -46,13 +46,15 @@ const PLACED_ORDER_STORAGE_KEY = 'checkout:lastPlacedOrder';
 // "buy now" of 1 unit used to silently become "3" whenever 2 of that exact
 // same size/color were already sitting in the cart for later.
 const BUY_NOW_ITEM_STORAGE_KEY = 'checkout:buyNowItem';
-// Yetkazib berish manzili/shahar/telefon — muvaffaqiyatli buyurtmadan
-// keyin shu kalit bilan saqlanadi (pastdagi onSubmit'ga qarang) va
-// xaridor keyingi safar checkout sahifasiga kelganda formaga qaytarib
-// to'ldiriladi, har safar qayta qo'lda yozmasin deb. Birinchi buyurtma —
-// ya'ni bu kalit hali bo'sh bo'lganda — pastdagi effekt buning o'rniga
-// xaridor ro'yxatdan o'tishda kiritgan manzil/telefonni (GET_ME so'rovi
-// orqali) ishlatadi, shunda hech qachon bo'sh forma bilan boshlanmaydi.
+// Faqat "Shahar" (deliveryCity) uchun eslatma sifatida ishlatiladi —
+// muvaffaqiyatli buyurtmadan keyin shu kalit bilan saqlanadi (pastdagi
+// onSubmit'ga qarang). Manzil va telefon ENDI bu yerdan o'qilmaydi — ular
+// har doim xaridorning "Shaxsiy ma'lumotlar" profilidan (GET_ME so'rovi
+// orqali) olinadi, shunda profilda telefon/manzil yangilansa, keyingi
+// xariddan boshlab aynan o'sha yangi qiymat ishlatiladi. Avval bu yerda
+// eski buyurtmadan qolgan manzil/telefon ustunlik qilar edi — bu esa
+// profilni to'g'irlagandan keyin ham checkout'da ESKI raqamni
+// ko'rsatishga olib kelgan xato edi.
 const SAVED_DELIVERY_INFO_KEY = 'checkout:savedDeliveryInfo';
 // Falls back to the admin's personal account if the bot isn't configured
 // yet (NEXT_PUBLIC_TELEGRAM_BOT_USERNAME empty in .env.local) — otherwise
@@ -198,45 +200,44 @@ function CheckoutPageInner({ params }: { params: { locale: Locale } }) {
   const [editingDelivery, setEditingDelivery] = useState(false);
   const [deliveryPrefillReady, setDeliveryPrefillReady] = useState(false);
 
-  // Manzil/shahar/telefonni formaga qaytarib to'ldirish — ustunlik
-  // tartibi: (1) oldingi muvaffaqiyatli buyurtmadan qolgan aniq ma'lumot
-  // (pastdagi onSubmit shuni saqlaydi — masalan boshqa shaharga yetkazib
-  // berish so'ralgan bo'lishi mumkin), (2) hech qanday oldingi buyurtma
-  // bo'lmasa — ro'yxatdan o'tishda kiritilgan manzil/telefon (GET_ME).
-  // useEffect ichida — localStorage faqat brauzerda mavjud, server-side
-  // render paytida bu componentning o'zi ham bir marta serverda ishlaydi
-  // (bu "use client" bo'lsa ham), shu sababli localStorage'ga to'g'ridan-
-  // to'g'ri render vaqtida emas, faqat mount bo'lgandan keyin murojaat
-  // qilinadi. Faqat bir marta ishlaydi (topilgach — yoki GET_ME hali
-  // yuklanayotgan bo'lsa, u tugagach) — xaridor formani qo'lda o'zgartirsa,
-  // bu effekt qayta ishga tushib uni bosib ketmaydi.
+  // Manzil/telefonni formaga qaytarib to'ldirish — manba HAR DOIM
+  // xaridorning "Shaxsiy ma'lumotlar" profili (GET_ME): u yerda telefon
+  // yoki manzilni yangilasa, keyingi xariddan boshlab aynan o'sha yangi
+  // qiymat ishlatiladi. Faqat "Shahar" (deliveryCity) — profilda bunday
+  // maydon yo'qligi uchun — oldingi buyurtmada saqlangan qiymatdan
+  // (SAVED_DELIVERY_INFO_KEY) to'ldiriladi. useEffect ichida — localStorage
+  // faqat brauzerda mavjud, server-side render paytida bu componentning
+  // o'zi ham bir marta serverda ishlaydi (bu "use client" bo'lsa ham), shu
+  // sababli localStorage'ga to'g'ridan-to'g'ri render vaqtida emas, faqat
+  // mount bo'lgandan keyin murojaat qilinadi. Faqat bir marta ishlaydi
+  // (GET_ME javob bergach) — xaridor formani qo'lda o'zgartirsa, bu effekt
+  // qayta ishga tushib uni bosib ketmaydi.
   useEffect(() => {
     if (deliveryPrefillReady) return;
+    // GET_ME hali yuklanayotgan bo'lsa kutamiz — aks holda profil
+    // ma'lumoti kelishidan oldin bo'sh forma "tayyor" deb belgilanib
+    // qolardi.
+    if (!user || meLoading) return;
+    const profile = meData?.me;
+
+    let cachedCity: string | undefined;
     try {
       const raw = localStorage.getItem(SAVED_DELIVERY_INFO_KEY);
       if (raw) {
         const saved = JSON.parse(raw) as Partial<CheckoutForm>;
-        reset((current) => ({ ...current, ...saved }));
-        setDeliveryPrefillReady(true);
-        return;
+        cachedCity = saved.deliveryCity || undefined;
       }
     } catch {
-      // localStorage o'qishda xato bo'lsa (masalan maxfiy rejim) — pastga
-      // o'tib, GET_ME'dan foydalanishga harakat qilinadi.
+      // localStorage o'qishda xato bo'lsa (masalan maxfiy rejim) — shahar
+      // maydoni shunchaki bo'sh qoladi, manzil/telefonga ta'sir qilmaydi.
     }
-    // Oldingi buyurtma topilmadi — GET_ME hali yuklanayotgan bo'lsa kutamiz
-    // (aks holda profil ma'lumoti kelishidan oldin bo'sh forma "tayyor" deb
-    // belgilanib qolardi), keyin ro'yxatdan o'tishdagi manzil/telefonni
-    // ishlatamiz.
-    if (!user || meLoading) return;
-    const profile = meData?.me;
-    if (profile?.address || profile?.phone) {
-      reset((current) => ({
-        ...current,
-        ...(profile.address ? { deliveryAddress: profile.address } : {}),
-        ...(profile.phone ? { phone: profile.phone } : {}),
-      }));
-    }
+
+    reset((current) => ({
+      ...current,
+      ...(profile?.address ? { deliveryAddress: profile.address } : {}),
+      ...(profile?.phone ? { phone: profile.phone } : {}),
+      ...(cachedCity ? { deliveryCity: cachedCity } : {}),
+    }));
     setDeliveryPrefillReady(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deliveryPrefillReady, meLoading, meData, user]);
@@ -311,15 +312,17 @@ function CheckoutPageInner({ params }: { params: { locale: Locale } }) {
       } catch {
         // sessionStorage can throw in some privacy modes — safe to ignore.
       }
-      // Keyingi safar checkout'ga qaytganda formani avtomatik to'ldirish
-      // uchun — yuqoridagi useEffect shuni o'qiydi.
+      // Keyingi safar checkout'ga qaytganda "Shahar" maydonini avtomatik
+      // to'ldirish uchun — yuqoridagi useEffect shundan faqat shu maydonni
+      // o'qiydi. Manzil/telefon ATAYLAB bu yerga yozilmaydi — ular har doim
+      // profildan (GET_ME) olinadi, shu bilan checkout hech qachon profilda
+      // allaqachon to'g'irlangan raqamdan farqli ESKI qiymatni saqlab
+      // qolmaydi.
       try {
         localStorage.setItem(
           SAVED_DELIVERY_INFO_KEY,
           JSON.stringify({
-            deliveryAddress: values.deliveryAddress,
             deliveryCity: values.deliveryCity,
-            phone: values.phone,
           }),
         );
       } catch {
