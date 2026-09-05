@@ -4,8 +4,8 @@ import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { useMutation, useQuery } from '@apollo/client';
-import { Check, Copy, Send, X } from 'lucide-react';
-import { GET_MY_CART, GET_MY_ORDERS } from '@/lib/graphql/queries';
+import { Check, Copy, Send, X, Pencil } from 'lucide-react';
+import { GET_MY_CART, GET_MY_ORDERS, GET_ME } from '@/lib/graphql/queries';
 import { CREATE_ORDER } from '@/lib/graphql/mutations';
 import { useAuthStore } from '@/lib/store/auth-store';
 import { formatPrice } from '@/lib/utils/format';
@@ -49,7 +49,10 @@ const BUY_NOW_ITEM_STORAGE_KEY = 'checkout:buyNowItem';
 // Yetkazib berish manzili/shahar/telefon — muvaffaqiyatli buyurtmadan
 // keyin shu kalit bilan saqlanadi (pastdagi onSubmit'ga qarang) va
 // xaridor keyingi safar checkout sahifasiga kelganda formaga qaytarib
-// to'ldiriladi, har safar qayta qo'lda yozmasin deb.
+// to'ldiriladi, har safar qayta qo'lda yozmasin deb. Birinchi buyurtma —
+// ya'ni bu kalit hali bo'sh bo'lganda — pastdagi effekt buning o'rniga
+// xaridor ro'yxatdan o'tishda kiritgan manzil/telefonni (GET_ME so'rovi
+// orqali) ishlatadi, shunda hech qachon bo'sh forma bilan boshlanmaydi.
 const SAVED_DELIVERY_INFO_KEY = 'checkout:savedDeliveryInfo';
 // Falls back to the admin's personal account if the bot isn't configured
 // yet (NEXT_PUBLIC_TELEGRAM_BOT_USERNAME empty in .env.local) — otherwise
@@ -131,6 +134,11 @@ function CheckoutPageInner({ params }: { params: { locale: Locale } }) {
   // never needs the buyer's actual cart contents in that mode.
   const { data, loading: cartLoading } = useQuery(GET_MY_CART, { skip: !user || buyNowRequested });
 
+  // Ro'yxatdan o'tishda kiritilgan manzil/telefonni olish uchun — pastdagi
+  // effekt buyerning birinchi buyurtmasida (hali SAVED_DELIVERY_INFO_KEY
+  // bo'sh bo'lganda) shulardan foydalanadi, forma bo'sh boshlanmasin deb.
+  const { data: meData, loading: meLoading } = useQuery(GET_ME, { skip: !user });
+
   // Once an order is placed, keep polling the buyer's own orders so this
   // screen can reflect what actually happened to the receipt (admin
   // confirms/rejects it, on the site or via the Telegram bot) — without
@@ -178,29 +186,70 @@ function CheckoutPageInner({ params }: { params: { locale: Locale } }) {
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm<CheckoutForm>({ defaultValues: { phone: '+998 ' } });
 
-  // Oldingi muvaffaqiyatli buyurtmadan qolgan manzil/shahar/telefonni
-  // formaga qaytarib to'ldirish (pastdagi onSubmit ularni saqlaydi).
+  // Yetkazib berish ma'lumotlari topilgach forma "ko'rish" (read-only
+  // xulosa + qalam tugmasi) rejimida ochiladi — xaridor har safar bo'sh
+  // formani qayta to'ldirmasin deb. Hali hech qanday manzil topilmagan
+  // holatda (masalan GET_ME hali javob bermagan, yoki chindan ham bo'sh)
+  // to'g'ridan-to'g'ri tahrirlash formasi ko'rsatiladi.
+  const [editingDelivery, setEditingDelivery] = useState(false);
+  const [deliveryPrefillReady, setDeliveryPrefillReady] = useState(false);
+
+  // Manzil/shahar/telefonni formaga qaytarib to'ldirish — ustunlik
+  // tartibi: (1) oldingi muvaffaqiyatli buyurtmadan qolgan aniq ma'lumot
+  // (pastdagi onSubmit shuni saqlaydi — masalan boshqa shaharga yetkazib
+  // berish so'ralgan bo'lishi mumkin), (2) hech qanday oldingi buyurtma
+  // bo'lmasa — ro'yxatdan o'tishda kiritilgan manzil/telefon (GET_ME).
   // useEffect ichida — localStorage faqat brauzerda mavjud, server-side
   // render paytida bu componentning o'zi ham bir marta serverda ishlaydi
   // (bu "use client" bo'lsa ham), shu sababli localStorage'ga to'g'ridan-
   // to'g'ri render vaqtida emas, faqat mount bo'lgandan keyin murojaat
-  // qilinadi. Faqat bir marta (mount'da) ishlaydi — xaridor formani qo'lda
-  // o'zgartirsa, bu effekt qayta ishga tushib uni bosib ketmaydi.
+  // qilinadi. Faqat bir marta ishlaydi (topilgach — yoki GET_ME hali
+  // yuklanayotgan bo'lsa, u tugagach) — xaridor formani qo'lda o'zgartirsa,
+  // bu effekt qayta ishga tushib uni bosib ketmaydi.
   useEffect(() => {
+    if (deliveryPrefillReady) return;
     try {
       const raw = localStorage.getItem(SAVED_DELIVERY_INFO_KEY);
-      if (!raw) return;
-      const saved = JSON.parse(raw) as Partial<CheckoutForm>;
-      reset((current) => ({ ...current, ...saved }));
+      if (raw) {
+        const saved = JSON.parse(raw) as Partial<CheckoutForm>;
+        reset((current) => ({ ...current, ...saved }));
+        setDeliveryPrefillReady(true);
+        return;
+      }
     } catch {
-      // localStorage o'qishda xato bo'lsa (masalan maxfiy rejim) — forma
-      // shunchaki bo'sh boshlanadi, bu funksiya qo'shilishidan oldingidek.
+      // localStorage o'qishda xato bo'lsa (masalan maxfiy rejim) — pastga
+      // o'tib, GET_ME'dan foydalanishga harakat qilinadi.
     }
+    // Oldingi buyurtma topilmadi — GET_ME hali yuklanayotgan bo'lsa kutamiz
+    // (aks holda profil ma'lumoti kelishidan oldin bo'sh forma "tayyor" deb
+    // belgilanib qolardi), keyin ro'yxatdan o'tishdagi manzil/telefonni
+    // ishlatamiz.
+    if (!user || meLoading) return;
+    const profile = meData?.me;
+    if (profile?.address || profile?.phone) {
+      reset((current) => ({
+        ...current,
+        ...(profile.address ? { deliveryAddress: profile.address } : {}),
+        ...(profile.phone ? { phone: profile.phone } : {}),
+      }));
+    }
+    setDeliveryPrefillReady(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [deliveryPrefillReady, meLoading, meData, user]);
+
+  // Forma tayyor bo'lgach: agar manzil topilgan bo'lsa "ko'rish" rejimida
+  // boshlanadi (qalam bosilsa tahrirlashga o'tadi); hech narsa topilmasa
+  // (yangi profil, GET_ME bo'sh qaytdi) to'g'ridan-to'g'ri tahrirlash
+  // formasi ochiladi — bo'sh xulosa ko'rsatishning ma'nosi yo'q.
+  useEffect(() => {
+    if (!deliveryPrefillReady) return;
+    if (!watch('deliveryAddress')) setEditingDelivery(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deliveryPrefillReady]);
 
   // Real Click/Payme merchant credentials aren't set up yet, so online
   // payment selection is hidden — every order goes through as "to be
@@ -482,44 +531,85 @@ function CheckoutPageInner({ params }: { params: { locale: Locale } }) {
         <div className="space-y-6 lg:col-span-2">
           <Reveal>
             <div className="card-surface space-y-5 p-6">
-              <h2 className="text-sm font-bold uppercase tracking-wider">{dict.checkout.deliveryInfo}</h2>
-
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold text-ink-900/60">{dict.checkout.address}</label>
-                <input
-                  {...register('deliveryAddress', { required: true, minLength: 5 })}
-                  className="w-full rounded-xl border border-ink-900/15 px-4 py-3 text-sm outline-none focus:border-ink-950"
-                />
-                {errors.deliveryAddress && <p className="mt-1 text-xs text-red-500">Majburiy maydon</p>}
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-bold uppercase tracking-wider">{dict.checkout.deliveryInfo}</h2>
+                {/* Ma'lumot allaqachon topilgan bo'lsa (oldingi buyurtma
+                    yoki ro'yxatdan o'tishdagi manzil/telefon) — qalam
+                    tugmasi tahrirlash formasini ochadi/yopadi. Hech narsa
+                    topilmasa (editingDelivery effekt orqali avtomatik true
+                    bo'ladi) bu tugma umuman ko'rsatilmaydi, chunki forma
+                    allaqachon ochiq. */}
+                {deliveryPrefillReady && watch('deliveryAddress') && (
+                  <button
+                    type="button"
+                    onClick={() => setEditingDelivery((v) => !v)}
+                    className="flex items-center gap-1.5 text-xs font-semibold text-ink-900/50 hover:text-ink-950 dark:text-cream/50 dark:hover:text-cream"
+                  >
+                    {editingDelivery ? (
+                      dict.checkout.doneEditingDelivery
+                    ) : (
+                      <>
+                        <Pencil size={13} />
+                        {dict.checkout.editDeliveryInfo}
+                      </>
+                    )}
+                  </button>
+                )}
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-ink-900/60">{dict.checkout.city}</label>
-                  <input
-                    {...register('deliveryCity')}
-                    className="w-full rounded-xl border border-ink-900/15 px-4 py-3 text-sm outline-none focus:border-ink-950"
-                  />
+              {editingDelivery ? (
+                <>
+                  <div>
+                    <label className="mb-1.5 block text-xs font-semibold text-ink-900/60">{dict.checkout.address}</label>
+                    <input
+                      {...register('deliveryAddress', { required: true, minLength: 5 })}
+                      className="w-full rounded-xl border border-ink-900/15 px-4 py-3 text-sm outline-none focus:border-ink-950"
+                    />
+                    {errors.deliveryAddress && <p className="mt-1 text-xs text-red-500">Majburiy maydon</p>}
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <label className="mb-1.5 block text-xs font-semibold text-ink-900/60">{dict.checkout.city}</label>
+                      <input
+                        {...register('deliveryCity')}
+                        className="w-full rounded-xl border border-ink-900/15 px-4 py-3 text-sm outline-none focus:border-ink-950"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-xs font-semibold text-ink-900/60">{dict.checkout.phone}</label>
+                      <input
+                        {...register('phone', { required: true })}
+                        placeholder="+998 90 123 45 67"
+                        className="w-full rounded-xl border border-ink-900/15 px-4 py-3 text-sm outline-none focus:border-ink-950"
+                      />
+                      {errors.phone && <p className="mt-1 text-xs text-red-500">Majburiy maydon</p>}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 block text-xs font-semibold text-ink-900/60">{dict.checkout.note}</label>
+                    <textarea
+                      {...register('note')}
+                      rows={3}
+                      className="w-full rounded-xl border border-ink-900/15 px-4 py-3 text-sm outline-none focus:border-ink-950"
+                    />
+                  </div>
+                </>
+              ) : (
+                // Ko'rish rejimi — ro'yxatdan o'tishda yoki oldingi
+                // buyurtmada berilgan ma'lumot qayta so'ralmaydi, faqat
+                // ko'rsatiladi. Qiymatlar baribir register() qilingan
+                // maydonlarda saqlanadi (hidden emas, shunchaki
+                // ko'rsatilmayapti), shuning uchun submit ularni to'liq
+                // yuboradi.
+                <div className="space-y-1 text-sm text-ink-900/70 dark:text-cream/70">
+                  <p>{watch('deliveryAddress')}</p>
+                  {watch('deliveryCity') && <p>{watch('deliveryCity')}</p>}
+                  <p>{watch('phone')}</p>
+                  {watch('note') && <p className="text-ink-900/50 dark:text-cream/50">{watch('note')}</p>}
                 </div>
-                <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-ink-900/60">{dict.checkout.phone}</label>
-                  <input
-                    {...register('phone', { required: true })}
-                    placeholder="+998 90 123 45 67"
-                    className="w-full rounded-xl border border-ink-900/15 px-4 py-3 text-sm outline-none focus:border-ink-950"
-                  />
-                  {errors.phone && <p className="mt-1 text-xs text-red-500">Majburiy maydon</p>}
-                </div>
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold text-ink-900/60">{dict.checkout.note}</label>
-                <textarea
-                  {...register('note')}
-                  rows={3}
-                  className="w-full rounded-xl border border-ink-900/15 px-4 py-3 text-sm outline-none focus:border-ink-950"
-                />
-              </div>
+              )}
             </div>
           </Reveal>
 

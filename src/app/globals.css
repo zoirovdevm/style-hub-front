@@ -186,12 +186,31 @@ h1 {
  * oladi. Faqat matn kiritish maydonlariga tegadi — tugmalar (masalan
  * ProductCard'dagi rasm-nuqta indikatorlari) o'zining atayin qo'shilgan
  * `focus-visible:ring-*` klaviatura-fokus uslubini saqlab qoladi.
+ *
+ * iPhone'da (iOS Safari) yuqoridagi outline/box-shadow qoidasi yetarli
+ * emas edi — bu yerda ko'rinayotgan narsa umuman CSS outline emas, balki
+ * iOS'ning o'zining ikkita alohida "chrome"i:
+ *   1) -webkit-tap-highlight-color — istalgan bosiladigan elementga
+ *      bosilganda iOS avtomatik chizadigan xira kulrang/ko'k "yaltillash",
+ *      outline yoki box-shadow bilan boshqarilmaydi, faqat shu maxsus
+ *      xususiyat bilan o'chiriladi.
+ *   2) -webkit-appearance — iOS matn maydonlariga o'zining tabiiy
+ *      "chrome"ini (yumaloq burchak, ichki soya) chizadi, fokusda bu
+ *      yanada ko'zga tashlanadi; appearance: none shuni butunlay o'chiradi.
+ * Ikkalasi ham hamma joyga (nafaqat input/textarea/select, balki tugma va
+ * havolalarga ham) qo'llanadi — iOS tap-highlight istalgan bosiladigan
+ * elementda chiqishi mumkin.
  */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
 input,
 textarea,
 select {
   outline: none !important;
   box-shadow: none !important;
+  -webkit-appearance: none;
+  appearance: none;
 }
 input:focus,
 textarea:focus,
