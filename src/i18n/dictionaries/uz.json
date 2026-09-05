@@ -399,6 +399,8 @@
     "unblock": "Blokdan chiqarish",
     "confirmBlock": "Bu foydalanuvchini bloklaysizmi? U tizimga kira olmay qoladi.",
     "confirmUnblock": "Bu foydalanuvchini blokdan chiqarasizmi?",
+    "deleteUser": "Butunlay o'chirish",
+    "confirmDeleteUser": "Bu foydalanuvchini bazadan butunlay o'chirasizmi? Bu amalni ortga qaytarib bo'lmaydi — o'chirilgach, uning telefon raqami/email'i bilan qaytadan ro'yxatdan o'tish mumkin bo'ladi.",
     "dangerZone": "Xavfli hudud",
     "clearAllDataTitle": "Barcha ma'lumotlarni tozalash",
     "clearAllDataHint": "Mahsulotlar, kategoriyalar, brendlar, buyurtmalar, savat va sevimlilar ro'yxatlari butunlay o'chiriladi. Foydalanuvchilar (hisoblar) va sozlamalar o'zgarishsiz qoladi. Bu amalni ortga qaytarib bo'lmaydi.",

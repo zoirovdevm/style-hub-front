@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 import { useMutation, useQuery } from '@apollo/client';
-import { Search, Ban, CheckCircle2 } from 'lucide-react';
+import { Search, Ban, CheckCircle2, Trash2 } from 'lucide-react';
 import { GET_USERS } from '@/lib/graphql/queries';
-import { SET_USER_ACTIVE } from '@/lib/graphql/mutations';
+import { SET_USER_ACTIVE, REMOVE_USER } from '@/lib/graphql/mutations';
 import { useAuthStore } from '@/lib/store/auth-store';
 import { getFriendlyErrorMessage } from '@/lib/utils/graphql-error';
 import { formatDate } from '@/lib/utils/format';
@@ -27,6 +27,8 @@ export default function AdminUsersPage({ params }: { params: { locale: Locale } 
     pollInterval: 15000,
   });
   const [setUserActive] = useMutation(SET_USER_ACTIVE);
+  const [removeUser] = useMutation(REMOVE_USER);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const users = data?.users?.list ?? [];
   const total = data?.users?.total ?? 0;
@@ -44,6 +46,25 @@ export default function AdminUsersPage({ params }: { params: { locale: Locale } 
       alert(getFriendlyErrorMessage(error));
     } finally {
       setUpdatingId(null);
+    }
+  }
+
+  // Blokdan farqli — foydalanuvchini bazadan butunlay o'chiradi, shuning
+  // uchun uning telefon raqami darhol bo'shab, o'sha raqam bilan qaytadan
+  // ro'yxatdan o'tish mumkin bo'ladi. Buyurtma tarixi bor foydalanuvchini
+  // backend rad etadi (getFriendlyErrorMessage o'sha xabarni ko'rsatadi).
+  async function handleDelete(id: string) {
+    // eslint-disable-next-line no-alert
+    if (!confirm(dict.admin.confirmDeleteUser)) return;
+    setDeletingId(id);
+    try {
+      await removeUser({ variables: { id } });
+      await refetch();
+    } catch (error) {
+      // eslint-disable-next-line no-alert
+      alert(getFriendlyErrorMessage(error));
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -139,18 +160,28 @@ export default function AdminUsersPage({ params }: { params: { locale: Locale } 
                   </td>
                   <td className="px-5 py-4">
                     {currentUser?.id !== u.id && (
-                      <button
-                        onClick={() => handleToggleActive(u.id, u.isActive)}
-                        disabled={updatingId === u.id}
-                        title={u.isActive ? dict.admin.block : dict.admin.unblock}
-                        className={`flex h-8 w-8 items-center justify-center rounded-lg border disabled:opacity-50 ${
-                          u.isActive
-                            ? 'border-ink-900/10 text-red-500 hover:border-red-500'
-                            : 'border-ink-900/10 text-emerald-600 hover:border-emerald-500'
-                        }`}
-                      >
-                        {u.isActive ? <Ban size={14} /> : <CheckCircle2 size={14} />}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleToggleActive(u.id, u.isActive)}
+                          disabled={updatingId === u.id || deletingId === u.id}
+                          title={u.isActive ? dict.admin.block : dict.admin.unblock}
+                          className={`flex h-8 w-8 items-center justify-center rounded-lg border disabled:opacity-50 ${
+                            u.isActive
+                              ? 'border-ink-900/10 text-red-500 hover:border-red-500'
+                              : 'border-ink-900/10 text-emerald-600 hover:border-emerald-500'
+                          }`}
+                        >
+                          {u.isActive ? <Ban size={14} /> : <CheckCircle2 size={14} />}
+                        </button>
+                        <button
+                          onClick={() => handleDelete(u.id)}
+                          disabled={updatingId === u.id || deletingId === u.id}
+                          title={dict.admin.deleteUser}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-ink-900/10 text-ink-900/40 hover:border-red-500 hover:text-red-500 disabled:opacity-50 dark:text-cream/40"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     )}
                   </td>
                 </tr>

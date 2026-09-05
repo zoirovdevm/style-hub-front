@@ -178,6 +178,32 @@ h1 {
 }
 
 /*
+ * Foydalanuvchi so'roviga ko'ra: standart brauzer fokus konturi (masalan
+ * Chrome'ning ko'k "focus ring"i) endi butun sayt bo'ylab HAR QANDAY
+ * input/textarea/select elementida ko'rinmaydi — ko'pgina joylarda
+ * alohida `outline-none` klassi bor edi, lekin har bir yangi forma uchun
+ * buni qo'lda takrorlash o'rniga bitta global qoida hammasini qamrab
+ * oladi. Faqat matn kiritish maydonlariga tegadi — tugmalar (masalan
+ * ProductCard'dagi rasm-nuqta indikatorlari) o'zining atayin qo'shilgan
+ * `focus-visible:ring-*` klaviatura-fokus uslubini saqlab qoladi.
+ */
+input,
+textarea,
+select {
+  outline: none !important;
+  box-shadow: none !important;
+}
+input:focus,
+textarea:focus,
+select:focus,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/*
  * Adaptive navbar contrast (see src/lib/hooks/use-navbar-contrast.ts).
  * Header.tsx and MobileBottomNav.tsx toggle a `navbar-on-dark` class on
  * themselves when JS detects they're currently floating over a section

@@ -300,6 +300,15 @@ export const SET_USER_ACTIVE = gql`
   }
 `;
 
+// Blokdan farqli — foydalanuvchini bazadan butunlay o'chiradi, shuning
+// uchun uning telefon raqami/email'i darhol bo'shab, o'sha raqam bilan
+// qaytadan ro'yxatdan o'tish mumkin bo'ladi.
+export const REMOVE_USER = gql`
+  mutation RemoveUser($id: ID!) {
+    removeUser(id: $id)
+  }
+`;
+
 export const CLEAR_ALL_DATA = gql`
   mutation ClearAllData {
     clearAllData
