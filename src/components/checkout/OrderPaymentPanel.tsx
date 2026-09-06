@@ -206,16 +206,17 @@ export function OrderPaymentPanel({
             <p className="text-sm text-ink-900/70 dark:text-cream/70">{dict.checkout.paymentCardInstructions}</p>
 
             {/* "Bizning karta" — haqiqiy bank kartasiga o'xshash ko'rinish:
-                to'q fon, yumaloq burchak, ism va raqam qo'lyozma uslubidagi
-                shriftda pastki chap burchakda. */}
+                to'q fon, yumaloq burchak, ism va raqam oddiy (sans) shriftda
+                pastki chap burchakda. Kenglik doim ota elementga (max-w-md
+                karta) 100% mos keladi — alohida max-width belgilanmagan. */}
             <button
               type="button"
               onClick={copyCardNumber}
-              className="group relative flex aspect-[8/5] w-full max-w-[280px] flex-col justify-end gap-1 rounded-2xl border border-cream/15 bg-gradient-to-br from-ink-900 to-ink-950 p-5 text-left shadow-soft transition-transform active:scale-[0.98]"
+              className="group relative flex aspect-[8/5] w-full flex-col justify-end gap-1 rounded-2xl border border-cream/15 bg-gradient-to-br from-ink-900 to-ink-950 p-5 text-left shadow-soft transition-transform active:scale-[0.98]"
             >
               <Copy size={16} className="absolute right-4 top-4 text-cream/30 transition-colors group-hover:text-cream/60" />
-              <p className="font-script text-2xl leading-tight tracking-wide text-cream/90">{PAYMENT_CARD_HOLDER}</p>
-              <p className="font-script text-3xl leading-tight tracking-widest text-cream">{PAYMENT_CARD_NUMBER}</p>
+              <p className="text-lg font-medium leading-tight text-cream/90">{PAYMENT_CARD_HOLDER}</p>
+              <p className="text-2xl font-semibold leading-tight tracking-wider text-cream">{PAYMENT_CARD_NUMBER}</p>
             </button>
             {copied && <p className="text-xs font-semibold text-emerald-600">{dict.checkout.copied}</p>}
 

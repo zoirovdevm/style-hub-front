@@ -32,10 +32,6 @@ const config: Config = {
       fontFamily: {
         display: ['var(--font-display)', 'serif'],
         sans: ['var(--font-sans)', 'sans-serif'],
-        // "Bizning karta" bo'limidagi bank kartasi ko'rinishidagi
-        // dizaynda ism/karta raqamini haqiqiy kartadagidek qo'lyozma
-        // uslubida ko'rsatish uchun — faqat o'sha bitta joyda ishlatiladi.
-        script: ['var(--font-script)', 'cursive'],
       },
       animation: {
         'fade-up': 'fadeUp 0.6s ease forwards',
