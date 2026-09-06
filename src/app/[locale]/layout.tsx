@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Inter, Playfair_Display } from 'next/font/google';
+import { Inter, Playfair_Display, Caveat } from 'next/font/google';
 import '../globals.css';
 import { Providers } from '@/components/providers/Providers';
 import { Header } from '@/components/layout/Header';
@@ -10,6 +10,10 @@ import { getDictionary } from '@/i18n/get-dictionary';
 
 const inter = Inter({ subsets: ['latin', 'cyrillic'], variable: '--font-sans', display: 'swap' });
 const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-display', display: 'swap' });
+// Faqat to'lov sahifasidagi "Bizning karta" bank-karta ko'rinishidagi
+// bloqida (ism/karta raqami) ishlatiladi — haqiqiy kartadagi qo'lyozma
+// uslubini eslatish uchun.
+const caveat = Caveat({ subsets: ['latin', 'cyrillic'], variable: '--font-script', display: 'swap' });
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -73,7 +77,11 @@ export default async function LocaleLayout({
   const dict = await getDictionary(params.locale);
 
   return (
-    <html lang={params.locale} className={`${inter.variable} ${playfair.variable}`} suppressHydrationWarning>
+    <html
+      lang={params.locale}
+      className={`${inter.variable} ${playfair.variable} ${caveat.variable}`}
+      suppressHydrationWarning
+    >
       <head>
         {/* Runs before React hydrates so the page never flashes the wrong
             theme on load — reads the same zustand-persist key ThemeStore

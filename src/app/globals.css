@@ -4,6 +4,7 @@
 :root {
   --font-display: "Playfair Display", serif;
   --font-sans: "Inter", sans-serif;
+  --font-script: "Caveat", cursive;
 }
 /* Removed a dead `@import url("https://fonts.googleapis.com/...")` that
    used to sit here. It was CSS-invalid in this position (an @import must

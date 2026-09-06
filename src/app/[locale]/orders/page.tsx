@@ -2,12 +2,14 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { useQuery } from '@apollo/client';
-import { Check, Clock, Package, X } from 'lucide-react';
+import { Check, Clock, Package, X, ArrowRight } from 'lucide-react';
 import { GET_MY_ORDERS } from '@/lib/graphql/queries';
 import { useAuthStore } from '@/lib/store/auth-store';
 import { formatPrice, formatDate } from '@/lib/utils/format';
 import { translateColorName } from '@/lib/utils/colorNames';
+import { resolveProductCoverImage } from '@/lib/utils/productImage';
 import { OrderStatusBadge } from '@/components/ui/OrderStatusBadge';
 import { Reveal } from '@/components/ui/Reveal';
 import type { Locale } from '@/i18n/config';
@@ -17,6 +19,7 @@ import ruDict from '@/i18n/dictionaries/ru.json';
 export default function OrdersPage({ params }: { params: { locale: Locale } }) {
   const { locale } = params;
   const dict = locale === 'ru' ? ruDict : uzDict;
+  const router = useRouter();
   const user = useAuthStore((s) => s.user);
 
   // network-only so a status the admin just changed always shows up here,
@@ -68,10 +71,20 @@ export default function OrdersPage({ params }: { params: { locale: Locale } }) {
       )}
 
       <div className="mt-10 space-y-4">
-        {orders.map((order: any, i: number) => (
-          <Reveal key={order.id} delay={i * 0.05}>
-            <div className="card-surface p-6">
-              <div className="flex flex-wrap items-center justify-between gap-3">
+        {orders.map((order: any, i: number) => {
+          // To'lanmagan (yoki rad etilgan — qayta urinish uchun) buyurtma
+          // kartochkasi bosilsa, to'lov sahifasiga o'tadi (aynan shu
+          // buyurtmaning mahsuloti/kartasi bilan). To'langan buyurtma uchun
+          // avvalgidek — kartochkaning o'zi hech qayerga olib bormaydi,
+          // faqat ichidagi mahsulot havolalari ishlaydi.
+          const payable = order.paymentStatus !== 'PAID';
+          return (
+            <Reveal key={order.id} delay={i * 0.05}>
+              <div
+                onClick={payable ? () => router.push(`/${locale}/orders/${order.id}`) : undefined}
+                className={`card-surface p-6 ${payable ? 'cursor-pointer transition-colors hover:border-gold-500/30' : ''}`}
+              >
+                <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p className="text-xs text-ink-900/40">{dict.orders.orderNumber}</p>
                   <p className="font-mono text-sm font-bold">{order.orderNumber}</p>
@@ -105,7 +118,9 @@ export default function OrdersPage({ params }: { params: { locale: Locale } }) {
 
               <div className="mt-4 space-y-3 border-t border-ink-900/10 pt-4">
                 {order.items.map((item: any) => {
-                  const cover = item.product?.images?.[0] || '/placeholder-product.svg';
+                  // Xaridor tanlagan RANGGA mos rasm (resolveProductCoverImage)
+                  // — avval har doim bitta umumiy rasm ko'rsatilar edi.
+                  const cover = resolveProductCoverImage(item.product, item.color);
                   const inner = (
                     <>
                       <div className="relative h-16 w-14 shrink-0 overflow-hidden rounded-lg bg-ink-900/5">
@@ -126,6 +141,10 @@ export default function OrdersPage({ params }: { params: { locale: Locale } }) {
                     <Link
                       key={item.id}
                       href={`/${locale}/product/${item.product.slug}`}
+                      // Kartochkaning o'zi (payable bo'lsa) to'lov sahifasiga
+                      // olib boradi — mahsulot havolasi bosilganda shu tashqi
+                      // navigatsiya ishga tushmasligi uchun bubbling to'xtatiladi.
+                      onClick={(e) => e.stopPropagation()}
                       className="flex items-center gap-3 hover:opacity-80"
                     >
                       {inner}
@@ -144,9 +163,17 @@ export default function OrdersPage({ params }: { params: { locale: Locale } }) {
                 </span>
                 <span className="text-base font-bold">{formatPrice(order.totalAmount, locale)}</span>
               </div>
-            </div>
-          </Reveal>
-        ))}
+
+              {payable && (
+                <p className="mt-3 flex items-center justify-end gap-1 text-xs font-semibold text-gold-600 dark:text-gold-400">
+                  {dict.orders.payNow}
+                  <ArrowRight size={13} />
+                </p>
+              )}
+              </div>
+            </Reveal>
+          );
+        })}
       </div>
     </div>
   );

@@ -4,13 +4,14 @@ import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { useMutation, useQuery } from '@apollo/client';
-import { Check, Copy, Send, X, Pencil } from 'lucide-react';
-import { GET_MY_CART, GET_MY_ORDERS, GET_ME } from '@/lib/graphql/queries';
+import { Pencil } from 'lucide-react';
+import { GET_MY_CART, GET_ME } from '@/lib/graphql/queries';
 import { CREATE_ORDER } from '@/lib/graphql/mutations';
 import { useAuthStore } from '@/lib/store/auth-store';
 import { formatPrice } from '@/lib/utils/format';
 import { translateColorName } from '@/lib/utils/colorNames';
 import { Reveal } from '@/components/ui/Reveal';
+import { OrderPaymentPanel } from '@/components/checkout/OrderPaymentPanel';
 import type { Locale } from '@/i18n/config';
 import uzDict from '@/i18n/dictionaries/uz.json';
 import ruDict from '@/i18n/dictionaries/ru.json';
@@ -21,13 +22,6 @@ interface CheckoutForm {
   phone: string;
   note: string;
 }
-
-// Real Click/Payme merchant credentials aren't configured yet, so payment is
-// coordinated manually: the buyer transfers to this card and sends the
-// receipt via Telegram. Centralized here since it's shown both after order
-// placement and could be reused elsewhere.
-const PAYMENT_CARD_NUMBER = '4073 4200 2305 8815';
-const PAYMENT_CARD_HOLDER = 'Muhammadjon Zoirov';
 
 // `placedOrder` below is plain component state, so it's normally lost the
 // moment this component remounts — e.g. a locale switch, or (very commonly
@@ -56,12 +50,6 @@ const BUY_NOW_ITEM_STORAGE_KEY = 'checkout:buyNowItem';
 // profilni to'g'irlagandan keyin ham checkout'da ESKI raqamni
 // ko'rsatishga olib kelgan xato edi.
 const SAVED_DELIVERY_INFO_KEY = 'checkout:savedDeliveryInfo';
-// Falls back to the admin's personal account if the bot isn't configured
-// yet (NEXT_PUBLIC_TELEGRAM_BOT_USERNAME empty in .env.local) — otherwise
-// deep-links straight into the bot with ?start=order_<id>, so the bot can
-// bind the buyer's chat to this exact order automatically.
-const TELEGRAM_BOT_USERNAME = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || '';
-const TELEGRAM_FALLBACK_USERNAME = 'MZ0526';
 
 // useSearchParams() opts the calling component out of static prerendering
 // unless it's wrapped in <Suspense> — without this wrapper `next build`
@@ -88,10 +76,11 @@ function CheckoutPageInner({ params }: { params: { locale: Locale } }) {
   const hasHydrated = useAuthStore((s) => s.hasHydrated);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [placedOrder, setPlacedOrder] = useState<{ id: string; orderNumber: string; totalAmount: number; buyNow?: boolean } | null>(
-    null,
-  );
-  const [copied, setCopied] = useState(false);
+  // To'liq buyurtma ma'lumoti (mahsulot, narx, holat) endi bu yerda emas,
+  // OrderPaymentPanel ichida GET_ORDER orqali o'qiladi — shu komponent faqat
+  // buyurtma ID'sini va (remount'dan keyin tiklash uchun) "bu buy-now
+  // orqalimi" belgisini eslab qolishi kifoya.
+  const [placedOrder, setPlacedOrder] = useState<{ id: string; buyNow?: boolean } | null>(null);
 
   // ?items=id1,id2 — set by the cart page when the buyer checked out only
   // some of their cart, not the whole thing (its checkbox selection). Absent
@@ -141,21 +130,10 @@ function CheckoutPageInner({ params }: { params: { locale: Locale } }) {
   // bo'sh bo'lganda) shulardan foydalanadi, forma bo'sh boshlanmasin deb.
   const { data: meData, loading: meLoading } = useQuery(GET_ME, { skip: !user });
 
-  // Once an order is placed, keep polling the buyer's own orders so this
-  // screen can reflect what actually happened to the receipt (admin
-  // confirms/rejects it, on the site or via the Telegram bot) — without
-  // this, returning to the site after sending a payment kept showing the
-  // exact same "here's the card number, send your receipt" screen forever,
-  // no matter what the admin had already done with it. `network-only` +
-  // polling (not the cache) so a status the admin just changed always shows
-  // up, same reasoning as the /orders page's own query.
-  const { data: ordersData } = useQuery(GET_MY_ORDERS, {
-    skip: !placedOrder,
-    pollInterval: 4000,
-    fetchPolicy: 'network-only',
-  });
-  const livePaymentStatus: 'PENDING' | 'PAID' | 'FAILED' =
-    ordersData?.myOrders?.find((o: any) => o.id === placedOrder?.id)?.paymentStatus ?? 'PENDING';
+  // Buyurtma joylashtirilgandan keyingi holat (to'langan/rad etilgan/hali
+  // kutilmoqda), mahsulot ma'lumoti va "Bizning karta" ekrani endi
+  // OrderPaymentPanel'ning o'zi ichida GET_ORDER orqali kuzatiladi — bu yerda
+  // alohida so'rov yuritishning hojati yo'q.
   const allCartItems = data?.myCart ?? [];
   // Synthesizes the same `{ id, quantity, size, color, product: { title,
   // price } }` shape the summary/subtotal code below already expects from
@@ -298,11 +276,11 @@ function CheckoutPageInner({ params }: { params: { locale: Locale } }) {
 
       // Stay on this page and show the payment card + Telegram instructions
       // instead of redirecting straight to /orders — the buyer needs those
-      // details to actually send the payment.
+      // details to actually send the payment. OrderPaymentPanel re-fetches
+      // everything else about this order itself, so only the id needs to be
+      // kept here.
       const order = {
         id: orderData?.createOrder?.id ?? '',
-        orderNumber: orderData?.createOrder?.orderNumber ?? '',
-        totalAmount: orderData?.createOrder?.totalAmount ?? 0,
         buyNow: buyNowRequested,
       };
       setPlacedOrder(order);
@@ -369,12 +347,6 @@ function CheckoutPageInner({ params }: { params: { locale: Locale } }) {
     }
   }, [cartLoading, items.length, placedOrder]);
 
-  function copyCardNumber() {
-    navigator.clipboard.writeText(PAYMENT_CARD_NUMBER.replace(/\s/g, ''));
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
-
   // Redirecting here must happen in an effect, not directly in the render
   // body — calling router.push() synchronously during render can run while
   // Next.js is statically prerendering this page (no browser `location`
@@ -412,25 +384,13 @@ function CheckoutPageInner({ params }: { params: { locale: Locale } }) {
     );
   }
 
-  // With the bot configured, `?start=order_<id>` deep-links straight into
-  // it — the bot then knows exactly which order this chat belongs to the
-  // moment the buyer opens it (see TelegramService.bot.start() on the
-  // backend), so screenshots get matched automatically with no manual
-  // order-number typing needed. Falls back to the old pre-filled-text link
-  // to the admin's personal account if the bot isn't set up yet.
-  const telegramHref = TELEGRAM_BOT_USERNAME
-    ? `https://t.me/${TELEGRAM_BOT_USERNAME}?start=order_${placedOrder?.id ?? ''}`
-    : (() => {
-        const telegramText = placedOrder
-          ? `${dict.orders.orderNumber}: ${placedOrder.orderNumber}\n${dict.orders.total}: ${formatPrice(placedOrder.totalAmount, locale)}\n${dict.checkout.telegramReceiptMessage}`
-          : '';
-        return `https://t.me/${TELEGRAM_FALLBACK_USERNAME}?text=${encodeURIComponent(telegramText)}`;
-      })();
-
   if (placedOrder) {
-    const goToOrdersButton = (
-      <button
-        onClick={() => {
+    return (
+      <OrderPaymentPanel
+        orderId={placedOrder.id}
+        locale={locale}
+        dict={dict}
+        onGoToOrders={() => {
           try {
             sessionStorage.removeItem(PLACED_ORDER_STORAGE_KEY);
           } catch {
@@ -438,89 +398,7 @@ function CheckoutPageInner({ params }: { params: { locale: Locale } }) {
           }
           router.push(`/${locale}/orders`);
         }}
-        className="btn-outline w-full"
-      >
-        {dict.checkout.goToOrders}
-      </button>
-    );
-
-    // Confirmed — the card/Telegram instructions are no longer needed, so
-    // this replaces them entirely with a plain success state instead of
-    // leaving a "still waiting for payment" screen up after payment is
-    // already done.
-    if (livePaymentStatus === 'PAID') {
-      return (
-        <div className="container-app py-20">
-          <Reveal>
-            <div className="mx-auto max-w-md card-surface space-y-5 p-8 text-center">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-300">
-                <Check size={28} strokeWidth={3} />
-              </div>
-              <h1 className="font-display text-2xl font-medium">{dict.checkout.paymentConfirmedTitle}</h1>
-              <p className="text-sm text-ink-900/60 dark:text-cream/60">{dict.checkout.paymentConfirmedBody}</p>
-              <p className="text-xs text-ink-900/50">
-                {dict.checkout.orderPlacedSubtitle}: <span className="font-mono font-semibold">{placedOrder.orderNumber}</span>
-              </p>
-              {goToOrdersButton}
-            </div>
-          </Reveal>
-        </div>
-      );
-    }
-
-    // Rejected — keeps the card/Telegram instructions below the rejection
-    // notice (rather than replacing them) so the buyer can immediately
-    // retry with a corrected screenshot without hunting for the card number
-    // again.
-    const rejected = livePaymentStatus === 'FAILED';
-
-    return (
-      <div className="container-app py-20">
-        <Reveal>
-          <div className="mx-auto max-w-md card-surface space-y-5 p-8 text-center">
-            {rejected ? (
-              <>
-                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-300">
-                  <X size={28} strokeWidth={3} />
-                </div>
-                <h1 className="font-display text-2xl font-medium">{dict.checkout.paymentRejectedTitle}</h1>
-                <p className="text-sm text-ink-900/60 dark:text-cream/60">{dict.checkout.paymentRejectedBody}</p>
-              </>
-            ) : (
-              <h1 className="font-display text-2xl font-medium">{dict.checkout.orderPlacedTitle}</h1>
-            )}
-            <p className="text-xs text-ink-900/50">
-              {dict.checkout.orderPlacedSubtitle}: <span className="font-mono font-semibold">{placedOrder.orderNumber}</span>
-            </p>
-
-            <div className="space-y-3 rounded-xl border border-ink-900/10 bg-ink-900/[0.03] p-5 text-left dark:border-cream/10 dark:bg-cream/5">
-              <p className="text-sm text-ink-900/70 dark:text-cream/70">{dict.checkout.paymentCardInstructions}</p>
-              <button
-                onClick={copyCardNumber}
-                className="flex w-full items-center justify-between rounded-lg border border-ink-900/15 bg-white px-4 py-3 font-mono text-base font-bold dark:border-cream/15 dark:bg-ink-800 dark:text-cream"
-              >
-                <span>{PAYMENT_CARD_NUMBER}</span>
-                <Copy size={16} className="text-ink-900/40" />
-              </button>
-              {copied && <p className="text-xs font-semibold text-emerald-600">✓</p>}
-              <p className="text-xs text-ink-900/50 dark:text-cream/50">
-                {dict.checkout.cardHolder}: <span className="font-semibold">{PAYMENT_CARD_HOLDER}</span>
-              </p>
-              <a
-                href={telegramHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-primary flex w-full items-center justify-center gap-2"
-              >
-                <Send size={16} />
-                {dict.checkout.sendReceiptTelegram}
-              </a>
-            </div>
-
-            {goToOrdersButton}
-          </div>
-        </Reveal>
-      </div>
+      />
     );
   }
 

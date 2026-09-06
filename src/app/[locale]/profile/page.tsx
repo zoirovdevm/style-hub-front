@@ -6,13 +6,14 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useForm, Controller } from 'react-hook-form';
 import { useMutation, useQuery } from '@apollo/client';
-import { User2, Package, Pencil, X } from 'lucide-react';
+import { User2, Package, Pencil, X, ArrowRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { LogOut, ShieldCheck } from 'lucide-react';
 import { GET_ME, GET_MY_ORDERS } from '@/lib/graphql/queries';
 import { UPDATE_PROFILE } from '@/lib/graphql/mutations';
 import { useAuthStore } from '@/lib/store/auth-store';
 import { formatPrice, formatDate } from '@/lib/utils/format';
+import { resolveProductCoverImage } from '@/lib/utils/productImage';
 import { OrderStatusBadge } from '@/components/ui/OrderStatusBadge';
 import { PhoneInput } from '@/components/ui/PhoneInput';
 import { Reveal } from '@/components/ui/Reveal';
@@ -275,8 +276,15 @@ export default function ProfilePage({ params }: { params: { locale: Locale } }) 
                 // fixed padding rather than a percentage width.
                 <div className="min-w-0 max-w-full max-h-[60vh] space-y-3 overflow-y-auto overscroll-contain px-3 sm:px-0 lg:max-h-none lg:overflow-visible">
                   {orders.map((order: any, i: number) => {
-                    const cover = order.items[0]?.product?.images?.[0] || '/placeholder-product.svg';
+                    // Xaridor tanlagan RANGGA mos rasm — avval har doim
+                    // mahsulotning umumiy birinchi rasmi ko'rsatilar edi.
+                    const cover = resolveProductCoverImage(order.items[0]?.product, order.items[0]?.color);
                     const deliveryPoint = [order.deliveryCity, order.deliveryAddress].filter(Boolean).join(', ');
+                    // To'lanmagan (yoki rad etilgan) buyurtma kartochkasi
+                    // bosilsa, aynan shu buyurtmaning to'lov sahifasiga
+                    // o'tadi — to'langan buyurtma uchun avvalgidek hech
+                    // qanday navigatsiya yo'q.
+                    const payable = order.paymentStatus !== 'PAID';
                     return (
                       <Reveal key={order.id} delay={i * 0.04} className="min-w-0 max-w-full">
                         {/* Badges used to sit beside the price line with
@@ -310,7 +318,12 @@ export default function ProfilePage({ params }: { params: { locale: Locale } }) 
                             to work with, so the card, image, and every text
                             size step back up to a comfortable reading size
                             there instead of staying thumbnail-sized. */}
-                        <div className="card-surface flex w-full min-w-0 max-w-full gap-1.5 p-1.5 lg:gap-4 lg:p-4">
+                        <div
+                          onClick={payable ? () => router.push(`/${locale}/orders/${order.id}`) : undefined}
+                          className={`card-surface flex w-full min-w-0 max-w-full gap-1.5 p-1.5 lg:gap-4 lg:p-4 ${
+                            payable ? 'cursor-pointer transition-colors hover:border-gold-500/30' : ''
+                          }`}
+                        >
                           <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-ink-900/5 lg:h-20 lg:w-20">
                             <Image src={cover} alt={order.items[0]?.title ?? ''} fill className="object-cover" unoptimized />
                           </div>
@@ -329,6 +342,12 @@ export default function ProfilePage({ params }: { params: { locale: Locale } }) 
                                 {order.paymentStatus === 'PAID' ? dict.admin.paid : dict.admin.unpaid}
                               </span>
                               <OrderStatusBadge status={order.status} dict={dict} compact />
+                              {payable && (
+                                <span className="ml-auto flex items-center gap-0.5 text-[9px] font-semibold text-gold-600 dark:text-gold-400 lg:text-xs">
+                                  {dict.orders.payNow}
+                                  <ArrowRight size={11} />
+                                </span>
+                              )}
                             </div>
                             {/* These four lines used to be `truncate`
                                 (nowrap + ellipsis) — with a long enough

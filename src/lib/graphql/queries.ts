@@ -286,6 +286,48 @@ export const GET_MY_ORDERS = gql`
           id
           slug
           images
+          colorImages {
+            color
+            images
+          }
+        }
+      }
+    }
+  }
+`;
+
+// Bitta buyurtmaning to'liq ma'lumoti — "Buyurtmalarim" ro'yxatidagi
+// to'lanmagan buyurtma kartochkasi bosilganda ochiladigan to'lov sahifasi
+// (OrderPaymentPanel) shu so'rovdan foydalanadi. Backend'da bu so'rov
+// faqat buyurtma egasi yoki admin uchun ochiq (order.resolver.ts).
+export const GET_ORDER = gql`
+  query GetOrder($id: ID!) {
+    order(id: $id) {
+      id
+      orderNumber
+      status
+      totalAmount
+      deliveryAddress
+      deliveryCity
+      phone
+      paymentMethod
+      paymentStatus
+      createdAt
+      items {
+        id
+        title
+        price
+        size
+        color
+        quantity
+        product {
+          id
+          slug
+          images
+          colorImages {
+            color
+            images
+          }
         }
       }
     }

@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { useMutation } from '@apollo/client';
 import { AnimatePresence, motion } from 'framer-motion';
-import { AlertCircle } from 'lucide-react';
 import { SEND_REGISTER_OTP, VERIFY_REGISTER_OTP, REGISTER } from '@/lib/graphql/mutations';
 import { useAuthStore } from '@/lib/store/auth-store';
 import { useRegisterWizardStore, type RegisterDetailsForm } from '@/lib/store/register-wizard-store';
@@ -63,15 +62,10 @@ export default function RegisterPage({ params }: { params: { locale: Locale } })
   const [confirmError, setConfirmError] = useState<string | null>(null);
   const [showWelcome, setShowWelcome] = useState(false);
 
-  // Telefon/manzil to'g'riligini tasdiqlash checkboxi — foydalanuvchi
-  // ro'yxatdan o'tishni shu belgilamasdan yakunlay olmaydi (handleConfirm
-  // shuni tekshiradi). Har safar 'confirm' bosqichiga qaytilganda emas,
-  // faqat wizard boshidan reset bo'lganda tozalanadi (resetWizard bilan bir
-  // vaqtda hech narsa qilmaymiz — bu state komponent umrining oxirigacha
-  // yetarli, chunki muvaffaqiyatli ro'yxatdan o'tgach sahifa boshqa joyga
-  // yo'naltiriladi).
+  // "Bizning politika"ga rozilik checkboxi — belgilanmaguncha "Tasdiqlash"
+  // tugmasi disabled qolaveradi (pastdagi step==='confirm' JSX'ga qarang),
+  // shuning uchun bu belgilanmasdan ro'yxatdan o'tishni yakunlab bo'lmaydi.
   const [agreeTerms, setAgreeTerms] = useState(false);
-  const [termsError, setTermsError] = useState(false);
 
   const [sendOtp, { loading: sendingOtp }] = useMutation(SEND_REGISTER_OTP);
   const [verifyOtp, { loading: verifyingOtp }] = useMutation(VERIFY_REGISTER_OTP);
@@ -184,17 +178,9 @@ export default function RegisterPage({ params }: { params: { locale: Locale } })
   }
 
   async function handleConfirm() {
-    if (!details) return;
-    // Checkbox belgilanmagan bo'lsa — hisob umuman yaratilmaydi, faqat
-    // ogohlantirish ko'rsatiladi va tugma bosilishi shu yerda to'xtatiladi.
-    // Tugmani shunchaki `disabled` qilib qo'yish o'rniga shu yo'l tanlandi,
-    // chunki disabled tugma nega bosilmayotgani haqida hech narsa
-    // tushuntirmaydi — bu yerda esa foydalanuvchi nima qilish kerakligini
-    // aniq ko'radi.
-    if (!agreeTerms) {
-      setTermsError(true);
-      return;
-    }
+    // `agreeTerms` bo'lmasa bu funksiya umuman chaqirilmaydi — tugma
+    // pastda `disabled={registering || !agreeTerms}` bilan berkitilgan.
+    if (!details || !agreeTerms) return;
     setConfirmError(null);
     try {
       const { data } = await registerUser({
@@ -493,46 +479,34 @@ export default function RegisterPage({ params }: { params: { locale: Locale } })
                 </div>
               </dl>
 
-              {/* Telefon/manzil to'g'riligini tasdiqlash — aynan shu
-                  bosqichda, chunki yuqoridagi dl'da ikkalasi ham allaqachon
-                  ko'rsatilgan, xaridor ularni ko'rib turib rozilik
-                  bildiradi. */}
-              <div
-                className={`mt-6 rounded-xl border p-4 transition-colors ${
-                  termsError
-                    ? 'border-red-300 bg-red-50 dark:border-red-500/30 dark:bg-red-900/10'
-                    : 'border-ink-900/10 bg-ink-900/[0.02] dark:border-cream/10 dark:bg-cream/5'
-                }`}
-              >
-                <label className="flex cursor-pointer items-start gap-3">
-                  <input
-                    type="checkbox"
-                    checked={agreeTerms}
-                    onChange={(e) => {
-                      setAgreeTerms(e.target.checked);
-                      if (e.target.checked) setTermsError(false);
-                    }}
-                    className="mt-0.5 h-[18px] w-[18px] shrink-0 cursor-pointer rounded border-ink-900/25 text-gold-500 accent-gold-500 focus:ring-gold-500 focus:ring-offset-0 dark:border-cream/25"
-                  />
-                  <span className="text-sm leading-relaxed text-ink-900/70 dark:text-cream/70">
-                    {dict.auth.termsAgreementText}
-                  </span>
+              {/* "Bizning politika"ga rozilik — belgilanmaguncha pastdagi
+                  "Tasdiqlash" tugmasi disabled (yarim shaffof) bo'lib
+                  qoladi va bosilmaydi. */}
+              <div className="mt-6 flex items-start gap-3">
+                <input
+                  id="agree-terms"
+                  type="checkbox"
+                  checked={agreeTerms}
+                  onChange={(e) => setAgreeTerms(e.target.checked)}
+                  className="mt-0.5 h-[18px] w-[18px] shrink-0 cursor-pointer rounded border-ink-900/25 text-gold-500 accent-gold-500 focus:ring-gold-500 focus:ring-offset-0 dark:border-cream/25"
+                />
+                <label htmlFor="agree-terms" className="cursor-pointer text-sm text-ink-900/70 dark:text-cream/70">
+                  {dict.auth.agreeToTerms}
+                  <br />
+                  <Link
+                    href={`/${locale}/terms`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    // Checkbox'ning o'zini emas, faqat havolani bosganda
+                    // ochilishi kerak — label ichida bo'lgani uchun
+                    // stopPropagation checkboxni beixtiyor bosilib
+                    // qolishining oldini oladi.
+                    onClick={(e) => e.stopPropagation()}
+                    className="font-semibold text-ink-950 underline dark:text-cream"
+                  >
+                    {dict.auth.viewPolicy}
+                  </Link>
                 </label>
-
-                <AnimatePresence>
-                  {termsError && (
-                    <motion.p
-                      initial={{ opacity: 0, height: 0, marginTop: 0 }}
-                      animate={{ opacity: 1, height: 'auto', marginTop: 8 }}
-                      exit={{ opacity: 0, height: 0, marginTop: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="flex items-center gap-1.5 overflow-hidden text-xs font-semibold text-red-500"
-                    >
-                      <AlertCircle size={13} className="shrink-0" />
-                      {dict.auth.termsAgreementWarning}
-                    </motion.p>
-                  )}
-                </AnimatePresence>
               </div>
 
               {confirmError && <p className="mt-4 text-xs text-red-500">{confirmError}</p>}
@@ -541,7 +515,12 @@ export default function RegisterPage({ params }: { params: { locale: Locale } })
                 <button type="button" onClick={() => setStep('details')} className="btn-outline w-1/2">
                   {dict.auth.goBack}
                 </button>
-                <button type="button" onClick={handleConfirm} disabled={registering} className="btn-primary w-1/2 disabled:opacity-50">
+                <button
+                  type="button"
+                  onClick={handleConfirm}
+                  disabled={registering || !agreeTerms}
+                  className="btn-primary w-1/2 disabled:cursor-not-allowed disabled:opacity-40"
+                >
                   {registering ? '…' : dict.auth.confirmSubmit}
                 </button>
               </div>

@@ -155,7 +155,9 @@
     "paymentConfirmedBody": "Buyurtmangiz uchun to'lov qabul qilindi. Tez orada yetkazib beramiz.",
     "paymentRejectedTitle": "To'lov rad etildi",
     "paymentRejectedBody": "Yuborgan chekingiz tasdiqlanmadi. Iltimos, to'lovni qaytadan amalga oshirib, to'g'ri skrinshotni pastdagi tugma orqali qayta yuboring.",
-    "buyNowMissing": "Xarid ma'lumotlari topilmadi. Iltimos, mahsulot sahifasiga qaytib qaytadan urinib ko'ring."
+    "buyNowMissing": "Xarid ma'lumotlari topilmadi. Iltimos, mahsulot sahifasiga qaytib qaytadan urinib ko'ring.",
+    "copied": "Nusxalandi!",
+    "orderNotFoundBody": "Bu buyurtma topilmadi yoki sizga tegishli emas."
   },
   "orders": {
     "title": "Buyurtmalarim",
@@ -169,7 +171,8 @@
     "statusProcessing": "Jarayonda",
     "statusShipped": "Yo'lda",
     "statusDelivered": "Yetkazildi",
-    "statusCancelled": "Bekor qilindi"
+    "statusCancelled": "Bekor qilindi",
+    "payNow": "To'lash uchun bosing"
   },
   "auth": {
     "loginTitle": "Hisobingizga kiring",
@@ -227,8 +230,8 @@
     "confirmStepSubtitle": "Hisobingizni yaratishdan oldin ma'lumotlaringizni tekshirib chiqing",
     "confirmPhoneLabel": "Telefon",
     "confirmPasswordLabel": "Parol",
-    "termsAgreementText": "Men kiritgan telefon raqami va yetkazib berish manzili to'g'ri ekanini tasdiqlayman. Noto'g'ri telefon raqami yoki manzil kiritilgan taqdirda, buyurtmani qaytarish yoki almashtirish imkoniyati mavjud emasligini tushunaman va bunga roziman.",
-    "termsAgreementWarning": "Davom etish uchun yuqoridagi shartga rozilik bildiring",
+    "agreeToTerms": "Men roziman",
+    "viewPolicy": "Bizning politika",
     "goBack": "Ortga qaytish",
     "confirmSubmit": "Tasdiqlash",
     "registerWelcomeTitle": "Xush kelibsiz! 🎉",
@@ -276,6 +279,28 @@
   "about": {
     "title": "Wardrobe haqida",
     "subtitle": "Zamonaviy kiyim-kechak marketpleysi"
+  },
+  "terms": {
+    "title": "Foydalanish shartlari",
+    "subtitle": "Buyurtma berishdan oldin quyidagi shartlar bilan tanishib chiqing",
+    "sections": [
+      {
+        "heading": "Ma'lumotlaringiz to'g'riligi",
+        "body": "Ro'yxatdan o'tishda va buyurtma berishda kiritilgan telefon raqami va yetkazib berish manzili to'g'ri bo'lishi shart. Noto'g'ri yoki eskirgan ma'lumot kiritilgan taqdirda, buyurtmani yetkazib berishda kechikish yoki uni yetkazib bera olmaslik yuzaga kelishi mumkin — bunday holatlarda buyurtmani qaytarish yoki almashtirish imkoniyati mavjud emas."
+      },
+      {
+        "heading": "To'lov tartibi",
+        "body": "Hozircha onlayn karta orqali avtomatik to'lov mavjud emas — buyurtma tasdiqlangandan so'ng, ko'rsatilgan karta raqamiga o'tkazma qilib, to'lov chekini Telegram orqali yuborasiz. Admin chekni tekshirib, buyurtmani tasdiqlaydi."
+      },
+      {
+        "heading": "Yetkazib berish",
+        "body": "Buyurtma tasdiqlangandan so'ng, ko'rsatilgan manzil bo'yicha yetkazib beriladi. Yetkazib berish muddati mahsulot va manzilga qarab farq qilishi mumkin."
+      },
+      {
+        "heading": "Qaytarish va almashtirish",
+        "body": "Mahsulot sifatiga oid muammolar yuzasidan qaytarish/almashtirish Telegram orqali admin bilan bog'lanib amalga oshiriladi. Xaridor tomonidan noto'g'ri kiritilgan telefon raqami yoki manzil sababli yuzaga kelgan muammolar uchun qaytarish/almashtirish imkoniyati berilmaydi."
+      }
+    ]
   },
   "footer": {
     "rights": "Barcha huquqlar himoyalangan",

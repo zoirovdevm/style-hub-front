@@ -58,6 +58,7 @@ export function Footer({ locale, dict }: { locale: Locale; dict: Dictionary }) {
             <Link href={`/${locale}/orders`} prefetch={false}>{dict.nav.orders}</Link>
             <Link href={`/${locale}/profile`} prefetch={false}>{dict.nav.profile}</Link>
             <Link href={`/${locale}/contact`} prefetch={false}>{dict.contact.title}</Link>
+            <Link href={`/${locale}/terms`} prefetch={false}>{dict.terms.title}</Link>
           </div>
         </div>
 
