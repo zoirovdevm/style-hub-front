@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { useMutation } from '@apollo/client';
 import { AnimatePresence, motion } from 'framer-motion';
+import { Check } from 'lucide-react';
 import { SEND_REGISTER_OTP, VERIFY_REGISTER_OTP, REGISTER } from '@/lib/graphql/mutations';
 import { useAuthStore } from '@/lib/store/auth-store';
 import { useRegisterWizardStore, type RegisterDetailsForm } from '@/lib/store/register-wizard-store';
@@ -481,16 +482,45 @@ export default function RegisterPage({ params }: { params: { locale: Locale } })
 
               {/* "Bizning politika"ga rozilik — belgilanmaguncha pastdagi
                   "Tasdiqlash" tugmasi disabled (yarim shaffof) bo'lib
-                  qoladi va bosilmaydi. */}
-              <div className="mt-6 flex items-start gap-3">
+                  qoladi va bosilmaydi.
+                  ROOT-CAUSE FIX: bu ilgari haqiqiy `<input type="checkbox">`
+                  ning o'ziga to'g'ridan-to'g'ri border/rounded klasslar
+                  qo'yib qo'yilgan edi — brauzerlar checkboxni odatda o'zining
+                  ICHKI (native, OS darajasidagi) ko'rinishida chizadi va
+                  border-rangi/burchak-radiusi kabi CSS'larni butunlay e'tiborsiz
+                  qoldiradi (faqat accent-color ta'sir qiladi), shuning uchun
+                  natija brauzerdan brauzerga farq qilar, ba'zilarida esa
+                  deyarli ko'rinmas darajada kichik/shaffof bo'lib qolar edi.
+                  Endi haqiqiy input butunlay ko'rinmas (`sr-only`) qilib
+                  yashirilgan, lekin funksional (checked/onChange, klaviatura
+                  bilan Tab+bo'shliq orqali ham ishlaydi) — uning o'rniga
+                  hamma joyda BIR XIL ko'rinadigan, to'liq o'zimiz chizgan
+                  kvadrat quti (span) ko'rsatiladi: belgilanmaganda oq fon +
+                  aniq border, belgilanganda esa saytning yashil rangida
+                  to'liq bo'yalgan fon + oq rangdagi ✓ belgisi. */}
+              <label htmlFor="agree-terms" className="mt-6 flex cursor-pointer items-start gap-3">
                 <input
                   id="agree-terms"
                   type="checkbox"
                   checked={agreeTerms}
                   onChange={(e) => setAgreeTerms(e.target.checked)}
-                  className="mt-0.5 h-[18px] w-[18px] shrink-0 cursor-pointer rounded-none border-ink-900/25 text-gold-500 accent-gold-500 focus:ring-gold-500 focus:ring-offset-0 dark:border-cream/25"
+                  className="sr-only"
                 />
-                <label htmlFor="agree-terms" className="cursor-pointer text-sm text-ink-900/70 dark:text-cream/70">
+                <span
+                  aria-hidden="true"
+                  className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors duration-150 ${
+                    agreeTerms
+                      ? 'border-gold-500 bg-gold-500'
+                      : 'border-ink-900/25 bg-white dark:border-cream/30 dark:bg-ink-900'
+                  }`}
+                >
+                  <Check
+                    size={14}
+                    strokeWidth={3.5}
+                    className={`text-white transition-opacity duration-150 ${agreeTerms ? 'opacity-100' : 'opacity-0'}`}
+                  />
+                </span>
+                <span className="text-sm text-ink-900/70 dark:text-cream/70">
                   {dict.auth.agreeToTerms}
                   <br />
                   <Link
@@ -506,8 +536,8 @@ export default function RegisterPage({ params }: { params: { locale: Locale } })
                   >
                     {dict.auth.viewPolicy}
                   </Link>
-                </label>
-              </div>
+                </span>
+              </label>
 
               {confirmError && <p className="mt-4 text-xs text-red-500">{confirmError}</p>}
 
