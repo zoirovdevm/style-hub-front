@@ -218,7 +218,7 @@ export function OrderPaymentPanel({
               className="group relative flex aspect-[8/5] w-full flex-col justify-end gap-1 rounded-2xl border border-ink-900/15 bg-white p-5 text-left shadow-soft transition-transform active:scale-[0.98] dark:border-cream/15 dark:bg-gradient-to-br dark:from-ink-900 dark:to-ink-950"
             >
               <Copy size={16} className="absolute right-4 top-4 text-ink-900/30 transition-colors group-hover:text-ink-900/60 dark:text-cream/30 dark:group-hover:text-cream/60" />
-              <p className="text-lg font-medium leading-tight text-ink-900/80 dark:text-cream/90">{PAYMENT_CARD_HOLDER}</p>
+              <p className="text-[24px] font-medium leading-tight text-ink-900/80 dark:text-cream/90">{PAYMENT_CARD_HOLDER}</p>
               <p className="text-2xl font-semibold leading-tight tracking-wider text-ink-950 dark:text-cream">{PAYMENT_CARD_NUMBER}</p>
             </button>
             {copied && <p className="text-xs font-semibold text-emerald-600">{dict.checkout.copied}</p>}
