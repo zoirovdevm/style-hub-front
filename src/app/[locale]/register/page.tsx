@@ -488,7 +488,7 @@ export default function RegisterPage({ params }: { params: { locale: Locale } })
                   type="checkbox"
                   checked={agreeTerms}
                   onChange={(e) => setAgreeTerms(e.target.checked)}
-                  className="mt-0.5 h-[18px] w-[18px] shrink-0 cursor-pointer rounded border-ink-900/25 text-gold-500 accent-gold-500 focus:ring-gold-500 focus:ring-offset-0 dark:border-cream/25"
+                  className="mt-0.5 h-[18px] w-[18px] shrink-0 cursor-pointer rounded-none border-ink-900/25 text-gold-500 accent-gold-500 focus:ring-gold-500 focus:ring-offset-0 dark:border-cream/25"
                 />
                 <label htmlFor="agree-terms" className="cursor-pointer text-sm text-ink-900/70 dark:text-cream/70">
                   {dict.auth.agreeToTerms}
