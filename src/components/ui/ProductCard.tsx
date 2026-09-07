@@ -385,6 +385,36 @@ export function ProductCard({
                 })}
               </div>
             )}
+
+            {/* Desktop-only hover carousel indicator (Uzum Market
+                reference) — short horizontal segments, one per photo,
+                hidden by default and only faded in on `group-hover` at md+
+                (same restricted-to-desktop pattern this file already uses
+                for the photo zoom at line ~300: md:group-hover:scale-105).
+                `group` lives on the outermost card wrapper, so hovering
+                anywhere on the card (not just the photo) reveals it, same
+                as that zoom effect. Completely separate block from the dot
+                indicator above, which stays exactly as it was (md:hidden —
+                mobile/tablet only) and is untouched by this addition; this
+                new block is itself `hidden` below md, so it has zero effect
+                on the mobile/tablet layout. Purely visual, no click/focus
+                handling of its own — the existing hover-scrub over the
+                whole image area (scrubHandlers) already drives
+                activeImageIndex, exactly like it already does for the
+                mobile dots above. */}
+            {hasMultipleImages && (
+              <div className="pointer-events-none absolute inset-x-0 bottom-2 hidden items-center justify-center gap-1 opacity-0 transition-opacity duration-200 md:flex md:group-hover:opacity-100">
+                {images.map((_, i) => (
+                  <span
+                    key={i}
+                    aria-hidden="true"
+                    className={`h-[3px] w-3 rounded-full transition-colors duration-300 ${
+                      i === activeImageIndex ? 'bg-gold-500' : 'bg-white/50'
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="space-y-1 px-4 pt-3">

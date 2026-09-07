@@ -206,17 +206,20 @@ export function OrderPaymentPanel({
             <p className="text-sm text-ink-900/70 dark:text-cream/70">{dict.checkout.paymentCardInstructions}</p>
 
             {/* "Bizning karta" — haqiqiy bank kartasiga o'xshash ko'rinish:
-                to'q fon, yumaloq burchak, ism va raqam oddiy (sans) shriftda
-                pastki chap burchakda. Kenglik doim ota elementga (max-w-md
-                karta) 100% mos keladi — alohida max-width belgilanmagan. */}
+                yumaloq burchak, ism va raqam oddiy (sans) shriftda pastki
+                chap burchakda. Kenglik doim ota elementga (max-w-md karta)
+                100% mos keladi — alohida max-width belgilanmagan.
+                Light mode'da oq fon + aniq ko'rinadigan border ("qosh"),
+                dark mode'da esa to'q (qora) fon — sayt bo'yicha `dark:`
+                pattern'iga mos. */}
             <button
               type="button"
               onClick={copyCardNumber}
-              className="group relative flex aspect-[8/5] w-full flex-col justify-end gap-1 rounded-2xl border border-cream/15 bg-gradient-to-br from-ink-900 to-ink-950 p-5 text-left shadow-soft transition-transform active:scale-[0.98]"
+              className="group relative flex aspect-[8/5] w-full flex-col justify-end gap-1 rounded-2xl border border-ink-900/15 bg-white p-5 text-left shadow-soft transition-transform active:scale-[0.98] dark:border-cream/15 dark:bg-gradient-to-br dark:from-ink-900 dark:to-ink-950"
             >
-              <Copy size={16} className="absolute right-4 top-4 text-cream/30 transition-colors group-hover:text-cream/60" />
-              <p className="text-lg font-medium leading-tight text-cream/90">{PAYMENT_CARD_HOLDER}</p>
-              <p className="text-2xl font-semibold leading-tight tracking-wider text-cream">{PAYMENT_CARD_NUMBER}</p>
+              <Copy size={16} className="absolute right-4 top-4 text-ink-900/30 transition-colors group-hover:text-ink-900/60 dark:text-cream/30 dark:group-hover:text-cream/60" />
+              <p className="text-lg font-medium leading-tight text-ink-900/80 dark:text-cream/90">{PAYMENT_CARD_HOLDER}</p>
+              <p className="text-2xl font-semibold leading-tight tracking-wider text-ink-950 dark:text-cream">{PAYMENT_CARD_NUMBER}</p>
             </button>
             {copied && <p className="text-xs font-semibold text-emerald-600">{dict.checkout.copied}</p>}
 

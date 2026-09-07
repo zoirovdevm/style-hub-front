@@ -329,10 +329,29 @@ function CheckoutPageInner({ params }: { params: { locale: Locale } }) {
       const parsed = JSON.parse(raw);
       // A buy-now order never touched the cart, so there's no "cart is
       // empty" signal to gate on the way the cart-checkout branch below
-      // does — the stored record itself is the only signal, and
-      // BUY_NOW_ITEM_STORAGE_KEY was already cleared the moment this order
-      // was placed, so this can't loop back into re-ordering it.
+      // does. ROOT-CAUSE FIX: this used to restore `parsed` unconditionally
+      // whenever it was a buy-now order, with no check for whether a BRAND
+      // NEW buy-now attempt was already queued — so clicking "Sotib olish"
+      // on a *different* product (writing a fresh BUY_NOW_ITEM_STORAGE_KEY
+      // and remounting this page with ?buyNow=1) would immediately jump
+      // straight to the previous, still-unpaid order's Payment Page instead
+      // of showing the new product. BUY_NOW_ITEM_STORAGE_KEY is only ever
+      // present here when a buy-now item hasn't been submitted yet (it's
+      // cleared the instant createOrder succeeds — see onSubmit above), so
+      // its presence is exactly the signal that this is a fresh checkout
+      // attempt, not a reload of an already-placed order's payment screen.
+      let hasPendingBuyNowItem = false;
+      try {
+        hasPendingBuyNowItem = !!sessionStorage.getItem(BUY_NOW_ITEM_STORAGE_KEY);
+      } catch {
+        // sessionStorage can throw in some privacy modes — treat as "no
+        // pending item" so the old entry can still be restored below.
+      }
       if (parsed.buyNow) {
+        if (hasPendingBuyNowItem) {
+          sessionStorage.removeItem(PLACED_ORDER_STORAGE_KEY);
+          return;
+        }
         setPlacedOrder(parsed);
         return;
       }
