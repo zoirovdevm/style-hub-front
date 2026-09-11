@@ -81,6 +81,18 @@ const nextConfig = {
       { source: '/uploads/:path*', destination: `${backend}/uploads/:path*` },
       { source: '/upload/:path*', destination: `${backend}/upload/:path*` },
       { source: '/presence/:path*', destination: `${backend}/presence/:path*` },
+      // Google Search Console'ning "HTML-fayl" usuli bilan sayt egaligini
+      // tasdiqlash uchun. Fayl public/ papkasida turadi va odatda faqat
+      // ildizdan ochiladi (/googleXXXX.html). Lekin Search Console'da
+      // manzil til prefiksi bilan qo'shilgan bo'lsa (masalan
+      // https://wardrobestore.uz/uz/), Google faylni AYNAN o'sha
+      // prefiksning ichidan qidiradi — /uz/googleXXXX.html. Bu qoida
+      // shunday so'rovni ildizdagi haqiqiy faylga yo'naltiradi, shuning
+      // uchun tasdiqlash ikkala holatda ham ishlaydi. Fayl nomi emas,
+      // naqsh yozilgan — kelajakda boshqa Google xizmati (masalan
+      // Analytics) uchun yana bir fayl qo'shilsa, bu qoidani
+      // o'zgartirish shart bo'lmaydi.
+      { source: '/:locale(uz|ru)/:file(google[a-z0-9]+\\.html)', destination: '/:file' },
     ];
   },
 };
