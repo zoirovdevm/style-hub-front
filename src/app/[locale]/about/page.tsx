@@ -3,7 +3,20 @@ import { getDictionary } from '@/i18n/get-dictionary';
 import type { Locale } from '@/i18n/config';
 import { Reveal } from '@/components/ui/Reveal';
 
+import { pageSeo } from '@/lib/seo/site';
+import type { Metadata } from 'next';
+
 const ICONS = [Sparkles, Truck, RotateCcw, ShieldCheck];
+
+export async function generateMetadata({ params }: { params: { locale: Locale } }): Promise<Metadata> {
+  const dict = await getDictionary(params.locale);
+  return pageSeo({
+    locale: params.locale,
+    path: '/about',
+    title: dict.about.title,
+    description: dict.about.subtitle,
+  });
+}
 
 export default async function AboutPage({ params }: { params: { locale: Locale } }) {
   const { locale } = params;

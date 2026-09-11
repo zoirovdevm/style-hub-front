@@ -1,7 +1,9 @@
 import Link from 'next/link';
+import type { Metadata } from 'next';
 import { ArrowRight, Truck, ShieldCheck, CheckCircle2, CreditCard } from 'lucide-react';
 import { getDictionary } from '@/i18n/get-dictionary';
 import type { Locale } from '@/i18n/config';
+import { pageSeo } from '@/lib/seo/site';
 import { serverFetchGraphQL } from '@/lib/graphql/server-fetch';
 import { GET_BEST_SELLERS_STR, GET_CATEGORIES_STR } from '@/lib/graphql/server-queries';
 import { ProductCard, type ProductCardData } from '@/components/ui/ProductCard';
@@ -27,6 +29,20 @@ const WHY_ITEMS = [
   { icon: ShieldCheck, ring: 'bg-violet-50 text-violet-600 dark:bg-violet-500/10 dark:text-violet-400' },
   { icon: CreditCard, ring: 'bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400' },
 ];
+
+// Bosh sahifa uchun canonical (https://wardrobestore.uz/uz) + hreflang
+// (uz/ru/x-default) + Open Graph. Avval bularning birortasi ham yo'q edi:
+// Google uchun /uz va /ru ikki alohida, bir-biriga aloqasiz sahifa
+// ko'rinardi va qaysi biri asosiy ekani noaniq edi.
+export async function generateMetadata({ params }: { params: { locale: Locale } }): Promise<Metadata> {
+  const dict = await getDictionary(params.locale);
+  return pageSeo({
+    locale: params.locale,
+    path: '',
+    title: `Wardrobe — ${dict.home.heroTitle}`,
+    description: dict.home.heroSubtitle,
+  });
+}
 
 export default async function HomePage({ params }: { params: { locale: Locale } }) {
   // The temporary `?stage=N` diagnostic scaffolding (used to binary-isolate

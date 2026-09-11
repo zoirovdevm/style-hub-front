@@ -1,11 +1,23 @@
+import type { Metadata } from 'next';
 import { getDictionary } from '@/i18n/get-dictionary';
 import type { Locale } from '@/i18n/config';
 import { Reveal } from '@/components/ui/Reveal';
+import { pageSeo } from '@/lib/seo/site';
 
 // Ro'yxatdan o'tish formasidagi "Bizning politika" havolasi shu sahifaga
 // olib boradi (yangi tabda ochiladi — register/page.tsx'ga qarang). Boshqa
 // statik sahifalar (about/contact) bilan bir xil, oddiy server component
 // naqshini takrorlaydi — interaktivlik kerak emas.
+export async function generateMetadata({ params }: { params: { locale: Locale } }): Promise<Metadata> {
+  const dict = await getDictionary(params.locale);
+  return pageSeo({
+    locale: params.locale,
+    path: '/terms',
+    title: dict.terms.title,
+    description: dict.terms.subtitle,
+  });
+}
+
 export default async function TermsPage({ params }: { params: { locale: Locale } }) {
   const { locale } = params;
   const dict = await getDictionary(locale);

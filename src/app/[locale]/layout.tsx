@@ -7,6 +7,7 @@ import { Footer } from '@/components/layout/Footer';
 import { MobileBottomNav } from '@/components/layout/MobileBottomNav';
 import { locales, type Locale } from '@/i18n/config';
 import { getDictionary } from '@/i18n/get-dictionary';
+import { SITE_URL, SITE_NAME } from '@/lib/seo/site';
 
 const inter = Inter({ subsets: ['latin', 'cyrillic'], variable: '--font-sans', display: 'swap' });
 const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-display', display: 'swap' });
@@ -42,23 +43,57 @@ export async function generateMetadata({
     // preview rasm/link ishlamay qoladi. Ishlab chiqarish domenini
     // .env orqali (NEXT_PUBLIC_SITE_URL) ham almashtirish mumkin —
     // masalan vaqtinchalik tunnel manzili bilan sinash uchun.
-    metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://wardrobestore.uz'),
+    metadataBase: new URL(SITE_URL),
     title: {
       default: `Wardrobe — ${dict.home.heroTitle}`,
       template: '%s — Wardrobe',
     },
     description: dict.home.heroSubtitle,
+    // Qidiruv so'zlari. Google bu tegga deyarli e'tibor bermaydi, lekin
+    // Yandex va ba'zi mahalliy qidiruv tizimlari hisobga oladi — zarari
+    // yo'q, foydasi bor.
+    keywords:
+      params.locale === 'ru'
+        ? ['интернет-магазин одежды', 'одежда Узбекистан', 'кроссовки', 'футболки', 'рубашки', 'Wardrobe', 'доставка по Узбекистану']
+        : ['onlayn kiyim do\'koni', 'kiyim O\'zbekiston', 'krossovka', 'futbolka', 'ko\'ylak', 'Wardrobe', 'yetkazib berish'],
     icons: {
       icon: '/logo.svg',
       shortcut: '/logo.svg',
+      apple: '/logo.svg',
     },
-    alternates: {
-      languages: { uz: '/uz', ru: '/ru' },
+    // Butun sayt bo'yicha indekslashga ruxsat — ochiq sahifalarning
+    // birortasida ham tasodifan `noindex` qolib ketmasligi uchun bu
+    // ATAYLAB aniq yozilgan. Yopiq sahifalar (profil, savat, admin...)
+    // esa middleware.ts dagi X-Robots-Tag orqali yopiladi.
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        'max-image-preview': 'large',
+        'max-snippet': -1,
+        'max-video-preview': -1,
+      },
     },
+    // DIQQAT: bu yerda `alternates` ATAYLAB berilmagan. Avval shu joyda
+    // `languages: { uz: '/uz', ru: '/ru' }` turardi va u layout bo'lgani
+    // uchun HAMMA sahifaga meros bo'lib o'tardi — natijada /uz/shop ham,
+    // /uz/product/... ham o'zining til variantlari sifatida BOSH SAHIFAni
+    // ko'rsatardi, bu esa Google uchun noto'g'ri signal. Endi har bir
+    // sahifa o'zining canonical + hreflang juftini pageSeo() orqali
+    // o'zi beradi (lib/seo/site.ts).
     openGraph: {
+      type: 'website',
+      siteName: SITE_NAME,
       title: `Wardrobe — ${dict.home.heroTitle}`,
       description: dict.home.heroSubtitle,
-      type: 'website',
+      locale: params.locale === 'ru' ? 'ru_RU' : 'uz_UZ',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `Wardrobe — ${dict.home.heroTitle}`,
+      description: dict.home.heroSubtitle,
     },
   };
 }
@@ -71,6 +106,46 @@ export default async function LocaleLayout({
   params: { locale: Locale };
 }) {
   const dict = await getDictionary(params.locale);
+
+  // Structured data (JSON-LD) — Google qidiruv natijasida sayt nomini,
+  // logotipini va ichki qidiruv maydonini to'g'ri ko'rsatishi uchun.
+  // Organization: "bu qanday tashkilot"; WebSite + SearchAction: Google
+  // natijada to'g'ridan-to'g'ri sayt ichida qidirish maydonini
+  // chiqarishi mumkin (sitelinks searchbox).
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Organization',
+        '@id': `${SITE_URL}/#organization`,
+        name: SITE_NAME,
+        url: SITE_URL,
+        logo: `${SITE_URL}/logo.svg`,
+        description: dict.home.heroSubtitle,
+        address: {
+          '@type': 'PostalAddress',
+          addressCountry: 'UZ',
+        },
+      },
+      {
+        '@type': 'WebSite',
+        '@id': `${SITE_URL}/#website`,
+        url: SITE_URL,
+        name: SITE_NAME,
+        description: dict.home.heroSubtitle,
+        inLanguage: params.locale === 'ru' ? 'ru-RU' : 'uz-UZ',
+        publisher: { '@id': `${SITE_URL}/#organization` },
+        potentialAction: {
+          '@type': 'SearchAction',
+          target: {
+            '@type': 'EntryPoint',
+            urlTemplate: `${SITE_URL}/${params.locale}/shop?search={search_term_string}`,
+          },
+          'query-input': 'required name=search_term_string',
+        },
+      },
+    ],
+  };
 
   return (
     <html
@@ -86,6 +161,13 @@ export default async function LocaleLayout({
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var raw=localStorage.getItem('fashion-marketplace-theme');var theme=raw?JSON.parse(raw).state.theme:'light';if(theme==='dark'){document.documentElement.classList.add('dark');}}catch(e){}})();`,
           }}
+        />
+        {/* Organization + WebSite structured data — yuqoridagi `jsonLd`ga
+            qarang. Server'da render bo'ladi, ya'ni Google HTML'ning
+            o'zidayoq ko'radi (JavaScript ishga tushishini kutmaydi). */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
       <body>

@@ -11,6 +11,7 @@ import { ProductReviews } from '@/components/product/ProductReviews';
 import { ProductCard, type ProductCardData } from '@/components/ui/ProductCard';
 import { Reveal } from '@/components/ui/Reveal';
 import { formatPrice } from '@/lib/utils/format';
+import { pageSeo, canonicalUrl, SITE_URL, SITE_NAME } from '@/lib/seo/site';
 
 interface ProductPageProps {
   params: { locale: Locale; slug: string };
@@ -27,23 +28,31 @@ async function fetchProduct(slug: string) {
 
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
   const product = await fetchProduct(params.slug);
-  if (!product) return {};
+  // Mahsulot topilmasa — sahifa 404 qaytaradi (pastdagi notFound()), shu
+  // sababli qidiruv tizimlariga bu manzilni indekslamaslik aniq aytiladi.
+  if (!product) return { robots: { index: false, follow: false } };
 
   const title = params.locale === 'ru' && product.titleRu ? product.titleRu : product.title;
-  const description = (params.locale === 'ru' && product.descriptionRu ? product.descriptionRu : product.description)?.slice(
-    0,
-    160,
-  );
+  const rawDescription = params.locale === 'ru' && product.descriptionRu ? product.descriptionRu : product.description;
+  // Tavsif bo'sh bo'lsa ham, qidiruv natijasida bo'sh qator turmasligi
+  // uchun mahsulot nomi va toifasidan qisqa matn yig'iladi.
+  const categoryName = product.category
+    ? params.locale === 'ru' && product.category.nameRu
+      ? product.category.nameRu
+      : product.category.name
+    : '';
+  const description = (rawDescription || `${title}${categoryName ? ` — ${categoryName}` : ''}. Wardrobe.`).slice(0, 160);
 
-  return {
+  return pageSeo({
+    locale: params.locale,
+    path: `/product/${params.slug}`,
     title,
     description,
-    openGraph: {
-      title,
-      description,
-      images: product.images?.length ? [product.images[0]] : undefined,
-    },
-  };
+    images: product.images?.length ? product.images.slice(0, 3) : undefined,
+    // Mahsulot kartochkasi uchun og:type = "website" emas, balki mazmunli
+    // sahifa sifatida beriladi.
+    ogType: 'article',
+  });
 }
 
 export default async function ProductDetailPage({ params }: ProductPageProps) {
@@ -75,8 +84,73 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
       ? productVariants.reduce((sum: number, v: { stock: number }) => sum + (v.stock ?? 0), 0)
       : product.stock;
 
+  // ── Structured data (JSON-LD) ──────────────────────────────────────
+  // Product schema — Google qidiruv natijasida narx, mavjudlik va reyting
+  // yulduzchalarini ko'rsatishi mumkin ("rich result"). Bularsiz mahsulot
+  // oddiy ko'k havola bo'lib chiqadi. Narx va mavjudlik REAL ma'lumotdan
+  // olinadi, hardcode qilinmagan.
+  const productUrl = canonicalUrl(locale, `/product/${slug}`);
+  const absoluteImages = (product.images ?? []).map((src: string) =>
+    src.startsWith('http') ? src : `${SITE_URL}${src.startsWith('/') ? '' : '/'}${src}`,
+  );
+
+  const productJsonLd: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: title,
+    description: description || title,
+    image: absoluteImages.length > 0 ? absoluteImages : [`${SITE_URL}/logo.svg`],
+    sku: product.sku,
+    url: productUrl,
+    ...(product.brand ? { brand: { '@type': 'Brand', name: product.brand.name } } : {}),
+    ...(product.category
+      ? { category: locale === 'ru' && product.category.nameRu ? product.category.nameRu : product.category.name }
+      : {}),
+    offers: {
+      '@type': 'Offer',
+      url: productUrl,
+      // Valyuta kodi ISO 4217 bo'yicha — O'zbekiston so'mi.
+      priceCurrency: 'UZS',
+      price: product.price,
+      availability: totalStock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+      itemCondition: 'https://schema.org/NewCondition',
+      seller: { '@type': 'Organization', name: SITE_NAME },
+    },
+  };
+
+  // aggregateRating faqat HAQIQIY sharh bo'lganda qo'shiladi. Sharhsiz
+  // mahsulotga reyting yozib qo'yish Google qoidalarini buzadi va butun
+  // sayt bo'yicha rich result'dan chetlatilishga olib kelishi mumkin.
+  if (product.reviewsCount > 0 && product.rating > 0) {
+    productJsonLd.aggregateRating = {
+      '@type': 'AggregateRating',
+      ratingValue: product.rating,
+      reviewCount: product.reviewsCount,
+    };
+  }
+
+  // BreadcrumbList — natijada "Wardrobe › Do'kon › Krossovka" ko'rinishidagi
+  // yo'lni chiqaradi.
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: SITE_NAME, item: canonicalUrl(locale, '') },
+      { '@type': 'ListItem', position: 2, name: dict.nav.shop, item: canonicalUrl(locale, '/shop') },
+      { '@type': 'ListItem', position: 3, name: title, item: productUrl },
+    ],
+  };
+
   return (
     <div className="container-app py-12">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
       {/* ProductColorProvider shares the selected color between the two
           sibling client components below — ProductActions (the size/color
           picker) writes to it, ProductGalleryForColor reads it to show that

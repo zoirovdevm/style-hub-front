@@ -4,6 +4,18 @@ import type { Locale } from '@/i18n/config';
 import { serverFetchGraphQL } from '@/lib/graphql/server-fetch';
 import { GET_CATEGORIES_STR } from '@/lib/graphql/server-queries';
 import { Reveal } from '@/components/ui/Reveal';
+import { pageSeo } from '@/lib/seo/site';
+import type { Metadata } from 'next';
+
+export async function generateMetadata({ params }: { params: { locale: Locale } }): Promise<Metadata> {
+  const dict = await getDictionary(params.locale);
+  return pageSeo({
+    locale: params.locale,
+    path: '/categories',
+    title: dict.nav.categories,
+    description: dict.home.heroSubtitle,
+  });
+}
 
 export default async function CategoriesPage({ params }: { params: { locale: Locale } }) {
   const { locale } = params;

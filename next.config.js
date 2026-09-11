@@ -45,6 +45,28 @@ const nextConfig = {
   // the backend, which this rewrite mechanism can't proxy — that's why it
   // was replaced with plain heartbeat polling over /presence/*, so it
   // rides this exact same rewrite instead of needing its own env var.)
+  // Saytning YAGONA asosiy manzili — "www"siz variant. Sertifikat
+  // (certbot --redirect) http → https yo'naltirishni allaqachon bajaradi,
+  // lekin www.wardrobestore.uz va wardrobestore.uz ikkalasi ham bir xil
+  // sahifani ochaverardi. Google uchun bu ikki alohida sayt bo'lib
+  // ko'rinadi va reyting ikkiga bo'linib ketadi ("duplicate content").
+  // Bu yerda kod darajasida 308 (doimiy) yo'naltirish qo'yilgani uchun
+  // nginx sozlamasiga tegmasdan ham muammo hal bo'ladi.
+  async redirects() {
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://wardrobestore.uz';
+    const host = siteUrl.replace(/^https?:\/\//, '').replace(/\/+$/, '');
+    // Faqat haqiqiy domen uchun; localhost'da (dev) hech narsa
+    // yo'naltirilmaydi.
+    if (host.startsWith('localhost') || host.startsWith('127.')) return [];
+    return [
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: `www.${host}` }],
+        destination: `https://${host}/:path*`,
+        permanent: true,
+      },
+    ];
+  },
   async rewrites() {
     // 127.0.0.1 ataylab ishlatilyapti, "localhost" emas — Windows'da
     // "localhost" ba'zan ::1 (IPv6) va 127.0.0.1 (IPv4) ikkalasiga bir vaqtda

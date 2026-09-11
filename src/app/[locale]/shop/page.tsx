@@ -1,5 +1,7 @@
+import type { Metadata } from 'next';
 import { getDictionary } from '@/i18n/get-dictionary';
 import type { Locale } from '@/i18n/config';
+import { pageSeo } from '@/lib/seo/site';
 import { serverFetchGraphQL } from '@/lib/graphql/server-fetch';
 import { GET_PRODUCTS_STR, GET_CATEGORIES_STR, GET_GENDERS_STR } from '@/lib/graphql/server-queries';
 import { ProductCard, type ProductCardData } from '@/components/ui/ProductCard';
@@ -14,6 +16,22 @@ interface ShopPageProps {
 }
 
 const LIMIT = 30;
+
+// Do'kon sahifasi. MUHIM nuqta: canonical HAR DOIM filtrsiz "/shop" ga
+// ishora qiladi. Sababi — /shop?category=x&sizes=M&page=3 kabi filtr
+// kombinatsiyalari cheksiz ko'p va ularning har biri Google uchun alohida
+// (deyarli bir xil mazmunli) sahifa bo'lib ko'rinadi. Bu "duplicate
+// content" deb baholanib, saytning umumiy reytingini pasaytiradi. Barchasi
+// bitta asosiy manzilga yig'ilsa, Google aynan o'shani indekslaydi.
+export async function generateMetadata({ params }: ShopPageProps): Promise<Metadata> {
+  const dict = await getDictionary(params.locale);
+  return pageSeo({
+    locale: params.locale,
+    path: '/shop',
+    title: dict.nav.shop,
+    description: dict.home.heroSubtitle,
+  });
+}
 
 export default async function ShopPage({ params, searchParams }: ShopPageProps) {
   const { locale } = params;
