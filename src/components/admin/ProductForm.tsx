@@ -7,6 +7,11 @@ import { UploadCloud } from 'lucide-react';
 import { GET_CATEGORIES, GET_BRANDS, GET_STORES, GET_GENDERS } from '@/lib/graphql/queries';
 import { uploadProductImage } from '@/lib/utils/uploadProductImage';
 import { PRESET_COLORS as COLOR_PRESETS } from '@/lib/utils/colorSwatch';
+// Toifaga qarab o'lcham ro'yxati — do'kon filtri (ShopFilters.tsx) bilan
+// BITTA umumiy manbadan o'qiladi (lib/utils/categorySizes.ts). Avval shu
+// faylning o'zida alohida nusxasi bor edi va ikkalasi bir-biridan
+// farqlanib ketgan edi.
+import { getSizeOptions } from '@/lib/utils/categorySizes';
 import type { Dictionary } from '@/i18n/get-dictionary';
 
 export interface VariantValue {
@@ -42,42 +47,6 @@ export interface ProductFormValues {
   // Erkaklar/Ayollar va h.k. — Brend bilan bir xil ixtiyoriy tanlov, admin
   // o'zi admin/categories sahifasida yaratgan ro'yxatdan.
   genderId?: string;
-}
-
-const CLOTHING_SIZE_OPTIONS = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
-const SHOE_SIZE_OPTIONS = ['36', '37', '38', '39', '40', '41', '42', '43', '44', '45'];
-
-// Matches the shop-side ShopFilters.tsx detection: no explicit "is this
-// footwear" flag on Category, so we recognize it from name/nameRu/slug
-// instead — a shoe product needs numeric sizes (36-45), not XS-XXL.
-function isFootwearCategory(cat?: { name?: string; nameRu?: string; slug?: string }): boolean {
-  if (!cat) return false;
-  const haystack = `${cat.name ?? ''} ${cat.nameRu ?? ''} ${cat.slug ?? ''}`.toLowerCase();
-  // Covers however the admin might have named a footwear category, in
-  // either language: "Krossovka"/"кроссовки" (sneakers), "poyabzal"/"обувь"
-  // (footwear, generic), "tufli"/"туфли" (shoes), "botinka"/"ботинки"
-  // (boots), "sandal"/"сандалии", "sapog"/"сапоги".
-  return /shoe|poyabzal|обув|krossov|кроссов|tufli|туфли|botin|ботин|sneaker|sandal|сандал|sapog|сапог/.test(haystack);
-}
-
-// ROOT-CAUSE FIX for "aksessuar/kosmetika qo'shmoqchiman, lekin u yerda
-// o'lcham kirmaydi": clothing sizes (XS-XXL) and shoe sizes (36-45) were
-// the ONLY two options the size picker ever showed — for a category like
-// accessories or cosmetics, where no size genuinely applies, the admin
-// still saw a full row of size buttons with nothing telling them it was
-// safe to just leave all of them unselected (the backend already fully
-// supports an empty `sizes` array — see product.input.ts — this was a
-// pure UI-confusion problem, not a validation one). For these categories
-// the size section is hidden entirely instead of showing options that
-// would never make sense to pick. Detected the same way as
-// isFootwearCategory — from the category's own name/nameRu/slug.
-function isSizelessCategory(cat?: { name?: string; nameRu?: string; slug?: string }): boolean {
-  if (!cat) return false;
-  const haystack = `${cat.name ?? ''} ${cat.nameRu ?? ''} ${cat.slug ?? ''}`.toLowerCase();
-  // "Aksessuar"/"аксессуары" (accessories), "kosmetika"/"косметика"
-  // (cosmetics), "parfyum(eriya)"/"парфюм(ерия)" (perfume) — none of these
-  // come in a clothing or shoe size.
-  return /aksessuar|аксессуар|kosmetika|косметик|parfyum|парфюм|parfum/.test(haystack);
 }
 
 // COLOR_PRESETS (the common ready-made swatches so the admin can add a
@@ -201,11 +170,11 @@ export function ProductForm({
   const noCategories = categories.length === 0;
   const selectedCategoryId = watch('categoryId');
   const selectedCategory = categories.find((c: any) => c.id === selectedCategoryId);
-  const SIZE_OPTIONS = isFootwearCategory(selectedCategory) ? SHOE_SIZE_OPTIONS : CLOTHING_SIZE_OPTIONS;
-  // No category picked yet defaults to `true` (same as the size picker's
-  // own long-standing default) — only actually hides once a known
-  // sizeless category (accessories, cosmetics, ...) is selected.
-  const showSizes = !isSizelessCategory(selectedCategory);
+  // Toifasiga qarab: poyabzal → 36-45, aksessuar/kosmetika → bo'sh (ya'ni
+  // o'lcham bo'limi umuman ko'rsatilmaydi), qolganlari → XS-XXXL. Toifa
+  // hali tanlanmagan bo'lsa kiyim o'lchamlari (avvalgi xulq-atvor).
+  const SIZE_OPTIONS = getSizeOptions(selectedCategory);
+  const showSizes = SIZE_OPTIONS.length > 0;
 
   // Switching TO a sizeless category (or starting a new product already
   // pointed at one) clears out any sizes picked earlier — otherwise a

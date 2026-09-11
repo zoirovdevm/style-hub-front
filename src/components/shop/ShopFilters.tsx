@@ -6,23 +6,14 @@ import { ChevronDown } from 'lucide-react';
 import { translateColorName } from '@/lib/utils/colorNames';
 import { PRESET_COLORS } from '@/lib/utils/colorSwatch';
 import { useNavLoadingStore } from '@/lib/store/shop-loading-store';
+// Toifaga qarab o'lcham ro'yxati — admin panelning mahsulot formasi
+// (components/admin/ProductForm.tsx) bilan BITTA umumiy manbadan o'qiladi
+// (lib/utils/categorySizes.ts). Avval shu faylda alohida nusxasi bor edi
+// va u admindagisidan orqada qolib ketgan edi: adminda "o'lchamsiz"
+// toifalar (aksessuar/kosmetika) hisobga olingan, bu yerda esa yo'q —
+// natijada "Aksessuarlar" tanlansa ham XS-XXL chiqib turardi.
+import { getSizeOptions } from '@/lib/utils/categorySizes';
 import type { Dictionary } from '@/i18n/get-dictionary';
-
-const CLOTHING_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
-const SHOE_SIZES = ['36', '37', '38', '39', '40', '41', '42', '43', '44', '45'];
-
-// The catalog has no explicit "this is a footwear category" flag, so we
-// detect it from the category's name/nameRu/slug — works in both uz and ru
-// regardless of exactly how the category was renamed via the admin panel.
-function isFootwearCategory(cat?: { name: string; nameRu?: string; slug: string }): boolean {
-  if (!cat) return false;
-  const haystack = `${cat.name} ${cat.nameRu ?? ''} ${cat.slug}`.toLowerCase();
-  // Covers however the admin might have named a footwear category, in
-  // either language: "Krossovka"/"кроссовки" (sneakers), "poyabzal"/"обувь"
-  // (footwear, generic), "tufli"/"туфли" (shoes), "botinka"/"ботинки"
-  // (boots), "sandal"/"сандалии", "sapog"/"сапоги".
-  return /shoe|poyabzal|обув|krossov|кроссов|tufli|туфли|botin|ботин|sneaker|sandal|сандал|sapog|сапог/.test(haystack);
-}
 
 interface ShopFiltersProps {
   dict: Dictionary;
@@ -52,7 +43,10 @@ export function ShopFilters({ dict, categories, genders, locale }: ShopFiltersPr
   const activeSizes = searchParams.get('sizes')?.split(',').filter(Boolean) ?? [];
   const activeColors = searchParams.get('colors')?.split(',').filter(Boolean) ?? [];
   const activeCategoryObj = categories.find((c) => c.slug === activeCategory);
-  const SIZES = isFootwearCategory(activeCategoryObj) ? SHOE_SIZES : CLOTHING_SIZES;
+  // Poyabzal toifasi → 36-45; aksessuar/kosmetika kabi o'lchamsiz toifa →
+  // bo'sh ro'yxat (pastda o'lcham bo'limi umuman chizilmaydi); qolganlari
+  // va "Barchasi" → kiyim o'lchamlari.
+  const SIZES = getSizeOptions(activeCategoryObj);
 
   function updateParams(mutator: (params: URLSearchParams) => void) {
     const params = new URLSearchParams(searchParams.toString());
@@ -65,6 +59,22 @@ export function ShopFilters({ dict, categories, genders, locale }: ShopFiltersPr
     // sitting there until the new one lands.
     useNavLoadingStore.getState().start('shop');
     router.push(`${pathname}?${params.toString()}`, { scroll: false });
+  }
+
+  // Toifa almashtirilganda tanlangan o'lchamlar HAR DOIM tozalanadi.
+  // Sababi: "M" tanlab turib "Krossovkalar"ga o'tilsa, URL'da sizes=M
+  // qolib ketardi — backend esa o'lchami "M" bo'lgan krossovkani
+  // topolmay, ro'yxat butunlay bo'sh chiqardi. Eng yomoni, "M" tugmasi
+  // endi chizilmaydi (ro'yxat 36-45 ga almashgan), shuning uchun
+  // xaridorda uni bekor qilishning IMKONI ham qolmasdi — "hech narsa
+  // topilmadi" degan boshi berk ko'chaga tushib qolardi. Aksessuar kabi
+  // o'lchamsiz toifalarda ham xuddi shu holat.
+  function selectCategory(slug: string | null) {
+    updateParams((p) => {
+      if (slug) p.set('category', slug);
+      else p.delete('category');
+      p.delete('sizes');
+    });
   }
 
   function toggleListParam(key: string, value: string, currentList: string[]) {
@@ -156,7 +166,7 @@ export function ShopFilters({ dict, categories, genders, locale }: ShopFiltersPr
             links. */}
         <div className="flex flex-col gap-1">
           <button
-            onClick={() => updateParams((p) => p.delete('category'))}
+            onClick={() => selectCategory(null)}
             className={`rounded-lg border-l-2 px-3 py-2 text-left text-sm transition-colors ${
               !activeCategory
                 ? 'border-gold-500 bg-gold-500/10 font-bold text-gold-600 dark:text-gold-400'
@@ -168,7 +178,7 @@ export function ShopFilters({ dict, categories, genders, locale }: ShopFiltersPr
           {categories.map((cat) => (
             <button
               key={cat.slug}
-              onClick={() => updateParams((p) => p.set('category', cat.slug))}
+              onClick={() => selectCategory(cat.slug)}
               className={`rounded-lg border-l-2 px-3 py-2 text-left text-sm transition-colors ${
                 activeCategory === cat.slug
                   ? 'border-gold-500 bg-gold-500/10 font-bold text-gold-600 dark:text-gold-400'
@@ -181,6 +191,11 @@ export function ShopFilters({ dict, categories, genders, locale }: ShopFiltersPr
         </div>
       </div>
 
+      {/* O'lchamsiz toifada (aksessuar, kosmetika, sumka...) bu bo'lim
+          BUTUNLAY chizilmaydi — avval bunday toifada ham kiyim
+          o'lchamlari (XS-XXL) chiqib turardi, ular esa u yerda hech
+          qachon mos kelmaydi. */}
+      {SIZES.length > 0 && (
       <div>
         <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-ink-900/50 dark:text-cream/50">{dict.product.size}</h4>
         <div className="flex flex-wrap gap-2">
@@ -199,6 +214,7 @@ export function ShopFilters({ dict, categories, genders, locale }: ShopFiltersPr
           ))}
         </div>
       </div>
+      )}
 
       <div>
         <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-ink-900/50 dark:text-cream/50">{dict.product.color}</h4>
