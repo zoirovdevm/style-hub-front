@@ -8,7 +8,43 @@ import { locales, defaultLocale, type Locale } from '@/i18n/config';
 // tashlanadi, aks holda manzillar "//uz" ko'rinishida yig'ilib qolardi.
 export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://wardrobestore.uz').replace(/\/+$/, '');
 
-export const SITE_NAME = 'Wardrobe';
+export const SITE_NAME = 'Wardrobe Store';
+
+// ── Brend so'rovlari uchun ──────────────────────────────────────────
+// "wardrobestore", "wardrobe uzbekistan" kabi so'rovlarda sayt chiqishi
+// uchun Google shu nomlarni sayt bilan BOG'LASHI kerak. Buning uchun
+// nomlar sahifada MATN sifatida bo'lishi shart — faqat domen nomida
+// turgani yetarli emas, chunki Google domen ichidagi so'zlarni alohida
+// brend nomi deb qabul qilishi shart emas.
+//
+// Quyidagilar Organization structured data'siga "alternateName" bo'lib
+// tushadi — bu Google uchun "bu sayt ana shu nomlar bilan ham ataladi"
+// degani, ya'ni aynan brend so'rovlarini hal qiladigan joy.
+export const BRAND_ALTERNATE_NAMES = [
+  'Wardrobe',
+  'Wardrobe Store',
+  'Wardrobe Uzbekistan',
+  "Wardrobe O'zbekiston",
+  'wardrobestore',
+  'wardrobestore.uz',
+];
+
+// Ijtimoiy tarmoqlar — "sameAs". Google shu havolalar orqali sayt va
+// Instagram profilini BITTA brend deb bog'laydi. Bog'lanish ikki
+// tomonlama bo'lgani muhim: Instagram profilining bio qismida ham
+// saytga havola turishi kerak.
+export const BRAND_SOCIAL_LINKS = [
+  'https://www.instagram.com/wardrobe.uzbekistan/',
+  'https://t.me/qqw3130',
+];
+
+// Qidiruv natijasida ko'rinadigan tavsif. Saytning O'ZIDAGI matnlar
+// (hero sarlavhasi va h.k.) o'zgarmaydi — bu faqat Google uchun va
+// ataylab brend nomi + joylashuv + asosiy toifalarni o'z ichiga oladi.
+export const SITE_DESCRIPTION: Record<string, string> = {
+  uz: "Wardrobe Store (wardrobestore.uz) — O'zbekistondagi onlayn kiyim do'koni. Futbolka, ko'ylak, shim, krossovka va aksessuarlar. Jizzax shahridan O'zbekiston bo'ylab yetkazib berish.",
+  ru: 'Wardrobe Store (wardrobestore.uz) — интернет-магазин одежды в Узбекистане. Футболки, рубашки, брюки, кроссовки и аксессуары. Доставка по всему Узбекистану из Джизака.',
+};
 
 // Sayt bo'ylab OG/Twitter uchun zaxira rasm. Hozircha logotip — keyinchalik
 // public/ ichiga 1200x630 o'lchamli og-image.jpg qo'yilsa, shu yerdagi

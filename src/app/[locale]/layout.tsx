@@ -7,7 +7,7 @@ import { Footer } from '@/components/layout/Footer';
 import { MobileBottomNav } from '@/components/layout/MobileBottomNav';
 import { locales, type Locale } from '@/i18n/config';
 import { getDictionary } from '@/i18n/get-dictionary';
-import { SITE_URL, SITE_NAME } from '@/lib/seo/site';
+import { SITE_URL, SITE_NAME, BRAND_ALTERNATE_NAMES, BRAND_SOCIAL_LINKS, SITE_DESCRIPTION } from '@/lib/seo/site';
 
 const inter = Inter({ subsets: ['latin', 'cyrillic'], variable: '--font-sans', display: 'swap' });
 const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-display', display: 'swap' });
@@ -44,18 +44,24 @@ export async function generateMetadata({
     // .env orqali (NEXT_PUBLIC_SITE_URL) ham almashtirish mumkin —
     // masalan vaqtinchalik tunnel manzili bilan sinash uchun.
     metadataBase: new URL(SITE_URL),
+    // Sarlavhada "Wardrobe Store" to'liq yozilishi muhim — qidiruv
+    // natijasida ko'rinadigan matn ham shu, va Google brend nomini
+    // aynan shu yerdan o'qiydi. `template` tufayli ichki sahifalar ham
+    // (masalan "Do'kon — Wardrobe Store") brend nomini olib yuradi.
     title: {
-      default: `Wardrobe — ${dict.home.heroTitle}`,
-      template: '%s — Wardrobe',
+      default: `Wardrobe Store — ${dict.home.heroTitle}`,
+      template: '%s — Wardrobe Store',
     },
-    description: dict.home.heroSubtitle,
+    description: SITE_DESCRIPTION[params.locale] ?? SITE_DESCRIPTION.uz,
     // Qidiruv so'zlari. Google bu tegga deyarli e'tibor bermaydi, lekin
     // Yandex va ba'zi mahalliy qidiruv tizimlari hisobga oladi — zarari
     // yo'q, foydasi bor.
-    keywords:
-      params.locale === 'ru'
-        ? ['интернет-магазин одежды', 'одежда Узбекистан', 'кроссовки', 'футболки', 'рубашки', 'Wardrobe', 'доставка по Узбекистану']
-        : ['onlayn kiyim do\'koni', 'kiyim O\'zbekiston', 'krossovka', 'futbolka', 'ko\'ylak', 'Wardrobe', 'yetkazib berish'],
+    keywords: [
+      ...BRAND_ALTERNATE_NAMES,
+      ...(params.locale === 'ru'
+        ? ['интернет-магазин одежды', 'одежда Узбекистан', 'кроссовки', 'футболки', 'рубашки', 'Джизак', 'доставка по Узбекистану']
+        : ["onlayn kiyim do'koni", "kiyim O'zbekiston", 'krossovka', 'futbolka', "ko'ylak", 'Jizzax', 'yetkazib berish']),
+    ],
     icons: {
       icon: '/logo.svg',
       shortcut: '/logo.svg',
@@ -116,15 +122,28 @@ export default async function LocaleLayout({
     '@context': 'https://schema.org',
     '@graph': [
       {
-        '@type': 'Organization',
+        // OnlineStore — oddiy "Organization" emas, aynan onlayn do'kon
+        // ekanini bildiradi. `alternateName` va `sameAs` — brend
+        // so'rovlarini ("wardrobestore", "wardrobe uzbekistan") hal
+        // qiladigan asosiy joy: Google shular orqali sayt, Instagram
+        // profili va turli yozilishlarni BITTA brend deb tanidi.
+        '@type': 'OnlineStore',
         '@id': `${SITE_URL}/#organization`,
         name: SITE_NAME,
+        alternateName: BRAND_ALTERNATE_NAMES,
         url: SITE_URL,
         logo: `${SITE_URL}/logo.svg`,
-        description: dict.home.heroSubtitle,
+        image: `${SITE_URL}/logo.svg`,
+        description: SITE_DESCRIPTION[params.locale] ?? SITE_DESCRIPTION.uz,
+        sameAs: BRAND_SOCIAL_LINKS,
         address: {
           '@type': 'PostalAddress',
+          addressLocality: params.locale === 'ru' ? 'Джизак' : 'Jizzax',
           addressCountry: 'UZ',
+        },
+        areaServed: {
+          '@type': 'Country',
+          name: params.locale === 'ru' ? 'Узбекистан' : "O'zbekiston",
         },
       },
       {
@@ -132,7 +151,8 @@ export default async function LocaleLayout({
         '@id': `${SITE_URL}/#website`,
         url: SITE_URL,
         name: SITE_NAME,
-        description: dict.home.heroSubtitle,
+        alternateName: BRAND_ALTERNATE_NAMES,
+        description: SITE_DESCRIPTION[params.locale] ?? SITE_DESCRIPTION.uz,
         inLanguage: params.locale === 'ru' ? 'ru-RU' : 'uz-UZ',
         publisher: { '@id': `${SITE_URL}/#organization` },
         potentialAction: {

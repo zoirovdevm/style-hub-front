@@ -78,8 +78,12 @@ export function Footer({ locale, dict }: { locale: Locale; dict: Dictionary }) {
         </div>
       </div>
 
+      {/* Brend nomining to'liq shakli ("Wardrobe Store") va mamlakat shu
+          yerda HAR BIR sahifada oddiy matn sifatida turadi — Google brend
+          nomini domendan emas, aynan sahifadagi matndan o'qiydi.
+          Dizaynga ta'siri yo'q: bu o'sha eski mayda mualliflik qatori. */}
       <div className="border-t border-cream/10 py-6 text-center text-xs text-cream/40">
-        © {year} Wardrobe — {dict.footer.rights}.
+        © {year} Wardrobe Store — {locale === 'ru' ? 'Узбекистан' : "O'zbekiston"}. {dict.footer.rights}.
       </div>
     </footer>
   );
