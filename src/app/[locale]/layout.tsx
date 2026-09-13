@@ -89,17 +89,21 @@ export async function generateMetadata({
     // ko'rsatardi, bu esa Google uchun noto'g'ri signal. Endi har bir
     // sahifa o'zining canonical + hreflang juftini pageSeo() orqali
     // o'zi beradi (lib/seo/site.ts).
+    // Ijtimoiy tarmoqlarda havola ulashilganda ko'rinadigan sarlavha/tavsif
+    // ham brend nomining to'liq shaklini olib yuradi — SITE_NAME bitta
+    // manbadan keladi, shuning uchun kelajakda nom o'zgarsa hamma joyda
+    // birdek o'zgaradi.
     openGraph: {
       type: 'website',
       siteName: SITE_NAME,
-      title: `Wardrobe — ${dict.home.heroTitle}`,
-      description: dict.home.heroSubtitle,
+      title: `${SITE_NAME} — ${dict.home.heroTitle}`,
+      description: SITE_DESCRIPTION[params.locale] ?? SITE_DESCRIPTION.uz,
       locale: params.locale === 'ru' ? 'ru_RU' : 'uz_UZ',
     },
     twitter: {
       card: 'summary_large_image',
-      title: `Wardrobe — ${dict.home.heroTitle}`,
-      description: dict.home.heroSubtitle,
+      title: `${SITE_NAME} — ${dict.home.heroTitle}`,
+      description: SITE_DESCRIPTION[params.locale] ?? SITE_DESCRIPTION.uz,
     },
   };
 }

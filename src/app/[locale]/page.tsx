@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { ArrowRight, Truck, ShieldCheck, CheckCircle2, CreditCard } from 'lucide-react';
 import { getDictionary } from '@/i18n/get-dictionary';
 import type { Locale } from '@/i18n/config';
-import { pageSeo } from '@/lib/seo/site';
+import { pageSeo, SITE_NAME, SITE_DESCRIPTION } from '@/lib/seo/site';
 import { serverFetchGraphQL } from '@/lib/graphql/server-fetch';
 import { GET_BEST_SELLERS_STR, GET_CATEGORIES_STR } from '@/lib/graphql/server-queries';
 import { ProductCard, type ProductCardData } from '@/components/ui/ProductCard';
@@ -34,13 +34,20 @@ const WHY_ITEMS = [
 // (uz/ru/x-default) + Open Graph. Avval bularning birortasi ham yo'q edi:
 // Google uchun /uz va /ru ikki alohida, bir-biriga aloqasiz sahifa
 // ko'rinardi va qaysi biri asosiy ekani noaniq edi.
+// DIQQAT: sahifaning o'z metadata'si layout'dagisini BEKOR QILADI. Ya'ni
+// bosh sahifaning sarlavhasi va tavsifi aynan shu yerdan olinadi,
+// layout.tsx dagi `title.default` dan emas. Shuning uchun brend nomi
+// ("Wardrobe Store") va qidiruv tavsifi bu yerda ham bir xil manbadan
+// (lib/seo/site.ts) o'qiladi — avval bu yerda "Wardrobe" qo'lda yozilgan
+// edi va layout yangilangach ham bosh sahifa eski sarlavhani ko'rsatib
+// turavergan edi.
 export async function generateMetadata({ params }: { params: { locale: Locale } }): Promise<Metadata> {
   const dict = await getDictionary(params.locale);
   return pageSeo({
     locale: params.locale,
     path: '',
-    title: `Wardrobe — ${dict.home.heroTitle}`,
-    description: dict.home.heroSubtitle,
+    title: `${SITE_NAME} — ${dict.home.heroTitle}`,
+    description: SITE_DESCRIPTION[params.locale] ?? SITE_DESCRIPTION.uz,
   });
 }
 
