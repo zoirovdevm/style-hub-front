@@ -7,6 +7,7 @@ import { UploadCloud } from 'lucide-react';
 import { GET_CATEGORIES, GET_BRANDS, GET_STORES, GET_GENDERS } from '@/lib/graphql/queries';
 import { uploadProductImage } from '@/lib/utils/uploadProductImage';
 import { PRESET_COLORS as COLOR_PRESETS } from '@/lib/utils/colorSwatch';
+import { Checkbox } from '@/components/ui/Checkbox';
 // Toifaga qarab o'lcham ro'yxati — do'kon filtri (ShopFilters.tsx) bilan
 // BITTA umumiy manbadan o'qiladi (lib/utils/categorySizes.ts). Avval shu
 // faylning o'zida alohida nusxasi bor edi va ikkalasi bir-biridan
@@ -813,8 +814,14 @@ export function ProductForm({
             </select>
           </div>
 
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" {...register('isFeatured')} className="accent-ink-950" />
+          {/* Avval bu oddiy `<input type="checkbox">` edi va unga
+              `accent-ink-950` (qora rang) berilgan edi — admin panelning
+              foni ham qora bo'lgani uchun quti fonga qo'shilib, ko'zga
+              umuman ko'rinmay ketgan. Endi Checkbox komponenti orqali
+              chiziladi: belgilanmaganda aniq chegarali quti,
+              belgilanganda yashil fon + oq ✓. */}
+          <label className="flex cursor-pointer items-center gap-2.5 text-sm">
+            <Checkbox {...register('isFeatured')} />
             {dict.admin.featuredLabel}
           </label>
         </div>
