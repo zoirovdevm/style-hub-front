@@ -65,6 +65,20 @@ const FOOTWEAR_ROOTS = [
   'snikers',
 ];
 
+// Shim/jinsi/shortik — bularning o'lchami XS-XXL emas, RAQAM bilan
+// beriladi (bel o'lchami). Diqqat: bu ro'yxat oyoq kiyimdan KEYIN emas,
+// undan ALOHIDA tekshiriladi va o'zining alohida raqamlar to'plamiga ega
+// (shim 36-56, poyabzal esa 35-45 — ular bir xil emas).
+const TROUSER_ROOTS = [
+  'shim',     // Shim
+  'bryuk',    // Брюки → bryuki
+  'jins',     // Jinsi, Джинсы → djinsi (ichida "jins" bor)
+  'short',    // Shortik, Шорты → shorti
+  'shalvar',
+  'pants',
+  'trouser',
+];
+
 const SIZELESS_ROOTS = [
   'akses',    // aksessuar, аксессуары, Aксессуары
   'kosmetik', // косметика
@@ -81,8 +95,14 @@ const SIZELESS_ROOTS = [
 export const CLOTHING_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
 // 35 dan 45 gacha — so'rov bo'yicha.
 export const SHOE_SIZES = ['35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45'];
+// Shim/jinsi uchun bel o'lchami — 36 dan boshlanadi (so'rov bo'yicha) va
+// juft raqamlar bilan boradi, chunki shim odatda shunday sotiladi
+// (46, 48, 50...). Agar oraliq raqamlar ham kerak bo'lsa (37, 39, ...),
+// shu qatorning o'zini o'zgartirish kifoya — qolgan hamma joy shu
+// ro'yxatdan o'qiydi.
+export const TROUSER_SIZES = ['36', '38', '40', '42', '44', '46', '48', '50', '52', '54', '56'];
 
-export type CategorySizeKind = 'clothing' | 'shoes' | 'none';
+export type CategorySizeKind = 'clothing' | 'shoes' | 'trousers' | 'none';
 
 export interface CategoryLike {
   name?: string | null;
@@ -108,11 +128,18 @@ export function isSizelessCategory(cat?: CategoryLike | null): boolean {
   return SIZELESS_ROOTS.some((root) => hay.includes(root));
 }
 
+export function isTrouserCategory(cat?: CategoryLike | null): boolean {
+  if (!cat) return false;
+  const hay = haystackOf(cat);
+  return TROUSER_ROOTS.some((root) => hay.includes(root));
+}
+
 // Toifa tanlanmagan bo'lsa (do'konda "Barchasi", adminda hali tanlanmagan)
 // — avvalgi xulq-atvor saqlanadi: kiyim o'lchamlari.
 export function getCategorySizeKind(cat?: CategoryLike | null): CategorySizeKind {
   if (isSizelessCategory(cat)) return 'none';
   if (isFootwearCategory(cat)) return 'shoes';
+  if (isTrouserCategory(cat)) return 'trousers';
   return 'clothing';
 }
 
@@ -123,6 +150,8 @@ export function getSizeOptions(cat?: CategoryLike | null): string[] {
       return [];
     case 'shoes':
       return SHOE_SIZES;
+    case 'trousers':
+      return TROUSER_SIZES;
     default:
       return CLOTHING_SIZES;
   }
