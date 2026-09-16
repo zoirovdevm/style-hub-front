@@ -385,6 +385,37 @@ export function ProductForm({
     }
   }
 
+  // Duxi: 100ml GACHA bo'lgan hajmlarning narxi yuborishdan OLDIN yana bir
+  // marta hisoblab qo'yiladi.
+  //
+  // NEGA: yuqoridagi useEffect faqat narx/hajm o'zgarganda ishlaydi va
+  // ba'zi holatlarda (masalan mahsulot tahrirga ochilib, forma qiymatlari
+  // asinxron to'lganda) u ishlab ulgurmay qolishi mumkin edi — natijada
+  // bazaga 10ml, 20ml ... uchun narx `null` bo'lib yozilib ketardi
+  // (haqiqatda shunday bo'lgan: 150ml dan yuqorisi saqlangan, 100ml
+  // gachasi bo'sh qolgan). Saqlash paytida qayta hisoblash buni butunlay
+  // yo'q qiladi: yuborilayotgan ma'lumot doim to'liq bo'ladi.
+  function withPerfumePrices(values: ProductFormValues): VariantValue[] {
+    const list = values.variants ?? [];
+    if (!isPerfume) return list;
+    const base = Number(values.price) || 0;
+    const volumes = (values.sizes ?? [])
+      .map((s2) => parseMl(s2))
+      .filter((ml): ml is number => ml != null);
+    // Narx qaysi hajm uchun kiritilgan: admin tanlagani, tanlamagan bo'lsa
+    // eng kichik hajm.
+    const baseSizeMl = parseMl(effectiveBaseSize) ?? (volumes.length ? Math.min(...volumes) : 0);
+    if (base <= 0 || baseSizeMl <= 0) return list;
+    const pricePerMl = base / baseSizeMl;
+    return list.map((v) => {
+      const ml = parseMl(v.size);
+      // 100ml dan yuqorisiga tegilmaydi — u yerda narxni admin o'zi qo'yadi
+      // (ko'proq hajm arzonroq).
+      if (ml == null || ml > 100) return v;
+      return { ...v, price: Math.round(pricePerMl * ml) };
+    });
+  }
+
   function submitHandler(values: ProductFormValues) {
     // Convert the "no brand selected" option (empty string) to undefined —
     // an empty string is not a valid UUID and would be rejected by the
@@ -404,7 +435,7 @@ export function ProductForm({
       // (An empty array, not undefined: ProductFormValues.variants isn't
       // optional, and the backend already treats an empty/missing variants
       // list the same way — falls back to the plain `stock` number.)
-      variants: hasVariantGrid ? values.variants : [],
+      variants: hasVariantGrid ? withPerfumePrices(values) : [],
       stock: hasVariantGrid ? totalVariantStock : values.stock,
     });
   }
@@ -783,13 +814,22 @@ export function ProductForm({
                 </label>
 
                 <p className="text-xs text-ink-900/50">
-                  100ml gacha bo'lgan hajmlar shu narxdan o'zi hisoblanadi. 100ml dan
-                  yuqorisini o'zingiz kiritasiz — bo'sh qoldirsangiz umumiy narxda sotiladi.
+                  100ml gacha bo'lgan hajmlar shu narxdan o'zi hisoblanadi (masalan
+                  10ml = 275 000 bo'lsa, 20ml = 550 000, 30ml = 825 000). 100ml dan
+                  yuqorisini o'zingiz kiritasiz — bo'sh qoldirsangiz, u ham shu
+                  nisbatda hisoblanadi.
                 </p>
 
                 <div className="grid gap-2 sm:grid-cols-2">
                   {mlSizes.map(({ size: s2, ml }) => {
                     const auto = ml <= 100;
+                    // Hisoblangan qiymat maydonda DARHOL ko'rinib tursin —
+                    // forma holatiga yozilishini kutib turmasdan. Admin
+                    // saqlashdan oldin qaysi hajm qanchaga tushishini
+                    // ko'rib tura oladi.
+                    const computed =
+                      baseMl > 0 && basePrice > 0 ? Math.round((basePrice / baseMl) * ml) : null;
+                    const shown = auto ? (getVariantPrice(s2) ?? computed) : getVariantPrice(s2);
                     return (
                       <label key={s2} className="flex items-center gap-2 text-sm">
                         <span className="w-16 shrink-0 text-xs font-semibold text-ink-900/60">{s2}</span>
@@ -798,8 +838,8 @@ export function ProductForm({
                           min={0}
                           step="1000"
                           readOnly={auto}
-                          placeholder={auto ? '' : 'umumiy narx'}
-                          value={getVariantPrice(s2) ?? ''}
+                          placeholder={auto ? '' : (computed != null ? String(computed) : 'umumiy narx')}
+                          value={shown ?? ''}
                           onChange={(e) => {
                             if (auto) return;
                             const raw = e.target.value.trim();

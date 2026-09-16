@@ -75,12 +75,18 @@ export function ProductCard({
   // to the backend either way, so this works without any .env switching.
   const images = product.images?.length ? product.images : ['/placeholder-product.svg'];
   const hasMultipleImages = images.length > 1;
-  const hasDiscount = product.oldPrice && product.oldPrice > product.price;
   // Narxi hajmga qarab o'zgaradigan mahsulotlarda (duxi) kartochkada
   // eng arzon variant narxi "dan" izohi bilan ko'rsatiladi — aks holda
   // ro'yxatdagi narx xaridor ichkarida ko'radigan narxga mos kelmasdi.
+  // Duxida bu eng kichik hajm (masalan 10ml) narxi bo'ladi.
   const variantPricing = hasVariantPricing(product);
   const displayPrice = variantPricing ? resolveMinPrice(product) : product.price;
+  // Chegirma KO'RSATILAYOTGAN narxga nisbatan hisoblanadi, mahsulotning
+  // umumiy narxiga emas — aks holda duxida "1 350 000 so'm dan" yozuvi
+  // ustida undan KICHIK chizilgan "550 000 so'm" va ma'nosiz "-50%"
+  // turib qolgan edi. Eski narx ko'rsatilayotgan narxdan katta bo'lmasa,
+  // chegirma umuman chizilmaydi.
+  const hasDiscount = !!product.oldPrice && product.oldPrice > displayPrice;
 
   // Card image strip: right on the card, without opening the product —
   // scrolling the mouse wheel (or a laptop trackpad's two-finger swipe)
@@ -322,7 +328,7 @@ export function ProductCard({
 
             {hasDiscount && (
               <span className="absolute left-3 top-3 rounded-full bg-gold-500 px-2.5 py-1 text-[11px] font-bold text-ink-950">
-                -{Math.round(100 - (product.price / product.oldPrice!) * 100)}%
+                -{Math.round(100 - (displayPrice / product.oldPrice!) * 100)}%
               </span>
             )}
 
@@ -424,47 +430,51 @@ export function ProductCard({
           </div>
 
           <div className="space-y-1 px-4 pt-3">
-            {/* Category now gets its OWN full-width row instead of sharing
-                one with the price — sharing a row used to leave category
-                only whatever leftover width the price (plus, when
-                discounted, the stacked strikethrough old price above/below
-                it) didn't need, which on a narrow 2-column mobile card was
-                sometimes almost nothing: a category name would truncate
-                down to 2-3 letters and an ellipsis sitting right up against
-                the price, reading as garbled clutter rather than a label.
-                Price now shares its row with the title instead — title
-                truncates gracefully (it's already meant to), and price
-                never needs to since it has nothing competing for its
-                space. */}
+            {/* Category gets its OWN full-width row instead of sharing one
+                with the price — sharing a row used to leave category only
+                whatever leftover width the price didn't need, which on a
+                narrow 2-column mobile card was sometimes almost nothing: a
+                category name would truncate down to 2-3 letters and an
+                ellipsis sitting right up against the price, reading as
+                garbled clutter rather than a label. */}
             {categoryName && (
               <p className="truncate text-[11px] uppercase tracking-wider text-ink-900/40 dark:text-cream/40">
                 {categoryName}
               </p>
             )}
-            <div className="flex items-start justify-between gap-2">
-              <h3 className="min-w-0 flex-1 truncate text-sm font-semibold text-ink-950 dark:text-cream">{title}</h3>
-              {/* Chegirma bo'lganda eski (chizilgan) narx endi joriy narx
-                  bilan bitta qatorda emas, ustma-ust (yangi narx ustida,
-                  eskisi ostida) joylashadi — ikkalasi bir qatorda yonma-yon
-                  turgani, tor mobil kartalarda (2 ustunli grid) narxlar
-                  uzun bo'lganda kartadan tashqariga chiqib, qo'shni
-                  kartaning ustiga yozilib ketishiga sabab bo'lgan edi. */}
-              <div className="flex shrink-0 flex-col items-end leading-tight">
-                <span className="whitespace-nowrap text-[15px] font-bold text-gold-600 dark:text-gold-400 sm:text-[17px]">
-                  {formatPrice(displayPrice, locale)}
-                  {variantPricing && (
-                    <span className="ml-1 text-[10px] font-medium text-ink-900/40 dark:text-cream/40">
-                      {locale === 'ru' ? 'от' : 'dan'}
-                    </span>
-                  )}
-                </span>
-                {hasDiscount && (
-                  <span className="whitespace-nowrap text-[10px] text-ink-900/40 line-through dark:text-cream/40 sm:text-xs">
-                    {formatPrice(product.oldPrice!, locale)}
+            {/* NARX — nomdan bitta TEPADA, alohida qatorda (Uzum/Wildberries
+                uslubi: xaridor avval narxni ko'radi). Avval narx nom bilan
+                yonma-yon turardi va tor mobil kartada ikkalasi joy uchun
+                kurashib, nom 2-3 harfgacha qisqarib ketardi.
+                Chegirmali eski narx joriy narxning yoniga, kichikroq va
+                chizilgan holda qo'yiladi; joy yetmasa `flex-wrap` uni
+                pastki qatorga tushiradi — kartadan tashqariga chiqib
+                ketmaydi. */}
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+              <span className="whitespace-nowrap text-[15px] font-bold text-gold-600 dark:text-gold-400 sm:text-[17px]">
+                {formatPrice(displayPrice, locale)}
+                {variantPricing && (
+                  <span className="ml-1 text-[10px] font-medium text-ink-900/40 dark:text-cream/40">
+                    {locale === 'ru' ? 'от' : 'dan'}
                   </span>
                 )}
-              </div>
+              </span>
+              {hasDiscount && (
+                <span className="whitespace-nowrap text-[10px] text-ink-900/40 line-through dark:text-cream/40 sm:text-xs">
+                  {formatPrice(product.oldPrice!, locale)}
+                </span>
+              )}
             </div>
+            {/* Tovar nomi — narxdan keyin, IKKI QATORgacha. Uzundan uzun
+                nom endi bir qatorga sig'may "Louis …" bo'lib qolmaydi:
+                line-clamp-2 ikkinchi qator oxirida "…" qo'yadi.
+                min-h-[2.25rem]: nomi bitta qatorlik mahsulot bilan ikki
+                qatorlik mahsulot yonma-yon turganda, ularning ostidagi
+                qoldiq/reyting satrlari bir tekisda qolishi uchun joy
+                doim ikki qatorga band qilinadi. */}
+            <h3 className="line-clamp-2 min-h-[2.25rem] text-sm font-semibold leading-tight text-ink-950 dark:text-cream">
+              {title}
+            </h3>
             {/* Total stock, visible right on the card — same "N dona qoldi"
                 wording used on the product detail page, so a shopper can
                 gauge availability before even opening the product. Out of
