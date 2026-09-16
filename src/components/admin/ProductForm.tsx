@@ -193,31 +193,46 @@ export function ProductForm({
     return match ? Number(match[1]) : null;
   }
 
-  // 100ml GACHA bo'lgan hajmlarni avtomatik to'ldiradi: allaqachon narxi
-  // kiritilgan ENG KICHIK hajm asos qilib olinadi va 1 ml narxi
-  // hisoblanib, qolganlariga hajmiga proporsional yoziladi.
-  // 100ml dan yuqorisi ATAYLAB tegilmaydi — u yerda admin o'zi chegirmali
-  // narx qo'yadi (ko'proq hajm arzonroq bo'lgani uchun).
-  function autoFillPerfumePrices() {
-    const mlSizes = sizes
-      .map((s) => ({ size: s, ml: parseMl(s) }))
-      .filter((x): x is { size: string; ml: number } => x.ml != null)
-      .sort((a, b) => a.ml - b.ml);
+  // ── 100ml GACHA bo'lgan hajmlar narxi AVTOMATIK hisoblanadi ─────────
+  // Asos — yuqoridagi "Narx" maydoni va u qaysi hajmga tegishli ekani
+  // (`priceBaseSize`, sukut bo'yicha eng kichik tanlangan hajm). Shundan
+  // 1 ml narxi chiqariladi va har bir hajmga o'z hajmiga proporsional
+  // yoziladi.
+  //
+  // Masalan: Narx = 275 000 va u 50ml uchun bo'lsa → 1 ml = 5 500, demak
+  // 10ml = 55 000, 20ml = 110 000, 30ml = 165 000, 100ml = 550 000.
+  //
+  // 100ml dan YUQORISI ataylab tegilmaydi — u yerda ko'proq hajm arzonroq
+  // bo'lgani uchun narxni admin o'zi qo'yadi.
+  const mlSizes = sizes
+    .map((s2) => ({ size: s2, ml: parseMl(s2) }))
+    .filter((x): x is { size: string; ml: number } => x.ml != null)
+    .sort((a, b) => a.ml - b.ml);
 
-    const base = mlSizes.find((x) => {
-      const p = getVariantPrice(x.size);
-      return p != null && p > 0;
-    });
-    if (!base) return;
+  // Narx qaysi hajm uchun kiritilgani. Admin tanlamagan bo'lsa — eng
+  // kichik hajm.
+  const [priceBaseSize, setPriceBaseSize] = useState<string>('');
+  const effectiveBaseSize = mlSizes.some((x) => x.size === priceBaseSize)
+    ? priceBaseSize
+    : (mlSizes[0]?.size ?? '');
+  const basePrice = Number(watch('price')) || 0;
+  const baseMl = mlSizes.find((x) => x.size === effectiveBaseSize)?.ml ?? 0;
 
-    const pricePerMl = (getVariantPrice(base.size) as number) / base.ml;
-    const next = variants.map((v) => {
+  // Narx, asos hajm yoki hajmlar ro'yxati o'zgarganda — 100ml gachasini
+  // qayta hisoblab qo'yadi. Faqat parfum toifasida ishlaydi.
+  useEffect(() => {
+    if (!isPerfume || baseMl <= 0 || basePrice <= 0) return;
+    const pricePerMl = basePrice / baseMl;
+    const current = getValues('variants') ?? [];
+    const next = current.map((v) => {
       const ml = parseMl(v.size);
       if (ml == null || ml > 100) return v;
       return { ...v, price: Math.round(pricePerMl * ml) };
     });
-    setValue('variants', next, { shouldDirty: true });
-  }
+    const changed = next.some((v, idx) => v.price !== current[idx]?.price);
+    if (changed) setValue('variants', next, { shouldDirty: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPerfume, basePrice, baseMl, sizes.join(','), variants.length]);
 
   const totalVariantStock = variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
 
@@ -234,6 +249,10 @@ export function ProductForm({
   // o'z narxi bo'ladi — shu sababli pastda alohida "hajm bo'yicha narx"
   // jadvali ko'rsatiladi. Boshqa toifalarda u umuman chizilmaydi.
   const isPerfume = getCategorySizeKind(selectedCategory) === 'perfume';
+  // Duxi/atirda rang tushunchasi yo'q — rang bo'limi va u bilan bog'liq
+  // "rang bo'yicha rasmlar" bloki umuman ko'rsatilmaydi, rasmlar oddiy
+  // "Rasmlar" bo'limidan qo'shiladi.
+  const showColors = !isPerfume;
 
   // Switching TO a sizeless category (or starting a new product already
   // pointed at one) clears out any sizes picked earlier — otherwise a
@@ -245,6 +264,18 @@ export function ProductForm({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showSizes]);
+
+  // Xuddi shunday: parfum toifasiga o'tilganda avval tanlab qo'yilgan
+  // ranglar tozalanadi. Aks holda ko'rinmay qolgan rang variantlar
+  // jadvalini ikki barobar qilib yuborardi (har hajm uchun har rang) va
+  // hajm narxi qaysi qatorga tegishli ekani chalkashardi.
+  useEffect(() => {
+    if (!showColors && colors.length > 0) {
+      setValue('colors', [], { shouldDirty: true });
+      setValue('colorImages', [], { shouldDirty: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showColors]);
 
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -525,6 +556,14 @@ export function ProductForm({
             <p className="text-xs text-ink-900/40">{dict.admin.noSizeForCategory}</p>
           )}
 
+          {/* Duxi/atirda rang tushunchasi yo'q — flakon rangi mahsulotni
+              ajratmaydi. Avval bu bo'lim har doim ko'rinardi va rasm
+              qo'shish uchun avval rang tanlash kerakdek tuyulardi ("Rang
+              bo'yicha rasmlar" bloki faqat rang tanlangandan keyin
+              ochilgani uchun). Endi parfum toifasida rang bo'limi umuman
+              chizilmaydi va rasmlar oddiygina "Rasmlar" bo'limidan
+              qo'shiladi. */}
+          {showColors && (
           <div>
             <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-ink-900/50">
               {dict.product.color} — {dict.admin.colorsHint}
@@ -662,6 +701,7 @@ export function ProductForm({
               </div>
             )}
           </div>
+          )}
         </div>
 
         {/* ── Zaxira: o'lcham/rangga ko'ra ── */}
@@ -714,51 +754,66 @@ export function ProductForm({
             </p>
 
             {/* ── Hajm bo'yicha narx — faqat duxi toifasida ──────────────
-                Har bir hajmning o'z narxi bo'ladi. Bo'sh qoldirilgan
-                hajm mahsulotning umumiy narxida sotiladi.
-                "Avtomatik hisoblash" tugmasi narxi kiritilgan eng kichik
-                hajmni asos qilib, 100ml GACHA bo'lganlarini hajmiga
-                proporsional to'ldiradi. 100ml dan yuqorisiga tegmaydi —
-                u yerda ko'proq hajm arzonroq bo'lgani uchun narxni
-                o'zingiz qo'yasiz. */}
-            {isPerfume && sizes.length > 0 && (
+                100ml GACHA bo'lgan hajmlar yuqoridagi "Narx" maydonidan
+                AVTOMATIK hisoblanadi, shuning uchun ular faqat ko'rsatish
+                uchun (tahrirlab bo'lmaydi) — narxni o'zgartirish uchun
+                "Narx"ni yoki uning qaysi hajmga tegishli ekanini
+                o'zgartirasiz. 100ml dan yuqorisi qo'lda kiritiladi,
+                chunki ko'proq hajmni arzonroqqa berasiz. */}
+            {isPerfume && mlSizes.length > 0 && (
               <div className="space-y-3 border-t border-ink-900/10 pt-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-ink-900/50">
-                    Hajm bo'yicha narx
-                  </h4>
-                  <button
-                    type="button"
-                    onClick={autoFillPerfumePrices}
-                    className="rounded-lg border border-ink-900/15 px-3 py-1.5 text-xs font-semibold transition-colors hover:border-ink-950 hover:bg-ink-900/5"
+                <h4 className="text-xs font-bold uppercase tracking-wider text-ink-900/50">
+                  Hajm bo'yicha narx
+                </h4>
+
+                <label className="flex flex-wrap items-center gap-2 text-xs text-ink-900/60">
+                  Yuqoridagi narx qaysi hajm uchun?
+                  <select
+                    value={effectiveBaseSize}
+                    onChange={(e) => setPriceBaseSize(e.target.value)}
+                    className="rounded-lg border border-ink-900/15 px-2 py-1.5 text-sm outline-none focus:border-ink-950"
                   >
-                    100ml gachasini avtomatik hisoblash
-                  </button>
-                </div>
+                    {mlSizes.map((x) => (
+                      <option key={x.size} value={x.size}>
+                        {x.size}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
                 <p className="text-xs text-ink-900/50">
-                  Avval bitta kichik hajmning narxini kiriting (masalan 10ml), keyin tugmani bosing —
-                  100ml gacha bo'lganlari o'zi to'ladi. 100ml dan yuqorisini o'zingiz kiritasiz.
-                  Bo'sh qoldirilgan hajm umumiy narxda sotiladi.
+                  100ml gacha bo'lgan hajmlar shu narxdan o'zi hisoblanadi. 100ml dan
+                  yuqorisini o'zingiz kiritasiz — bo'sh qoldirsangiz umumiy narxda sotiladi.
                 </p>
 
                 <div className="grid gap-2 sm:grid-cols-2">
-                  {sizes.map((s) => (
-                    <label key={s} className="flex items-center gap-2 text-sm">
-                      <span className="w-16 shrink-0 text-xs font-semibold text-ink-900/60">{s}</span>
-                      <input
-                        type="number"
-                        min={0}
-                        step="1000"
-                        placeholder="umumiy narx"
-                        value={getVariantPrice(s) ?? ''}
-                        onChange={(e) => {
-                          const raw = e.target.value.trim();
-                          setVariantPrice(s, raw === '' ? null : Math.max(0, Number(raw) || 0));
-                        }}
-                        className="w-full rounded-lg border border-ink-900/15 px-2 py-1.5 text-sm outline-none focus:border-ink-950"
-                      />
-                    </label>
-                  ))}
+                  {mlSizes.map(({ size: s2, ml }) => {
+                    const auto = ml <= 100;
+                    return (
+                      <label key={s2} className="flex items-center gap-2 text-sm">
+                        <span className="w-16 shrink-0 text-xs font-semibold text-ink-900/60">{s2}</span>
+                        <input
+                          type="number"
+                          min={0}
+                          step="1000"
+                          readOnly={auto}
+                          placeholder={auto ? '' : 'umumiy narx'}
+                          value={getVariantPrice(s2) ?? ''}
+                          onChange={(e) => {
+                            if (auto) return;
+                            const raw = e.target.value.trim();
+                            setVariantPrice(s2, raw === '' ? null : Math.max(0, Number(raw) || 0));
+                          }}
+                          className={`w-full rounded-lg border px-2 py-1.5 text-sm outline-none ${
+                            auto
+                              ? 'cursor-not-allowed border-ink-900/10 bg-ink-900/5 text-ink-900/60'
+                              : 'border-ink-900/15 focus:border-ink-950'
+                          }`}
+                        />
+                        {auto && <span className="shrink-0 text-[10px] text-ink-900/40">avto</span>}
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
             )}
