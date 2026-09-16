@@ -213,6 +213,35 @@ export function ProductForm({
   // "Rasmlar" bo'limidan qo'shiladi.
   const showColors = !isPerfume;
 
+  // ── Duxi: hajmni (ml) admin o'zi yozib qo'shadi ──────────────────────
+  // Tayyor ro'yxat (10ml, 20ml ... 500ml) hamma flakonni qamramaydi —
+  // 3ml, 75ml, 125ml kabi hajmlar ham uchraydi. Shu maydonga son yoziladi:
+  // "75", "75ml", "75 ml" — uchalasi ham bir xil tushuniladi va "75ml"
+  // bo'lib qo'shiladi. Qo'shilgan hajm avtomatik ravishda quyidagi
+  // "Hajm bo'yicha narx" jadvaliga ham tushadi (100ml gacha — narxi o'zi
+  // hisoblanadi, yuqorisi — qo'lda).
+  const [customVolume, setCustomVolume] = useState('');
+
+  function addCustomVolume() {
+    const raw = customVolume.trim().toLowerCase().replace(/\s*ml$/, '').trim();
+    const ml = Number(raw);
+    if (!raw || !Number.isFinite(ml) || ml <= 0) return;
+    const label = `${Math.round(ml)}ml`;
+    if (!sizes.includes(label)) {
+      setValue('sizes', [...sizes, label], { shouldDirty: true });
+    }
+    setCustomVolume('');
+  }
+
+  // Ko'rsatiladigan o'lchamlar: tayyor ro'yxat + mahsulotda allaqachon bor,
+  // lekin ro'yxatda yo'q o'lchamlar (ya'ni admin o'zi qo'shgan hajmlar).
+  // Ilgari bunday o'lcham chiplar orasida umuman ko'rinmasdi — saqlangan,
+  // lekin ekranda yo'q, o'chirib ham bo'lmaydigan holatda qolardi.
+  const extraSizes = sizes.filter((s2) => !SIZE_OPTIONS.includes(s2));
+  const sizeChoices = isPerfume
+    ? [...SIZE_OPTIONS, ...extraSizes].sort((a, b) => (parseMl(a) ?? 0) - (parseMl(b) ?? 0))
+    : [...SIZE_OPTIONS, ...extraSizes];
+
   // ── 100ml GACHA bo'lgan hajmlar narxi AVTOMATIK hisoblanadi ─────────
   // Asos — yuqoridagi "Narx" maydoni va u qaysi hajmga tegishli ekani
   // (`priceBaseSize`, sukut bo'yicha eng kichik tanlangan hajm). Shundan
@@ -567,7 +596,7 @@ export function ProductForm({
                 {dict.product.size} — {dict.admin.sizesHint}
               </h3>
               <div className="flex flex-wrap gap-2">
-                {SIZE_OPTIONS.map((size) => (
+                {sizeChoices.map((size) => (
                   <button
                     type="button"
                     key={size}
@@ -580,6 +609,46 @@ export function ProductForm({
                   </button>
                 ))}
               </div>
+
+              {/* Ro'yxatda yo'q hajmni qo'shish (faqat duxi toifasida).
+                  Enter bosilganda formani YUBORMAYDI — type="button" va
+                  onKeyDown ichidagi preventDefault shuning uchun: aks holda
+                  hajm qo'shmoqchi bo'lgan admin tasodifan mahsulotni
+                  saqlab yuborardi. */}
+              {isPerfume && (
+                <div className="mt-3">
+                  <label className="mb-1.5 block text-xs font-semibold text-ink-900/60">
+                    Ro'yxatda yo'q hajmni qo'shish
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={customVolume}
+                      placeholder="masalan: 75"
+                      onChange={(e) => setCustomVolume(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          addCustomVolume();
+                        }
+                      }}
+                      className="w-40 rounded-lg border border-ink-900/15 px-3 py-2 text-sm outline-none focus:border-ink-950"
+                    />
+                    <button
+                      type="button"
+                      onClick={addCustomVolume}
+                      className="rounded-lg border border-ink-950 bg-ink-950 px-4 text-sm font-semibold text-cream transition-opacity hover:opacity-90"
+                    >
+                      Qo'shish
+                    </button>
+                  </div>
+                  <p className="mt-1.5 text-xs text-ink-900/50">
+                    Faqat sonni yozing — "ml" o'zi qo'shiladi. Qo'shilgan hajm pastdagi
+                    "Hajm bo'yicha narx" jadvaliga ham tushadi.
+                  </p>
+                </div>
+              )}
             </div>
           ) : (
             // Aksessuar/kosmetika kabi toifalarda kiyim/poyabzal o'lchami
