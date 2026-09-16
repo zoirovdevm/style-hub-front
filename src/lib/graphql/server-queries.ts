@@ -75,3 +75,19 @@ export const GET_SITE_SETTINGS_STR = `
     siteSettings { heroImage contactAddress contactPhone contactTelegram contactEmail }
   }
 `;
+
+// Bosh sahifadagi reklama karuseli — faqat faol bannerlar, admin
+// belgilagan tartibda (backend: modules/banner/).
+export const GET_BANNERS_STR = `
+  query GetBanners {
+    banners {
+      id
+      image
+      title
+      titleRu
+      linkType
+      productSlug
+      categorySlug
+    }
+  }
+`;

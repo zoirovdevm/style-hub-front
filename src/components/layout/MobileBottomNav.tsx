@@ -3,8 +3,8 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useQuery } from '@apollo/client';
-import { Home, LayoutGrid, ShoppingBag, Heart, User2 } from 'lucide-react';
-import { GET_MY_CART, GET_MY_WISHLIST } from '@/lib/graphql/queries';
+import { Home, LayoutGrid, ShoppingBag, User2 } from 'lucide-react';
+import { GET_MY_CART } from '@/lib/graphql/queries';
 import { useAuthStore } from '@/lib/store/auth-store';
 import type { Locale } from '@/i18n/config';
 import type { Dictionary } from '@/i18n/get-dictionary';
@@ -23,10 +23,8 @@ export function MobileBottomNav({ locale, dict }: MobileBottomNavProps) {
   const user = useAuthStore((s) => s.user);
 
   const { data: cartData } = useQuery(GET_MY_CART, { skip: !user, fetchPolicy: 'cache-first' });
-  const { data: wishlistData } = useQuery(GET_MY_WISHLIST, { skip: !user, fetchPolicy: 'cache-first' });
 
   const cartCount = cartData?.myCart?.reduce((sum: number, i: any) => sum + i.quantity, 0) ?? 0;
-  const wishlistCount = wishlistData?.myWishlist?.length ?? 0;
 
   // Per explicit request, this pill's colors follow the SITE THEME only
   // (Tailwind `dark:` variant), same as Header.tsx — see the comment on
@@ -41,11 +39,17 @@ export function MobileBottomNav({ locale, dict }: MobileBottomNavProps) {
   // shows a "please log in" prompt with its own Login button when there's
   // no user (see profile/page.tsx) — nothing is actually unreachable, the
   // bottom nav just no longer has to say "Kirish" out loud.
+  // To'rtta tab: Bosh sahifa / Kategoriyalar / Savat / Profil.
+  //
+  // Sevimlilar (yurakcha) bu yerdan OLIB TASHLANDI — u endi header
+  // ostidagi qidiruv qatorining o'ng chetida turadi
+  // (MobileSearchBar.tsx). Uning o'rnini "Kategoriyalar" egalladi:
+  // qidiruv qatori allaqachon "qidirib topish" yo'lini bergani uchun,
+  // pastda ko'rib-tanlab yurish (browsing) yo'li kerak edi.
   const items = [
     { href: `/${locale}`, label: dict.nav.home, icon: Home },
-    { href: `/${locale}/shop`, label: dict.nav.shop, icon: LayoutGrid },
+    { href: `/${locale}/categories`, label: dict.nav.categories, icon: LayoutGrid },
     { href: `/${locale}/cart`, label: dict.nav.cart, icon: ShoppingBag, count: cartCount },
-    { href: `/${locale}/wishlist`, label: dict.nav.wishlist, icon: Heart, count: wishlistCount },
     { href: `/${locale}/profile`, label: dict.nav.profile, icon: User2 },
   ];
 
@@ -77,7 +81,7 @@ export function MobileBottomNav({ locale, dict }: MobileBottomNavProps) {
         // untouched from the prior explicit theme spec (black bg + cream
         // text, light 8px backdrop-blur) — re-verify dark mode on real iOS
         // Safari after deploying.
-        className="transform-gpu will-change-transform mx-auto grid max-w-md grid-cols-5 rounded-full border border-black/10 bg-white px-1 shadow-lg dark:border-white/10 dark:bg-[rgba(10,10,12,0.92)] dark:backdrop-blur-[8px]"
+        className="transform-gpu will-change-transform mx-auto grid max-w-md grid-cols-4 rounded-full border border-black/10 bg-white px-1 shadow-lg dark:border-white/10 dark:bg-[rgba(10,10,12,0.92)] dark:backdrop-blur-[8px]"
       >
         {items.map((item) => {
           const active = isActive(item.href);

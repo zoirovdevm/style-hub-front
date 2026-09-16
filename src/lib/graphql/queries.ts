@@ -463,3 +463,40 @@ export const GET_ADMIN_STATS = gql`
     }
   }
 `;
+
+// ── Reklama bannerlari ────────────────────────────────────────────────
+// Bosh sahifadagi karusel uchun (faqat faol bannerlar) va admin
+// panelning "Reklamalar" bo'limi uchun (hammasi, o'chirilganlari ham).
+// Havola uchun faqat slug kerak — nega to'liq mahsulot obyekti emasligi
+// haqida backenddagi models/banner.model.ts izohiga qarang.
+export const BANNER_FIELDS = gql`
+  fragment BannerFields on Banner {
+    id
+    image
+    title
+    titleRu
+    linkType
+    isActive
+    sortOrder
+    productId
+    productSlug
+    productTitle
+    categoryId
+    categorySlug
+    categoryName
+  }
+`;
+
+export const GET_BANNERS = gql`
+  ${BANNER_FIELDS}
+  query GetBanners {
+    banners { ...BannerFields }
+  }
+`;
+
+export const GET_ADMIN_BANNERS = gql`
+  ${BANNER_FIELDS}
+  query GetAdminBanners {
+    adminBanners { ...BannerFields }
+  }
+`;

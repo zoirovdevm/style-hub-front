@@ -12,7 +12,8 @@
     "logout": "Выйти",
     "contact": "Поддержка",
     "about": "О нас",
-    "admin": "Админ-панель"
+    "admin": "Админ-панель",
+    "searchPlaceholder": "Поиск товара или категории"
   },
   "home": {
     "heroEyebrow": "Новая сезонная коллекция",
@@ -315,6 +316,7 @@
     "userName": "Имя",
     "role": "Роль",
     "products": "Товары",
+    "banners": "Реклама",
     "orders": "Заказы",
     "categories": "Категории",
     "brands": "Бренды",

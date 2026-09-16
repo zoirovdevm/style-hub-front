@@ -12,7 +12,8 @@
     "logout": "Chiqish",
     "contact": "Yordam",
     "about": "Biz haqimizda",
-    "admin": "Admin panel"
+    "admin": "Admin panel",
+    "searchPlaceholder": "Mahsulot yoki kategoriya qidirish"
   },
   "home": {
     "heroEyebrow": "Yangi mavsum kolleksiyasi",
@@ -315,6 +316,7 @@
     "userName": "Ism",
     "role": "Roli",
     "products": "Mahsulotlar",
+    "banners": "Reklamalar",
     "orders": "Buyurtmalar",
     "categories": "Kategoriyalar",
     "brands": "Brendlar",

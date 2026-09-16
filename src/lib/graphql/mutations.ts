@@ -394,3 +394,26 @@ export const REJECT_ORDER_PAYMENT = gql`
     }
   }
 `;
+
+// ── Reklama bannerlari (admin) ────────────────────────────────────────
+export const CREATE_BANNER = gql`
+  mutation CreateBanner($input: CreateBannerInput!) {
+    createBanner(input: $input) {
+      id
+    }
+  }
+`;
+
+export const UPDATE_BANNER = gql`
+  mutation UpdateBanner($id: ID!, $input: UpdateBannerInput!) {
+    updateBanner(id: $id, input: $input) {
+      id
+    }
+  }
+`;
+
+export const REMOVE_BANNER = gql`
+  mutation RemoveBanner($id: ID!) {
+    removeBanner(id: $id)
+  }
+`;

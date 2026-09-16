@@ -5,10 +5,11 @@ import { getDictionary } from '@/i18n/get-dictionary';
 import type { Locale } from '@/i18n/config';
 import { pageSeo, SITE_NAME, SITE_DESCRIPTION } from '@/lib/seo/site';
 import { serverFetchGraphQL } from '@/lib/graphql/server-fetch';
-import { GET_BEST_SELLERS_STR, GET_CATEGORIES_STR } from '@/lib/graphql/server-queries';
+import { GET_PRODUCTS_STR, GET_CATEGORIES_STR, GET_BANNERS_STR } from '@/lib/graphql/server-queries';
 import { ProductCard, type ProductCardData } from '@/components/ui/ProductCard';
 import { Reveal } from '@/components/ui/Reveal';
 import { CategoryCarousel } from '@/components/ui/CategoryCarousel';
+import { BannerCarousel, type BannerItem } from '@/components/home/BannerCarousel';
 
 type HomeCategory = {
   id: string;
@@ -79,19 +80,39 @@ export default async function HomePage({ params }: { params: { locale: Locale } 
   // the "shop is fresh, home is stale until I wait/refresh" symptom
   // reported. Categories right below already used 0 for the same reason
   // (see its own comment). Bringing bestSellers in line with both.
-  const [bestSellersData, categoriesData] = await Promise.all([
-    serverFetchGraphQL<{ bestSellers: ProductCardData[] }>(GET_BEST_SELLERS_STR, { limit: 8 }, 0).catch(() => ({
-      bestSellers: [],
-    })),
+  //
+  // TASODIFIY TARTIB: bosh sahifadagi tovarlar endi `bestSellers` emas,
+  // oddiy `products` so'rovi orqali `sort: RANDOM` bilan olinadi — ya'ni
+  // saytga kirgan odam har safar boshqa tovarlarni ko'radi (backend:
+  // product.service.ts, queryProducts). Do'kon sahifasidagi qidiruv,
+  // filtr va sahifalash tegilmagan — ular o'z saralashlaridan
+  // foydalanaveradi.
+  // `revalidate: 0` bu yerda ikki marta muhim: birinchidan admin
+  // o'zgartirishi darhol ko'rinadi, ikkinchidan keshlangan javob
+  // "tasodifiy"likni yo'qqa chiqarardi (hamma bir xil tartibni ko'rardi).
+  const [randomProductsData, categoriesData, bannersData] = await Promise.all([
+    serverFetchGraphQL<{ products: { list: ProductCardData[] } }>(
+      GET_PRODUCTS_STR,
+      { filter: { sort: 'RANDOM', page: 1, limit: 10 } },
+      0,
+    ).catch(() => ({ products: { list: [] } })),
     // revalidate: 0 — a newly added/renamed category should show up in the
     // carousel on the next request, not wait out a stale cached page.
     serverFetchGraphQL<{ categories: HomeCategory[] }>(GET_CATEGORIES_STR, undefined, 0).catch(() => ({
       categories: [],
     })),
+    // Reklama bannerlari — admin panelning "Reklamalar" bo'limidan
+    // boshqariladi, hech narsa hardcode qilinmagan. Backend ishlamay
+    // qolsa ham bosh sahifa ochilaveradi (catch -> bo'sh ro'yxat), shunchaki
+    // karusel ko'rinmaydi.
+    serverFetchGraphQL<{ banners: BannerItem[] }>(GET_BANNERS_STR, undefined, 0).catch(() => ({
+      banners: [],
+    })),
   ]);
 
-  const bestSellers = bestSellersData.bestSellers ?? [];
+  const bestSellers = randomProductsData.products?.list ?? [];
   const categories = categoriesData.categories ?? [];
+  const banners = bannersData.banners ?? [];
 
   // Splits the hero heading around its one highlighted word so only that
   // word can get its own color/italic styling — the dictionary string
@@ -109,6 +130,12 @@ export default async function HomePage({ params }: { params: { locale: Locale } 
 
   return (
     <div>
+      {/* REKLAMA BANNERLARI — mobil ko'rinishda qidiruv qatoridan keyin
+          keladigan birinchi blok (qidiruv qatori layout.tsx da, <main>
+          boshida turadi). Banner qo'shilmagan bo'lsa bu bo'lim umuman
+          chizilmaydi. */}
+      <BannerCarousel banners={banners} locale={locale} />
+
       {/* HERO */}
       {/* -mt-[68px]/pt-[68px] (and the sm: pair) cancel out <main>'s new
           top padding exactly, then re-add the same amount as the section's
@@ -126,7 +153,16 @@ export default async function HomePage({ params }: { params: { locale: Locale } 
           `data-navbar-contrast` flag is needed anymore either: the header
           can just use its normal light-theme styling here since the
           background underneath it now actually matches. */}
-      <section className="relative -mt-[68px] overflow-hidden bg-white pt-[68px] text-ink-950 dark:bg-ink-950 dark:text-cream sm:-mt-[84px] sm:pt-[84px]">
+      {/* Avval bu bo'limda `-mt-[68px] pt-[68px]` (va sm: jufti) bor edi —
+          u <main>'ning tepa bo'shlig'ini bekor qilib, hero fonini suzib
+          turuvchi header ortiga cho'zardi. Endi hero birinchi blok emas
+          (yuqorida banner karuseli, mobil ko'rinishda esa undan ham
+          oldin qidiruv qatori bor), shuning uchun manfiy margin olib
+          tashlandi — aks holda hero o'zidan yuqoridagi bloklarni ustiga
+          tortib, ularni yopib qo'yardi. Ko'rinishda deyarli hech narsa
+          o'zgarmaydi: hero foni (bg-white / dark:bg-ink-950) sahifa foni
+          bilan aynan bir xil. */}
+      <section className="relative overflow-hidden bg-white text-ink-950 dark:bg-ink-950 dark:text-cream">
         {/* Very faint edge-to-edge base tint, so the far corners/edges
             aren't completely bare — kept much lighter than the blobs below
             so the glow still reads as concentrated toward the center/text,

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, ShoppingBag, ClipboardList, Tag, Store, Users, Settings, LogOut, X } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Megaphone, ClipboardList, Tag, Store, Users, Settings, LogOut, X } from 'lucide-react';
 import { useAuthStore } from '@/lib/store/auth-store';
 import { useScrollLock } from '@/lib/hooks/use-scroll-lock';
 import type { Dictionary } from '@/i18n/get-dictionary';
@@ -43,6 +43,9 @@ export function AdminSidebar({ locale, dict, open, onClose }: AdminSidebarProps)
   const links = [
     { href: `/${locale}/admin`, label: dict.admin.dashboard, icon: LayoutDashboard, exact: true },
     { href: `/${locale}/admin/products`, label: dict.admin.products, icon: ShoppingBag },
+    // Bosh sahifadagi reklama karuseli — mahsulotlar bo'limidan keyin
+    // turadi, chunki banner ko'pincha aynan bir tovarga bog'lanadi.
+    { href: `/${locale}/admin/banners`, label: dict.admin.banners, icon: Megaphone },
     { href: `/${locale}/admin/orders`, label: dict.admin.orders, icon: ClipboardList },
     { href: `/${locale}/admin/categories`, label: dict.admin.categories, icon: Tag },
     { href: `/${locale}/admin/stores`, label: dict.admin.stores, icon: Store },

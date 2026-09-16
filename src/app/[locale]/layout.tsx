@@ -5,6 +5,7 @@ import { Providers } from '@/components/providers/Providers';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { MobileBottomNav } from '@/components/layout/MobileBottomNav';
+import { MobileSearchBar } from '@/components/layout/MobileSearchBar';
 import { locales, type Locale } from '@/i18n/config';
 import { getDictionary } from '@/i18n/get-dictionary';
 import { SITE_URL, SITE_NAME, BRAND_ALTERNATE_NAMES, BRAND_SOCIAL_LINKS, SITE_DESCRIPTION } from '@/lib/seo/site';
@@ -205,10 +206,17 @@ export default async function LocaleLayout({
               content down on their own, this padding replaces that lost
               space, sized to match the header's own gap + pill height
               exactly (pt-3 + h-14 = 68px on mobile, pt-4 + h-[68px] = 84px
-              from sm: up). The homepage hero cancels this out with a
-              matching negative margin so its background still reaches the
-              very top of the page — see page.tsx. */}
-          <main className="min-h-[70vh] pt-[68px] sm:pt-[84px]">{children}</main>
+              from sm: up).
+              MobileSearchBar — header ostidagi qidiruv qatori (chapda
+              qidiruv, o'ngda sevimlilar), faqat kichik ekranlarda
+              (`lg:hidden`). U <main> ICHIDA, hamma sahifa mazmunidan
+              oldin turadi — shunda har bir sahifada aynan headerdan keyin
+              ko'rinadi va layout'ning tepa bo'shlig'i bilan to'g'ri
+              joylashadi. */}
+          <main className="min-h-[70vh] pt-[68px] sm:pt-[84px]">
+            <MobileSearchBar locale={params.locale} dict={dict} />
+            {children}
+          </main>
           <Footer locale={params.locale} dict={dict} />
           {/* Clears the fixed MobileBottomNav below on small screens so the
               end of the Footer isn't hidden behind it; not needed on lg+
