@@ -15,7 +15,7 @@ export const PRODUCT_FIELDS_STR = `
     colors
     images
     colorImages { color images }
-    variants { id size color stock }
+    variants { id size color stock price }
     isFeatured
     rating
     reviewsCount

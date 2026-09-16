@@ -12,6 +12,7 @@ import { GET_MY_WISHLIST } from '@/lib/graphql/queries';
 import { useAuthStore } from '@/lib/store/auth-store';
 import { formatPrice } from '@/lib/utils/format';
 import { useHoverScrubImages } from '@/lib/hooks/use-hover-scrub-images';
+import { hasVariantPricing, resolveMinPrice } from '@/lib/utils/variantPrice';
 import { QuickBuyModal } from '@/components/product/QuickBuyModal';
 import type { Dictionary } from '@/i18n/get-dictionary';
 import type { Locale } from '@/i18n/config';
@@ -31,7 +32,7 @@ export interface ProductCardData {
   stock?: number;
   sizes?: string[];
   colors?: string[];
-  variants?: { size: string; color: string; stock: number }[];
+  variants?: { size: string; color: string; stock: number; price?: number | null }[];
 }
 
 export function ProductCard({
@@ -75,6 +76,11 @@ export function ProductCard({
   const images = product.images?.length ? product.images : ['/placeholder-product.svg'];
   const hasMultipleImages = images.length > 1;
   const hasDiscount = product.oldPrice && product.oldPrice > product.price;
+  // Narxi hajmga qarab o'zgaradigan mahsulotlarda (duxi) kartochkada
+  // eng arzon variant narxi "dan" izohi bilan ko'rsatiladi — aks holda
+  // ro'yxatdagi narx xaridor ichkarida ko'radigan narxga mos kelmasdi.
+  const variantPricing = hasVariantPricing(product);
+  const displayPrice = variantPricing ? resolveMinPrice(product) : product.price;
 
   // Card image strip: right on the card, without opening the product —
   // scrolling the mouse wheel (or a laptop trackpad's two-finger swipe)
@@ -445,7 +451,12 @@ export function ProductCard({
                   kartaning ustiga yozilib ketishiga sabab bo'lgan edi. */}
               <div className="flex shrink-0 flex-col items-end leading-tight">
                 <span className="whitespace-nowrap text-[15px] font-bold text-gold-600 dark:text-gold-400 sm:text-[17px]">
-                  {formatPrice(product.price, locale)}
+                  {formatPrice(displayPrice, locale)}
+                  {variantPricing && (
+                    <span className="ml-1 text-[10px] font-medium text-ink-900/40 dark:text-cream/40">
+                      {locale === 'ru' ? 'от' : 'dan'}
+                    </span>
+                  )}
                 </span>
                 {hasDiscount && (
                   <span className="whitespace-nowrap text-[10px] text-ink-900/40 line-through dark:text-cream/40 sm:text-xs">

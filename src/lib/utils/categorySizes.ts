@@ -79,10 +79,22 @@ const TROUSER_ROOTS = [
   'trouser',
 ];
 
+// Duxi/atir — hajm (ml) bilan sotiladi. DIQQAT: 'parf' ildizi avval
+// pastdagi SIZELESS_ROOTS ro'yxatida turardi, ya'ni parfyumeriya
+// "o'lchamsiz toifa" deb hisoblanardi. Endi u shu yerga ko'chirildi —
+// aks holda duxi toifasida hajm ro'yxati umuman chiqmay qolardi.
+const PERFUME_ROOTS = [
+  'duxi',     // duxi, духи → duxi
+  'atir',     // atir, atir-upa
+  'parf',     // parfyum, parfyumeriya, парфюм, парфюмерия
+  'odekolon', // одеколон
+  'perfume',
+  'tualet',   // "tualet suvi" / туалетная вода
+];
+
 const SIZELESS_ROOTS = [
   'akses',    // aksessuar, аксессуары, Aксессуары
-  'kosmetik', // косметика
-  'parf',     // parfyum, парфюмерия
+  'kosmetik', // косметика (krem, bo'yoq va h.k. — hajm ro'yxati kerak emas)
   'sumk',     // sumka, сумки
   'soat',     // soat
   'chasi',    // часы → chasi (takror harflarsiz)
@@ -95,14 +107,25 @@ const SIZELESS_ROOTS = [
 export const CLOTHING_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
 // 35 dan 45 gacha — so'rov bo'yicha.
 export const SHOE_SIZES = ['35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45'];
-// Shim/jinsi uchun bel o'lchami — 36 dan boshlanadi (so'rov bo'yicha) va
-// juft raqamlar bilan boradi, chunki shim odatda shunday sotiladi
-// (46, 48, 50...). Agar oraliq raqamlar ham kerak bo'lsa (37, 39, ...),
-// shu qatorning o'zini o'zgartirish kifoya — qolgan hamma joy shu
-// ro'yxatdan o'qiydi.
-export const TROUSER_SIZES = ['36', '38', '40', '42', '44', '46', '48', '50', '52', '54', '56'];
+// Shim/jinsi uchun bel o'lchami — 25 dan boshlanadi (so'rov bo'yicha),
+// har bir raqam alohida. Yuqori chegara yetmasa yoki boshqacha kerak
+// bo'lsa, shu qatorning o'zini o'zgartirish kifoya — filtr ham, admin
+// panel ham aynan shu ro'yxatdan o'qiydi.
+export const TROUSER_SIZES = [
+  '25', '26', '27', '28', '29', '30', '31', '32', '33',
+  '34', '35', '36', '37', '38', '39', '40', '41', '42',
+];
 
-export type CategorySizeKind = 'clothing' | 'shoes' | 'trousers' | 'none';
+// Duxi/atir — bu yerda "o'lcham" emas, HAJM (ml). Mexanizm boshqa
+// toifalar bilan bir xil: mahsulotga shu qiymatlar biriktiriladi va
+// filtrda ham shular chiqadi. 50ml gacha o'nlik qadam bilan, keyin
+// 100ml dan 500ml gacha ellikli qadam bilan.
+export const PERFUME_SIZES = [
+  '10ml', '20ml', '30ml', '40ml', '50ml',
+  '100ml', '150ml', '200ml', '250ml', '300ml', '350ml', '400ml', '450ml', '500ml',
+];
+
+export type CategorySizeKind = 'clothing' | 'shoes' | 'trousers' | 'perfume' | 'none';
 
 export interface CategoryLike {
   name?: string | null;
@@ -134,9 +157,19 @@ export function isTrouserCategory(cat?: CategoryLike | null): boolean {
   return TROUSER_ROOTS.some((root) => hay.includes(root));
 }
 
-// Toifa tanlanmagan bo'lsa (do'konda "Barchasi", adminda hali tanlanmagan)
-// — avvalgi xulq-atvor saqlanadi: kiyim o'lchamlari.
+export function isPerfumeCategory(cat?: CategoryLike | null): boolean {
+  if (!cat) return false;
+  const hay = haystackOf(cat);
+  return PERFUME_ROOTS.some((root) => hay.includes(root));
+}
+
+// Tekshiruv TARTIBI muhim: duxi eng oldin qaraladi, chunki toifa
+// "Kosmetika va parfyumeriya" deb nomlangan bo'lsa, u ikkala ro'yxatga
+// ham tushadi — bunday holatda hajm ro'yxati foydaliroq.
+// Toifa tanlanmagan bo'lsa (do'konda "Barchasi", adminda hali
+// tanlanmagan) — avvalgi xulq-atvor saqlanadi: kiyim o'lchamlari.
 export function getCategorySizeKind(cat?: CategoryLike | null): CategorySizeKind {
+  if (isPerfumeCategory(cat)) return 'perfume';
   if (isSizelessCategory(cat)) return 'none';
   if (isFootwearCategory(cat)) return 'shoes';
   if (isTrouserCategory(cat)) return 'trousers';
@@ -152,6 +185,8 @@ export function getSizeOptions(cat?: CategoryLike | null): string[] {
       return SHOE_SIZES;
     case 'trousers':
       return TROUSER_SIZES;
+    case 'perfume':
+      return PERFUME_SIZES;
     default:
       return CLOTHING_SIZES;
   }

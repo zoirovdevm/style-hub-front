@@ -11,6 +11,8 @@ import { getFriendlyErrorMessage } from '@/lib/utils/graphql-error';
 import { translateColorName } from '@/lib/utils/colorNames';
 import { swatchColor } from '@/lib/utils/colorSwatch';
 import { useProductColor } from '@/lib/store/product-color-context';
+import { formatPrice } from '@/lib/utils/format';
+import { resolveUnitPrice, hasVariantPricing } from '@/lib/utils/variantPrice';
 import type { Dictionary } from '@/i18n/get-dictionary';
 import type { Locale } from '@/i18n/config';
 
@@ -18,6 +20,9 @@ interface ProductVariant {
   size: string;
   color: string;
   stock: number;
+  // Duxi hajmlari uchun — variantning o'z narxi; bo'lmasa mahsulotning
+  // umumiy narxi ishlatiladi.
+  price?: number | null;
 }
 
 interface ProductActionsProps {
@@ -78,6 +83,12 @@ export function ProductActions({ productId, title, price, sizes, colors, stock, 
 
   const selectedVariantStock = stockFor(size, color);
   const selectedComboOutOfStock = hasVariants && selectedVariantStock !== null && selectedVariantStock <= 0;
+
+  // Duxi kabi mahsulotlarda narx tanlangan hajmga qarab o'zgaradi.
+  // `variantPricing` false bo'lsa (kiyim, poyabzal — ya'ni hozirgi hamma
+  // mahsulot) hech narsa o'zgarmaydi va narx eski joyida ko'rinadi.
+  const variantPricing = hasVariantPricing({ price, variants });
+  const selectedUnitPrice = resolveUnitPrice({ price, variants }, size, color);
 
   // "M razmer, ko'k rang — 5 dona mavjud" / "... — faqat 2 dona qoldi" for
   // the currently selected size+color combo, built from real variant stock
@@ -162,7 +173,17 @@ export function ProductActions({ productId, title, price, sizes, colors, stock, 
     try {
       sessionStorage.setItem(
         'checkout:buyNowItem',
-        JSON.stringify({ productId, title, price, size: size || undefined, color: color || undefined, quantity }),
+        // Narx tanlangan hajm/o'lchamga qarab olinadi (duxi uchun muhim).
+        // Bu faqat checkout sahifasidagi ko'rinish uchun — buyurtmaning
+        // haqiqiy summasi baribir serverda qaytadan hisoblanadi.
+        JSON.stringify({
+          productId,
+          title,
+          price: selectedUnitPrice,
+          size: size || undefined,
+          color: color || undefined,
+          quantity,
+        }),
       );
     } catch {
       // sessionStorage can throw in some privacy modes — checkout's own
@@ -239,6 +260,22 @@ export function ProductActions({ productId, title, price, sizes, colors, stock, 
               );
             })}
           </div>
+        </div>
+      )}
+
+      {/* Tanlangan variantning narxi — faqat narxi tanlovga bog'liq
+          mahsulotlarda (duxi hajmlari) ko'rsatiladi. Oddiy mahsulotlarda
+          bu blok umuman chizilmaydi, shuning uchun ularning ko'rinishi
+          zarracha ham o'zgarmaydi: narx yuqoridagi odatdagi joyida
+          qolaveradi. */}
+      {variantPricing && (
+        <div className="rounded-xl border border-gold-500/30 bg-gold-500/5 px-4 py-3">
+          <p className="text-xs font-semibold uppercase tracking-wider text-ink-900/50 dark:text-cream/50">
+            {size || dict.product.size}
+          </p>
+          <p className="mt-0.5 text-2xl font-bold text-gold-600 dark:text-gold-400">
+            {formatPrice(selectedUnitPrice, locale)}
+          </p>
         </div>
       )}
 

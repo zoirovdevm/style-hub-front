@@ -25,6 +25,9 @@ export const PRODUCT_FIELDS = gql`
       size
       color
       stock
+      # Duxi hajmlari uchun — har bir variantning o'z narxi. Bo'sh (null)
+      # bo'lsa mahsulotning umumiy narxi ishlatiladi (resolveUnitPrice).
+      price
     }
     isFeatured
     rating

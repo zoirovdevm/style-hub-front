@@ -12,13 +12,16 @@ import { Checkbox } from '@/components/ui/Checkbox';
 // BITTA umumiy manbadan o'qiladi (lib/utils/categorySizes.ts). Avval shu
 // faylning o'zida alohida nusxasi bor edi va ikkalasi bir-biridan
 // farqlanib ketgan edi.
-import { getSizeOptions } from '@/lib/utils/categorySizes';
+import { getSizeOptions, getCategorySizeKind } from '@/lib/utils/categorySizes';
 import type { Dictionary } from '@/i18n/get-dictionary';
 
 export interface VariantValue {
   size: string;
   color: string;
   stock: number;
+  // Duxi hajmlari uchun — shu variantning o'z narxi. Bo'sh (null/undefined)
+  // bo'lsa mahsulotning umumiy narxi ishlatiladi.
+  price?: number | null;
 }
 
 export interface ColorImagesValue {
@@ -146,7 +149,10 @@ export function ProductForm({
     for (const s of rows) {
       for (const c of cols) {
         const existing = variants.find((v) => v.size === s && v.color === c);
-        next.push({ size: s, color: c, stock: existing?.stock ?? perComboFallback });
+        // Narx ham saqlanadi — o'lcham/rang ro'yxati o'zgarganda
+        // (masalan yangi hajm qo'shilganda) allaqachon kiritilgan
+        // narxlar yo'qolib ketmasligi uchun.
+        next.push({ size: s, color: c, stock: existing?.stock ?? perComboFallback, price: existing?.price ?? null });
       }
     }
     const changed =
@@ -165,6 +171,54 @@ export function ProductForm({
     setValue('variants', next, { shouldDirty: true });
   }
 
+  // ── Hajm bo'yicha narx (duxi) ────────────────────────────────────────
+  // Narx O'LCHAMGA (hajmga) biriktiriladi, o'lcham+rang juftiga emas:
+  // "50ml — 250 000" degan gap rangdan qat'i nazar o'rinli. Shuning
+  // uchun o'qishda shu o'lchamdagi birinchi variant olinadi, yozishda esa
+  // o'sha o'lchamdagi HAMMA variantga bir xil narx qo'yiladi.
+  function getVariantPrice(size: string): number | null {
+    const found = variants.find((v) => v.size === size && v.price != null);
+    return found?.price ?? null;
+  }
+
+  function setVariantPrice(size: string, price: number | null) {
+    const next = variants.map((v) => (v.size === size ? { ...v, price } : v));
+    setValue('variants', next, { shouldDirty: true });
+  }
+
+  // "ml" yozuvidagi hajmni songa aylantiradi: "50ml" → 50. Raqam
+  // topilmasa null — bunday o'lcham avtomatik hisoblashga qo'shilmaydi.
+  function parseMl(size: string): number | null {
+    const match = /^(\d+)\s*ml$/i.exec(size.trim());
+    return match ? Number(match[1]) : null;
+  }
+
+  // 100ml GACHA bo'lgan hajmlarni avtomatik to'ldiradi: allaqachon narxi
+  // kiritilgan ENG KICHIK hajm asos qilib olinadi va 1 ml narxi
+  // hisoblanib, qolganlariga hajmiga proporsional yoziladi.
+  // 100ml dan yuqorisi ATAYLAB tegilmaydi — u yerda admin o'zi chegirmali
+  // narx qo'yadi (ko'proq hajm arzonroq bo'lgani uchun).
+  function autoFillPerfumePrices() {
+    const mlSizes = sizes
+      .map((s) => ({ size: s, ml: parseMl(s) }))
+      .filter((x): x is { size: string; ml: number } => x.ml != null)
+      .sort((a, b) => a.ml - b.ml);
+
+    const base = mlSizes.find((x) => {
+      const p = getVariantPrice(x.size);
+      return p != null && p > 0;
+    });
+    if (!base) return;
+
+    const pricePerMl = (getVariantPrice(base.size) as number) / base.ml;
+    const next = variants.map((v) => {
+      const ml = parseMl(v.size);
+      if (ml == null || ml > 100) return v;
+      return { ...v, price: Math.round(pricePerMl * ml) };
+    });
+    setValue('variants', next, { shouldDirty: true });
+  }
+
   const totalVariantStock = variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
 
   const categories = categoriesData?.categories ?? [];
@@ -176,6 +230,10 @@ export function ProductForm({
   // hali tanlanmagan bo'lsa kiyim o'lchamlari (avvalgi xulq-atvor).
   const SIZE_OPTIONS = getSizeOptions(selectedCategory);
   const showSizes = SIZE_OPTIONS.length > 0;
+  // Duxi toifasida o'lchamlar aslida HAJM (10ml, 50ml...) va har birining
+  // o'z narxi bo'ladi — shu sababli pastda alohida "hajm bo'yicha narx"
+  // jadvali ko'rsatiladi. Boshqa toifalarda u umuman chizilmaydi.
+  const isPerfume = getCategorySizeKind(selectedCategory) === 'perfume';
 
   // Switching TO a sizeless category (or starting a new product already
   // pointed at one) clears out any sizes picked earlier — otherwise a
@@ -654,6 +712,56 @@ export function ProductForm({
             <p className="text-xs text-ink-900/50">
               {dict.admin.stock}: <span className="font-semibold text-ink-900">{totalVariantStock}</span>
             </p>
+
+            {/* ── Hajm bo'yicha narx — faqat duxi toifasida ──────────────
+                Har bir hajmning o'z narxi bo'ladi. Bo'sh qoldirilgan
+                hajm mahsulotning umumiy narxida sotiladi.
+                "Avtomatik hisoblash" tugmasi narxi kiritilgan eng kichik
+                hajmni asos qilib, 100ml GACHA bo'lganlarini hajmiga
+                proporsional to'ldiradi. 100ml dan yuqorisiga tegmaydi —
+                u yerda ko'proq hajm arzonroq bo'lgani uchun narxni
+                o'zingiz qo'yasiz. */}
+            {isPerfume && sizes.length > 0 && (
+              <div className="space-y-3 border-t border-ink-900/10 pt-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-ink-900/50">
+                    Hajm bo'yicha narx
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={autoFillPerfumePrices}
+                    className="rounded-lg border border-ink-900/15 px-3 py-1.5 text-xs font-semibold transition-colors hover:border-ink-950 hover:bg-ink-900/5"
+                  >
+                    100ml gachasini avtomatik hisoblash
+                  </button>
+                </div>
+                <p className="text-xs text-ink-900/50">
+                  Avval bitta kichik hajmning narxini kiriting (masalan 10ml), keyin tugmani bosing —
+                  100ml gacha bo'lganlari o'zi to'ladi. 100ml dan yuqorisini o'zingiz kiritasiz.
+                  Bo'sh qoldirilgan hajm umumiy narxda sotiladi.
+                </p>
+
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {sizes.map((s) => (
+                    <label key={s} className="flex items-center gap-2 text-sm">
+                      <span className="w-16 shrink-0 text-xs font-semibold text-ink-900/60">{s}</span>
+                      <input
+                        type="number"
+                        min={0}
+                        step="1000"
+                        placeholder="umumiy narx"
+                        value={getVariantPrice(s) ?? ''}
+                        onChange={(e) => {
+                          const raw = e.target.value.trim();
+                          setVariantPrice(s, raw === '' ? null : Math.max(0, Number(raw) || 0));
+                        }}
+                        className="w-full rounded-lg border border-ink-900/15 px-2 py-1.5 text-sm outline-none focus:border-ink-950"
+                      />
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {totalVariantStock === 0 && (
               <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700">

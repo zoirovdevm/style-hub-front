@@ -10,6 +10,7 @@ import { GET_MY_CART } from '@/lib/graphql/queries';
 import { UPDATE_CART_ITEM, REMOVE_CART_ITEM } from '@/lib/graphql/mutations';
 import { useAuthStore } from '@/lib/store/auth-store';
 import { formatPrice } from '@/lib/utils/format';
+import { resolveUnitPrice } from '@/lib/utils/variantPrice';
 import { getFriendlyErrorMessage } from '@/lib/utils/graphql-error';
 import { translateColorName } from '@/lib/utils/colorNames';
 import { Reveal } from '@/components/ui/Reveal';
@@ -68,7 +69,13 @@ export default function CartPage({ params }: { params: { locale: Locale } }) {
   const selectedItems = items.filter((i: any) => selectedIds.has(i.id));
   const selectedCount = selectedItems.length;
   const allSelected = items.length > 0 && selectedCount === items.length;
-  const subtotal = selectedItems.reduce((sum: number, i: any) => sum + Number(i.product.price) * i.quantity, 0);
+  // Har bir qator o'zining tanlangan variant narxidan hisoblanadi (duxi
+  // hajmlari uchun). Variantda o'z narxi bo'lmasa mahsulotning umumiy
+  // narxi olinadi, ya'ni oddiy mahsulotlar uchun hech narsa o'zgarmaydi.
+  const subtotal = selectedItems.reduce(
+    (sum: number, i: any) => sum + resolveUnitPrice(i.product, i.size, i.color) * i.quantity,
+    0,
+  );
 
   function toggleItem(id: string) {
     setSelectedIds((prev) => {
@@ -262,7 +269,7 @@ export default function CartPage({ params }: { params: { locale: Locale } }) {
                         onClick={(e) => e.stopPropagation()}
                       >
                         <span className="text-sm font-bold dark:text-cream">
-                          {formatPrice(item.product.price * item.quantity, locale)}
+                          {formatPrice(resolveUnitPrice(item.product, item.size, item.color) * item.quantity, locale)}
                         </span>
                         <button
                           type="button"

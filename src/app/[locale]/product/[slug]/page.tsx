@@ -11,6 +11,7 @@ import { ProductReviews } from '@/components/product/ProductReviews';
 import { ProductCard, type ProductCardData } from '@/components/ui/ProductCard';
 import { Reveal } from '@/components/ui/Reveal';
 import { formatPrice } from '@/lib/utils/format';
+import { hasVariantPricing, resolveMinPrice } from '@/lib/utils/variantPrice';
 import { pageSeo, canonicalUrl, SITE_URL, SITE_NAME } from '@/lib/seo/site';
 
 interface ProductPageProps {
@@ -73,6 +74,9 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
   const title = locale === 'ru' && product.titleRu ? product.titleRu : product.title;
   const description = locale === 'ru' && product.descriptionRu ? product.descriptionRu : product.description;
   const hasDiscount = product.oldPrice && product.oldPrice > product.price;
+  // Duxi kabi, narxi hajmga qarab o'zgaradigan mahsulotlar uchun.
+  const variantPricing = hasVariantPricing(product);
+  const minPrice = resolveMinPrice(product);
 
   // Total stock across every size/color combination, not just the overall
   // `stock` field (which some products don't keep in sync with their real
@@ -111,7 +115,11 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
       url: productUrl,
       // Valyuta kodi ISO 4217 bo'yicha — O'zbekiston so'mi.
       priceCurrency: 'UZS',
-      price: product.price,
+      // Narxi hajmga qarab o'zgaradigan mahsulotda Google'ga ENG ARZON
+      // variant narxi beriladi — sahifada ko'rinayotgan "... dan" narxi
+      // bilan bir xil bo'lishi uchun (ular farq qilsa, Google
+      // strukturali ma'lumotni "sahifaga mos emas" deb belgilaydi).
+      price: variantPricing ? minPrice : product.price,
       availability: totalStock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
       itemCondition: 'https://schema.org/NewCondition',
       seller: { '@type': 'Organization', name: SITE_NAME },
@@ -179,8 +187,21 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
             )}
             <h1 className="mt-2 font-display text-3xl font-medium sm:text-4xl">{title}</h1>
 
+            {/* Narxi hajmga bog'liq mahsulotlarda (duxi) bu yerda eng
+                arzon hajm narxi "dan" izohi bilan ko'rsatiladi — aniq
+                narx esa xaridor hajmni tanlagach, tanlov tugmalari
+                ostida chiqadi (ProductActions). Oddiy mahsulotlarda
+                hammasi avvalgidek: bitta narx, hech qanday qo'shimcha
+                yozuvsiz. */}
             <div className="mt-4 flex items-baseline gap-3">
-              <span className="text-2xl font-bold">{formatPrice(product.price, locale)}</span>
+              <span className="text-2xl font-bold">
+                {formatPrice(variantPricing ? minPrice : product.price, locale)}
+              </span>
+              {variantPricing && (
+                <span className="text-sm font-medium text-ink-900/50 dark:text-cream/50">
+                  {locale === 'ru' ? 'от' : 'dan'}
+                </span>
+              )}
               {hasDiscount && (
                 <span className="text-base text-ink-900/40 line-through">{formatPrice(product.oldPrice, locale)}</span>
               )}

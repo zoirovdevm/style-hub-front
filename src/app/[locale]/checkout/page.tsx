@@ -9,6 +9,7 @@ import { GET_MY_CART, GET_ME } from '@/lib/graphql/queries';
 import { CREATE_ORDER } from '@/lib/graphql/mutations';
 import { useAuthStore } from '@/lib/store/auth-store';
 import { formatPrice } from '@/lib/utils/format';
+import { resolveUnitPrice } from '@/lib/utils/variantPrice';
 import { translateColorName } from '@/lib/utils/colorNames';
 import { Reveal } from '@/components/ui/Reveal';
 import { OrderPaymentPanel } from '@/components/checkout/OrderPaymentPanel';
@@ -153,7 +154,12 @@ function CheckoutPageInner({ params }: { params: { locale: Locale } }) {
     : selectedItemIds
       ? allCartItems.filter((i: any) => selectedItemIds.includes(i.id))
       : allCartItems;
-  const subtotal = items.reduce((sum: number, i: any) => sum + Number(i.product.price) * i.quantity, 0);
+  // Har bir qator tanlangan variant narxidan (duxi hajmlari uchun).
+  // Bu faqat ko'rsatish uchun — yakuniy summa serverda hisoblanadi.
+  const subtotal = items.reduce(
+    (sum: number, i: any) => sum + resolveUnitPrice(i.product, i.size, i.color) * i.quantity,
+    0,
+  );
 
   // createOrder deletes the user's cart items server-side, but that doesn't
   // touch Apollo's client cache — without this, the cart page/badge kept
@@ -532,7 +538,9 @@ function CheckoutPageInner({ params }: { params: { locale: Locale } }) {
                       </span>
                     )}
                   </span>
-                  <span className="shrink-0">{formatPrice(item.product.price * item.quantity, locale)}</span>
+                  <span className="shrink-0">
+                    {formatPrice(resolveUnitPrice(item.product, item.size, item.color) * item.quantity, locale)}
+                  </span>
                 </div>
               ))}
             </div>

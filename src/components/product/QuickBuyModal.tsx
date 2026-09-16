@@ -13,6 +13,7 @@ import { getFriendlyErrorMessage } from '@/lib/utils/graphql-error';
 import { translateColorName } from '@/lib/utils/colorNames';
 import { swatchColor } from '@/lib/utils/colorSwatch';
 import { formatPrice } from '@/lib/utils/format';
+import { resolveUnitPrice } from '@/lib/utils/variantPrice';
 import { useScrollLock } from '@/lib/hooks/use-scroll-lock';
 import type { Dictionary } from '@/i18n/get-dictionary';
 import type { Locale } from '@/i18n/config';
@@ -135,6 +136,10 @@ export function QuickBuyModal({ product, locale, dict, onClose }: QuickBuyModalP
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // Tanlangan hajm/o'lchamning narxi (duxi uchun muhim). Variantda o'z
+  // narxi bo'lmasa mahsulotning umumiy narxi qaytadi.
+  const selectedUnitPrice = resolveUnitPrice(product as any, size, color);
+
   const selectedVariantStock = stockFor(size, color);
   const outOfStock = (product.stock ?? 1) <= 0 || (hasVariants && selectedVariantStock !== null && selectedVariantStock <= 0);
 
@@ -202,7 +207,16 @@ export function QuickBuyModal({ product, locale, dict, onClose }: QuickBuyModalP
     try {
       sessionStorage.setItem(
         'checkout:buyNowItem',
-        JSON.stringify({ productId: product.id, title, price: product.price, size: size || undefined, color: color || undefined, quantity }),
+        // Narx tanlangan hajmga qarab (duxi uchun). Faqat checkout
+        // ko'rinishi uchun — haqiqiy summa serverda hisoblanadi.
+        JSON.stringify({
+          productId: product.id,
+          title,
+          price: selectedUnitPrice,
+          size: size || undefined,
+          color: color || undefined,
+          quantity,
+        }),
       );
     } catch {
       // sessionStorage can throw in some privacy modes — checkout's own
@@ -263,7 +277,12 @@ export function QuickBuyModal({ product, locale, dict, onClose }: QuickBuyModalP
           </div>
 
           <div>
-            <p className="text-2xl font-bold text-gold-600 dark:text-gold-400">{formatPrice(product.price, locale)}</p>
+            {/* Tanlangan hajm/o'lchamning narxi. Variantda o'z narxi
+                bo'lmasa (kiyim, poyabzal — hozirgi hamma mahsulot)
+                mahsulotning umumiy narxi chiqadi, ya'ni avvalgidek. */}
+            <p className="text-2xl font-bold text-gold-600 dark:text-gold-400">
+              {formatPrice(selectedUnitPrice, locale)}
+            </p>
             {/* Same low-stock amber treatment as ProductCard's stock line
                 (<=5 left) — per request this color should be consistent
                 everywhere the site shows remaining stock, not just the
