@@ -193,6 +193,26 @@ export function ProductForm({
     return match ? Number(match[1]) : null;
   }
 
+  const totalVariantStock = variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
+
+  const categories = categoriesData?.categories ?? [];
+  const noCategories = categories.length === 0;
+  const selectedCategoryId = watch('categoryId');
+  const selectedCategory = categories.find((c: any) => c.id === selectedCategoryId);
+  // Toifasiga qarab: poyabzal → 36-45, aksessuar/kosmetika → bo'sh (ya'ni
+  // o'lcham bo'limi umuman ko'rsatilmaydi), qolganlari → XS-XXXL. Toifa
+  // hali tanlanmagan bo'lsa kiyim o'lchamlari (avvalgi xulq-atvor).
+  const SIZE_OPTIONS = getSizeOptions(selectedCategory);
+  const showSizes = SIZE_OPTIONS.length > 0;
+  // Duxi toifasida o'lchamlar aslida HAJM (10ml, 50ml...) va har birining
+  // o'z narxi bo'ladi — shu sababli pastda alohida "hajm bo'yicha narx"
+  // jadvali ko'rsatiladi. Boshqa toifalarda u umuman chizilmaydi.
+  const isPerfume = getCategorySizeKind(selectedCategory) === 'perfume';
+  // Duxi/atirda rang tushunchasi yo'q — rang bo'limi va u bilan bog'liq
+  // "rang bo'yicha rasmlar" bloki umuman ko'rsatilmaydi, rasmlar oddiy
+  // "Rasmlar" bo'limidan qo'shiladi.
+  const showColors = !isPerfume;
+
   // ── 100ml GACHA bo'lgan hajmlar narxi AVTOMATIK hisoblanadi ─────────
   // Asos — yuqoridagi "Narx" maydoni va u qaysi hajmga tegishli ekani
   // (`priceBaseSize`, sukut bo'yicha eng kichik tanlangan hajm). Shundan
@@ -234,25 +254,6 @@ export function ProductForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPerfume, basePrice, baseMl, sizes.join(','), variants.length]);
 
-  const totalVariantStock = variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
-
-  const categories = categoriesData?.categories ?? [];
-  const noCategories = categories.length === 0;
-  const selectedCategoryId = watch('categoryId');
-  const selectedCategory = categories.find((c: any) => c.id === selectedCategoryId);
-  // Toifasiga qarab: poyabzal → 36-45, aksessuar/kosmetika → bo'sh (ya'ni
-  // o'lcham bo'limi umuman ko'rsatilmaydi), qolganlari → XS-XXXL. Toifa
-  // hali tanlanmagan bo'lsa kiyim o'lchamlari (avvalgi xulq-atvor).
-  const SIZE_OPTIONS = getSizeOptions(selectedCategory);
-  const showSizes = SIZE_OPTIONS.length > 0;
-  // Duxi toifasida o'lchamlar aslida HAJM (10ml, 50ml...) va har birining
-  // o'z narxi bo'ladi — shu sababli pastda alohida "hajm bo'yicha narx"
-  // jadvali ko'rsatiladi. Boshqa toifalarda u umuman chizilmaydi.
-  const isPerfume = getCategorySizeKind(selectedCategory) === 'perfume';
-  // Duxi/atirda rang tushunchasi yo'q — rang bo'limi va u bilan bog'liq
-  // "rang bo'yicha rasmlar" bloki umuman ko'rsatilmaydi, rasmlar oddiy
-  // "Rasmlar" bo'limidan qo'shiladi.
-  const showColors = !isPerfume;
 
   // Switching TO a sizeless category (or starting a new product already
   // pointed at one) clears out any sizes picked earlier — otherwise a
