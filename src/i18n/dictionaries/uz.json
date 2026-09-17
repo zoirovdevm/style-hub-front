@@ -68,6 +68,7 @@
     "addToWishlist": "Sevimlilarga qo'shish",
     "removeFromWishlist": "Sevimlilardan olib tashlash",
     "sortNewest": "Yangilari",
+    "sortRandom": "Aralash",
     "sortPriceAsc": "Arzon narx",
     "sortPriceDesc": "Qimmat narx",
     "sortPopular": "Mashhur",
@@ -158,7 +159,8 @@
     "paymentRejectedBody": "Yuborgan chekingiz tasdiqlanmadi. Iltimos, to'lovni qaytadan amalga oshirib, to'g'ri skrinshotni pastdagi tugma orqali qayta yuboring.",
     "buyNowMissing": "Xarid ma'lumotlari topilmadi. Iltimos, mahsulot sahifasiga qaytib qaytadan urinib ko'ring.",
     "copied": "Nusxalandi!",
-    "orderNotFoundBody": "Bu buyurtma topilmadi yoki sizga tegishli emas."
+    "orderNotFoundBody": "Bu buyurtma topilmadi yoki sizga tegishli emas.",
+    "confirmDelivery": "Ha, to'g'ri"
   },
   "orders": {
     "title": "Buyurtmalarim",

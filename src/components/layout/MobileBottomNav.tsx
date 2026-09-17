@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useQuery } from '@apollo/client';
-import { Home, LayoutGrid, ShoppingBag, User2 } from 'lucide-react';
+import { Home, LayoutGrid, Store, ShoppingBag, User2 } from 'lucide-react';
 import { GET_MY_CART } from '@/lib/graphql/queries';
 import { useAuthStore } from '@/lib/store/auth-store';
 import type { Locale } from '@/i18n/config';
@@ -39,17 +39,16 @@ export function MobileBottomNav({ locale, dict }: MobileBottomNavProps) {
   // shows a "please log in" prompt with its own Login button when there's
   // no user (see profile/page.tsx) — nothing is actually unreachable, the
   // bottom nav just no longer has to say "Kirish" out loud.
-  // To'rtta tab: Bosh sahifa / Kategoriyalar / Savat / Profil.
+  // Beshta tab, so'ralgan tartibda:
+  //   Bosh sahifa / Magazin / Savat / Kategoriyalar / Profil.
   //
-  // Sevimlilar (yurakcha) bu yerdan OLIB TASHLANDI — u endi header
-  // ostidagi qidiruv qatorining o'ng chetida turadi
-  // (MobileSearchBar.tsx). Uning o'rnini "Kategoriyalar" egalladi:
-  // qidiruv qatori allaqachon "qidirib topish" yo'lini bergani uchun,
-  // pastda ko'rib-tanlab yurish (browsing) yo'li kerak edi.
+  // Sevimlilar (yurakcha) bu yerda YO'Q — u header ostidagi qidiruv
+  // qatorining o'ng chetiga ko'chirilgan (MobileSearchBar.tsx).
   const items = [
     { href: `/${locale}`, label: dict.nav.home, icon: Home },
-    { href: `/${locale}/categories`, label: dict.nav.categories, icon: LayoutGrid },
+    { href: `/${locale}/shop`, label: dict.nav.shop, icon: Store },
     { href: `/${locale}/cart`, label: dict.nav.cart, icon: ShoppingBag, count: cartCount },
+    { href: `/${locale}/categories`, label: dict.nav.categories, icon: LayoutGrid },
     { href: `/${locale}/profile`, label: dict.nav.profile, icon: User2 },
   ];
 
@@ -81,7 +80,7 @@ export function MobileBottomNav({ locale, dict }: MobileBottomNavProps) {
         // untouched from the prior explicit theme spec (black bg + cream
         // text, light 8px backdrop-blur) — re-verify dark mode on real iOS
         // Safari after deploying.
-        className="transform-gpu will-change-transform mx-auto grid max-w-md grid-cols-4 rounded-full border border-black/10 bg-white px-1 shadow-lg dark:border-white/10 dark:bg-[rgba(10,10,12,0.92)] dark:backdrop-blur-[8px]"
+        className="transform-gpu will-change-transform mx-auto grid max-w-md grid-cols-5 rounded-full border border-black/10 bg-white px-1 shadow-lg dark:border-white/10 dark:bg-[rgba(10,10,12,0.92)] dark:backdrop-blur-[8px]"
       >
         {items.map((item) => {
           const active = isActive(item.href);

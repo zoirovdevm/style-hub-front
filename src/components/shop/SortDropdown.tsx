@@ -8,9 +8,13 @@ export function SortDropdown({ dict }: { dict: Dictionary }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const currentSort = searchParams.get('sort') ?? 'NEWEST';
+  // Sukut — do'kon sahifasidagi bilan bir xil bo'lishi kerak (RANDOM),
+  // aks holda ro'yxat aralash ko'rinib turib, tanlovda "Yangilari"
+  // yozilib qolardi.
+  const currentSort = searchParams.get('sort') ?? 'RANDOM';
 
   const options = [
+    { value: 'RANDOM', label: dict.product.sortRandom },
     { value: 'NEWEST', label: dict.product.sortNewest },
     { value: 'PRICE_ASC', label: dict.product.sortPriceAsc },
     { value: 'PRICE_DESC', label: dict.product.sortPriceDesc },

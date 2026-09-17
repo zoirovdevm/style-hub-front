@@ -7,10 +7,14 @@ export type RegisterStep = 'phone' | 'otp' | 'details' | 'confirm';
 export interface RegisterDetailsForm {
   firstName: string;
   lastName: string;
-  email: string;
+  // Ro'yxatdan o'tishda endi so'ralmaydi (faqat telefon raqami bilan) —
+  // ixtiyoriy qilib qoldirildi, chunki eskiroq brauzerda saqlanib qolgan
+  // (persist) holatda bu maydon hali ham bo'lishi mumkin.
+  email?: string;
   password: string;
   confirmPassword: string;
-  address: string;
+  // Manzil birinchi buyurtmada so'raladi, ro'yxatdan o'tishda emas.
+  address?: string;
 }
 
 interface RegisterWizardState {

@@ -5,7 +5,7 @@ import { getDictionary } from '@/i18n/get-dictionary';
 import type { Locale } from '@/i18n/config';
 import { pageSeo, SITE_NAME, SITE_DESCRIPTION } from '@/lib/seo/site';
 import { serverFetchGraphQL } from '@/lib/graphql/server-fetch';
-import { GET_PRODUCTS_STR, GET_CATEGORIES_STR, GET_BANNERS_STR } from '@/lib/graphql/server-queries';
+import { GET_BEST_SELLERS_STR, GET_CATEGORIES_STR, GET_BANNERS_STR } from '@/lib/graphql/server-queries';
 import { ProductCard, type ProductCardData } from '@/components/ui/ProductCard';
 import { Reveal } from '@/components/ui/Reveal';
 import { CategoryCarousel } from '@/components/ui/CategoryCarousel';
@@ -81,21 +81,18 @@ export default async function HomePage({ params }: { params: { locale: Locale } 
   // reported. Categories right below already used 0 for the same reason
   // (see its own comment). Bringing bestSellers in line with both.
   //
-  // TASODIFIY TARTIB: bosh sahifadagi tovarlar endi `bestSellers` emas,
-  // oddiy `products` so'rovi orqali `sort: RANDOM` bilan olinadi — ya'ni
-  // saytga kirgan odam har safar boshqa tovarlarni ko'radi (backend:
-  // product.service.ts, queryProducts). Do'kon sahifasidagi qidiruv,
-  // filtr va sahifalash tegilmagan — ular o'z saralashlaridan
-  // foydalanaveradi.
-  // `revalidate: 0` bu yerda ikki marta muhim: birinchidan admin
-  // o'zgartirishi darhol ko'rinadi, ikkinchidan keshlangan javob
-  // "tasodifiy"likni yo'qqa chiqarardi (hamma bir xil tartibni ko'rardi).
-  const [randomProductsData, categoriesData, bannersData] = await Promise.all([
-    serverFetchGraphQL<{ products: { list: ProductCardData[] } }>(
-      GET_PRODUCTS_STR,
-      { filter: { sort: 'RANDOM', page: 1, limit: 10 } },
-      0,
-    ).catch(() => ({ products: { list: [] } })),
+  // Bosh sahifada MASHHUR tovarlar — eng ko'p sotilganlar (`bestSellers`,
+  // backendda soldCount bo'yicha). Bir muddat bu yerda tasodifiy tartib
+  // ishlatilgan edi; so'rovga ko'ra tasodifiy tartib endi faqat DO'KON
+  // (/shop) sahifasida qoldi, bosh sahifa esa haqiqiy mashhurlarni
+  // ko'rsatadi.
+  // `revalidate: 0` — admin tovar qo'shsa/o'zgartirsa bosh sahifa darhol
+  // yangilanishi uchun (aks holda keshlangan javob bir muddat eski
+  // ro'yxatni ko'rsatib turardi).
+  const [bestSellersData, categoriesData, bannersData] = await Promise.all([
+    serverFetchGraphQL<{ bestSellers: ProductCardData[] }>(GET_BEST_SELLERS_STR, { limit: 10 }, 0).catch(() => ({
+      bestSellers: [],
+    })),
     // revalidate: 0 — a newly added/renamed category should show up in the
     // carousel on the next request, not wait out a stale cached page.
     serverFetchGraphQL<{ categories: HomeCategory[] }>(GET_CATEGORIES_STR, undefined, 0).catch(() => ({
@@ -110,23 +107,16 @@ export default async function HomePage({ params }: { params: { locale: Locale } 
     })),
   ]);
 
-  const bestSellers = randomProductsData.products?.list ?? [];
+  const bestSellers = bestSellersData.bestSellers ?? [];
   const categories = categoriesData.categories ?? [];
   const banners = bannersData.banners ?? [];
 
-  // Splits the hero heading around its one highlighted word so only that
-  // word can get its own color/italic styling — the dictionary string
-  // itself stays plain text (no embedded HTML), this just locates
-  // "премиум"/"premium" within it at render time. Falls back to rendering
-  // the whole heading unstyled if the word isn't found for some reason
-  // (e.g. a future translation edit removes it) rather than crashing.
-  const heroTitleHighlightWord = locale === 'ru' ? 'премиум' : 'premium';
-  const heroTitleSplitIndex = dict.home.heroTitle.indexOf(heroTitleHighlightWord);
-  const heroTitleBefore =
-    heroTitleSplitIndex >= 0 ? dict.home.heroTitle.slice(0, heroTitleSplitIndex) : dict.home.heroTitle;
-  const heroTitleHighlight = heroTitleSplitIndex >= 0 ? heroTitleHighlightWord : '';
-  const heroTitleAfter =
-    heroTitleSplitIndex >= 0 ? dict.home.heroTitle.slice(heroTitleSplitIndex + heroTitleHighlightWord.length) : '';
+  // Bosh sahifadagi katta "Zamonaviy uslub, premium sifat" bloki (hero)
+  // butunlay olib tashlandi — endi sahifa to'g'ridan-to'g'ri reklama
+  // banneri bilan boshlanadi. Shu sababli sarlavhani ranglangan so'z
+  // bo'yicha bo'lib chiqadigan yordamchi o'zgaruvchilar ham keraksiz.
+  // `dict.home.heroTitle` faqat generateMetadata'da (sahifa <title>si va
+  // Google uchun tavsif) qolgan — u ko'rinadigan matn emas.
 
   return (
     <div>
@@ -135,122 +125,6 @@ export default async function HomePage({ params }: { params: { locale: Locale } 
           boshida turadi). Banner qo'shilmagan bo'lsa bu bo'lim umuman
           chizilmaydi. */}
       <BannerCarousel banners={banners} locale={locale} />
-
-      {/* HERO */}
-      {/* -mt-[68px]/pt-[68px] (and the sm: pair) cancel out <main>'s new
-          top padding exactly, then re-add the same amount as the section's
-          OWN padding — net effect: the visible content below is positioned
-          exactly like before, but this section's background now extends
-          all the way to the very top of the page, behind the floating
-          (fixed) header, instead of stopping where <main> used to start.
-          That's what lets the header's glass actually show this section
-          blurred through it instead of a plain mismatched background.
-          This section used to be unconditionally dark (bg-ink-950, no
-          dark: pairing) even in light theme — deliberately, so it always
-          had presence — but per request it now follows the site's normal
-          light/dark theme like everything else (white+ink text in light
-          mode, the old dark+cream look preserved for dark mode), so no
-          `data-navbar-contrast` flag is needed anymore either: the header
-          can just use its normal light-theme styling here since the
-          background underneath it now actually matches. */}
-      {/* Avval bu bo'limda `-mt-[68px] pt-[68px]` (va sm: jufti) bor edi —
-          u <main>'ning tepa bo'shlig'ini bekor qilib, hero fonini suzib
-          turuvchi header ortiga cho'zardi. Endi hero birinchi blok emas
-          (yuqorida banner karuseli, mobil ko'rinishda esa undan ham
-          oldin qidiruv qatori bor), shuning uchun manfiy margin olib
-          tashlandi — aks holda hero o'zidan yuqoridagi bloklarni ustiga
-          tortib, ularni yopib qo'yardi. Ko'rinishda deyarli hech narsa
-          o'zgarmaydi: hero foni (bg-white / dark:bg-ink-950) sahifa foni
-          bilan aynan bir xil. */}
-      <section className="relative overflow-hidden bg-white text-ink-950 dark:bg-ink-950 dark:text-cream">
-        {/* Very faint edge-to-edge base tint, so the far corners/edges
-            aren't completely bare — kept much lighter than the blobs below
-            so the glow still reads as concentrated toward the center/text,
-            not uniform. */}
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background: 'linear-gradient(135deg, rgba(16,185,129,0.05) 0%, rgba(5,150,105,0.03) 100%)',
-          }}
-        />
-        {/* ROOT-CAUSE FIX — the 5 large colorful glow-orb divs that used to
-            sit here (each `blur-[100-150px]`) are removed entirely per
-            explicit request. A staged isolation test confirmed these,
-            combined with the header's backdrop-blur sampling them through
-            its glass (see Header.tsx), were what produced the ~30s iOS
-            stall — WebKit had to keep re-rasterizing a huge, heavily
-            blurred, colorful area on every frame. The header no longer
-            uses backdrop-blur either, so this section no longer needs to
-            supply anything for it to blur — the plain gradient tint below
-            is the only decorative background left, and it's cheap (a
-            static CSS gradient, no filter/blur involved). */}
-        <div className="container-app relative flex min-h-[640px] flex-col justify-center py-24">
-          {/* Long accent line above the eyebrow text — left-aligned with
-              the text block (same starting edge as everything below it)
-              and wide enough to read as a divider across the content area,
-              fading out toward the right rather than ending abruptly. */}
-          <Reveal>
-            <div className="mb-6 h-px w-full max-w-md bg-gradient-to-r from-gold-500 via-gold-500/40 to-transparent" />
-          </Reveal>
-          <Reveal delay={0.05}>
-            <p className="mb-4 text-xs font-semibold uppercase tracking-[0.3em] text-gold-600 dark:text-gold-400">
-              {dict.home.heroEyebrow}
-            </p>
-          </Reveal>
-          <Reveal delay={0.1}>
-            <h1 className="max-w-2xl font-display text-5xl font-medium leading-tight sm:text-6xl lg:text-7xl">
-              {/* Only the one highlighted word ("премиум"/"premium") gets
-                  the exact accent green + italic treatment — everything
-                  else in the heading keeps its normal color, per request. */}
-              {heroTitleBefore}
-              {heroTitleHighlight && (
-                <em className="italic" style={{ color: '#10b981' }}>
-                  {heroTitleHighlight}
-                </em>
-              )}
-              {heroTitleAfter}
-            </h1>
-          </Reveal>
-          <Reveal delay={0.2}>
-            <p className="mt-6 max-w-lg text-base text-ink-900/60 dark:text-cream/70">{dict.home.heroSubtitle}</p>
-          </Reveal>
-          <Reveal delay={0.3}>
-            <div className="mt-10 flex flex-wrap gap-4">
-              {/* .btn-primary now IS the green gradient by default (see
-                  globals.css) — no per-page override needed here anymore. */}
-              <Link href={`/${locale}/shop`} className="btn-primary">
-                {dict.home.shopNow}
-                <ArrowRight size={16} />
-              </Link>
-              <Link href={`/${locale}/categories`} className="btn-outline">
-                {dict.home.exploreCategories}
-              </Link>
-            </div>
-          </Reveal>
-        </div>
-      </section>
-
-      {/* WHY US */}
-      <section className="relative overflow-hidden border-b border-ink-900/5 bg-gradient-to-b from-emerald-50/60 via-white to-white py-16 dark:border-cream/5 dark:from-ink-950 dark:via-ink-950 dark:to-ink-950">
-        <div className="container-app grid grid-cols-2 gap-5 lg:grid-cols-4">
-          {dict.home.whyUsItems.map((item, i) => {
-            const { icon: Icon, ring } = WHY_ITEMS[i % WHY_ITEMS.length];
-            return (
-              <Reveal key={item.title} delay={i * 0.08}>
-                <div className="flex h-full flex-col items-start gap-4 rounded-2xl border border-ink-900/8 bg-white p-6 transition-transform hover:-translate-y-1 dark:border-cream/10 dark:bg-ink-900/60">
-                  <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${ring}`}>
-                    <Icon size={22} />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-semibold text-ink-950 dark:text-cream">{item.title}</h3>
-                    <p className="mt-1.5 text-sm leading-relaxed text-ink-900/55 dark:text-cream/55">{item.desc}</p>
-                  </div>
-                </div>
-              </Reveal>
-            );
-          })}
-        </div>
-      </section>
 
       {/* BEST SELLERS — shown before the category grid, per request: product
           cards should be the first thing shoppers see below the fold, with
@@ -335,6 +209,38 @@ export default async function HomePage({ params }: { params: { locale: Locale } 
               <CategoryCarousel categories={categories} locale={locale} />
             </Reveal>
           )}
+        </div>
+      </section>
+
+      {/* WHY US — "Original mahsulotlar / Tezkor yetkazib berish /
+          Ishonchli xarid / Xavfsiz to'lov" kartalari.
+          Avval sahifaning eng tepasida, hero ostida turardi; so'rovga
+          ko'ra endi eng pastga, KATEGORIYALARDAN KEYIN tushirildi —
+          xaridor avval tovar va kategoriyalarni ko'radi, do'kon haqidagi
+          ishonch beruvchi yozuvlar esa pastda qoladi.
+          `border-b` `border-t` ga almashtirildi: bo'lim endi oxirgi
+          bo'lgani uchun chegara ustidan kerak, ostidan emas (pastda
+          darhol Footer boshlanadi). Gradient ham teskari yo'nalishga
+          (to-b -> to-t) o'girildi, shunda och yashil tus yuqoridagi oq
+          fon bilan emas, pastdagi Footer bilan tutashadi. */}
+      <section className="relative overflow-hidden border-t border-ink-900/5 bg-gradient-to-t from-emerald-50/60 via-white to-white py-16 dark:border-cream/5 dark:from-ink-950 dark:via-ink-950 dark:to-ink-950">
+        <div className="container-app grid grid-cols-2 gap-5 lg:grid-cols-4">
+          {dict.home.whyUsItems.map((item, i) => {
+            const { icon: Icon, ring } = WHY_ITEMS[i % WHY_ITEMS.length];
+            return (
+              <Reveal key={item.title} delay={i * 0.08}>
+                <div className="flex h-full flex-col items-start gap-4 rounded-2xl border border-ink-900/8 bg-white p-6 transition-transform hover:-translate-y-1 dark:border-cream/10 dark:bg-ink-900/60">
+                  <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${ring}`}>
+                    <Icon size={22} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-ink-950 dark:text-cream">{item.title}</h3>
+                    <p className="mt-1.5 text-sm leading-relaxed text-ink-900/55 dark:text-cream/55">{item.desc}</p>
+                  </div>
+                </div>
+              </Reveal>
+            );
+          })}
         </div>
       </section>
     </div>

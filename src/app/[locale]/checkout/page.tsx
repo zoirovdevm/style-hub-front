@@ -4,9 +4,9 @@ import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { useMutation, useQuery } from '@apollo/client';
-import { Pencil } from 'lucide-react';
+import { Check, Pencil } from 'lucide-react';
 import { GET_MY_CART, GET_ME } from '@/lib/graphql/queries';
-import { CREATE_ORDER } from '@/lib/graphql/mutations';
+import { CREATE_ORDER, UPDATE_PROFILE } from '@/lib/graphql/mutations';
 import { useAuthStore } from '@/lib/store/auth-store';
 import { formatPrice } from '@/lib/utils/format';
 import { resolveUnitPrice } from '@/lib/utils/variantPrice';
@@ -168,6 +168,12 @@ function CheckoutPageInner({ params }: { params: { locale: Locale } }) {
     refetchQueries: [{ query: GET_MY_CART }],
     awaitRefetchQueries: true,
   });
+  // Buyurtmadan keyin manzil/telefonni PROFILGA saqlab qo'yish uchun.
+  // GET_ME qayta so'raladi, shunda keyingi safar checkout ochilganda
+  // (va profil sahifasida) yangi qiymat darhol ko'rinadi.
+  const [updateProfile] = useMutation(UPDATE_PROFILE, {
+    refetchQueries: [{ query: GET_ME }],
+  });
   const {
     register,
     handleSubmit,
@@ -302,6 +308,30 @@ function CheckoutPageInner({ params }: { params: { locale: Locale } }) {
       // profildan (GET_ME) olinadi, shu bilan checkout hech qachon profilda
       // allaqachon to'g'irlangan raqamdan farqli ESKI qiymatni saqlab
       // qolmaydi.
+      // MA'LUMOTNI SAQLASH — bu ilgari qilinmagan edi va aynan shu sababli
+      // xaridor har safar manzil/telefonni qaytadan yozishga majbur
+      // bo'lardi: checkout ularni PROFILDAN (GET_ME) o'qiydi, lekin hech
+      // kim u yerga yozmasdi. Endi birinchi buyurtmada kiritilgan manzil
+      // va raqam profilga yoziladi, keyingi buyurtmada esa tayyor holda,
+      // qalam (tahrirlash) tugmasi bilan ko'rsatiladi.
+      //
+      // Xatolik bo'lsa (masalan raqam formati serverga yoqmasa) —
+      // ataylab jim o'tiladi: buyurtmaning o'zi allaqachon muvaffaqiyatli
+      // joylashtirilgan, uni xato xabari bilan buzish noto'g'ri bo'lardi.
+      try {
+        const profile = meData?.me;
+        const patch: Record<string, string> = {};
+        const nextAddress = values.deliveryAddress?.trim();
+        const nextPhone = values.phone?.trim();
+        if (nextAddress && nextAddress !== profile?.address) patch.address = nextAddress;
+        if (nextPhone && nextPhone !== profile?.phone) patch.phone = nextPhone;
+        if (Object.keys(patch).length > 0) {
+          await updateProfile({ variables: { input: patch } });
+        }
+      } catch {
+        // jim o'tiladi — yuqoridagi izohga qarang
+      }
+
       try {
         localStorage.setItem(
           SAVED_DELIVERY_INFO_KEY,
@@ -509,11 +539,29 @@ function CheckoutPageInner({ params }: { params: { locale: Locale } }) {
                 // maydonlarda saqlanadi (hidden emas, shunchaki
                 // ko'rsatilmayapti), shuning uchun submit ularni to'liq
                 // yuboradi.
-                <div className="space-y-1 text-sm text-ink-900/70 dark:text-cream/70">
-                  <p>{watch('deliveryAddress')}</p>
-                  {watch('deliveryCity') && <p>{watch('deliveryCity')}</p>}
-                  <p>{watch('phone')}</p>
-                  {watch('note') && <p className="text-ink-900/50 dark:text-cream/50">{watch('note')}</p>}
+                <div className="space-y-4">
+                  <div className="space-y-1 text-sm text-ink-900/70 dark:text-cream/70">
+                    <p>{watch('deliveryAddress')}</p>
+                    {watch('deliveryCity') && <p>{watch('deliveryCity')}</p>}
+                    <p>{watch('phone')}</p>
+                    {watch('note') && <p className="text-ink-900/50 dark:text-cream/50">{watch('note')}</p>}
+                  </div>
+
+                  {/* "Ha, to'g'ri" — saqlangan ma'lumot to'g'ri ekanini
+                      tasdiqlab, buyurtmani shu yerdan joylashtirish.
+                      Yon ustundagi "Buyurtma berish" tugmasi bilan AYNAN
+                      bir xil ishni bajaradi (ikkalasi ham shu formaning
+                      submit tugmasi) — telefonda yon ustun pastda qolib
+                      ketgani uchun, tasdiqlash ma'lumotning yonida ham
+                      turgani qulay. */}
+                  <button
+                    type="submit"
+                    disabled={submitting || items.length === 0}
+                    className="btn-primary w-full disabled:opacity-50 sm:w-auto"
+                  >
+                    <Check size={16} />
+                    {submitting ? '…' : dict.checkout.confirmDelivery}
+                  </button>
                 </div>
               )}
             </div>

@@ -190,9 +190,7 @@ export default function RegisterPage({ params }: { params: { locale: Locale } })
             phone: fullPhone,
             firstName: details.firstName,
             lastName: details.lastName,
-            email: details.email,
             password: details.password,
-            address: details.address,
           },
         },
       });
@@ -204,7 +202,14 @@ export default function RegisterPage({ params }: { params: { locale: Locale } })
       }, 2000);
     } catch (e: any) {
       if (MOCK_AUTH_FALLBACK) {
-        const mockPayload = mockAuthPayload({ email: details.email, firstName: details.firstName, lastName: details.lastName });
+        const mockPayload = mockAuthPayload({
+          // Haqiqiy email endi yig'ilmaydi — faqat mock rejim uchun
+          // raqamdan yasalgan o'rin bosar (backend ham xuddi shunday
+          // qiladi, auth.service.ts register izohiga qarang).
+          email: `${fullPhone.replace(/\D/g, '')}@phone.local`,
+          firstName: details.firstName,
+          lastName: details.lastName,
+        });
         setSession(mockPayload);
         setShowWelcome(true);
         resetWizard();
@@ -396,28 +401,16 @@ export default function RegisterPage({ params }: { params: { locale: Locale } })
                   </div>
                 </div>
 
-                <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-ink-900/60">{dict.auth.email}</label>
-                  <input
-                    type="email"
-                    {...registerDetails('email', { required: true, pattern: /^[^\s@]+@gmail\.com$/i })}
-                    className="w-full rounded-xl border border-ink-900/15 px-4 py-3 text-sm outline-none focus:border-ink-950"
-                  />
-                  {detailsErrors.email && (
-                    <p className="mt-1 text-xs text-red-500">
-                      {detailsErrors.email.type === 'pattern' ? dict.auth.emailMustBeGmail : 'Majburiy maydon'}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="mb-1.5 block text-xs font-semibold text-ink-900/60">{dict.auth.address}</label>
-                  <input
-                    {...registerDetails('address', { required: true })}
-                    className="w-full rounded-xl border border-ink-900/15 px-4 py-3 text-sm outline-none focus:border-ink-950"
-                  />
-                  {detailsErrors.address && <p className="mt-1 text-xs text-red-500">Majburiy maydon</p>}
-                </div>
+                {/* EMAIL va MANZIL maydonlari olib tashlandi — ro'yxatdan
+                    o'tish endi faqat TELEFON RAQAMI bilan: raqam yuqoridagi
+                    qadamda SMS kod orqali tasdiqlangan, shundan keyin ism,
+                    familiya va parol yetarli.
+                    Manzil birinchi buyurtma berishda so'raladi va o'sha
+                    yerda profilga saqlanadi (checkout sahifasi), keyingi
+                    buyurtmalarda tayyor holda chiqadi — shuning uchun uni
+                    ro'yxatdan o'tishda ikkinchi marta so'rashning hojati
+                    yo'q. Backendda ham ikkala maydon ixtiyoriy qilingan
+                    (register.input.ts). */}
 
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-ink-900/60">{dict.auth.password}</label>
@@ -462,14 +455,6 @@ export default function RegisterPage({ params }: { params: { locale: Locale } })
                 <div className="flex items-center justify-between border-b border-ink-900/10 pb-2">
                   <dt className="text-ink-900/50">{dict.auth.lastName}</dt>
                   <dd className="font-semibold">{details.lastName}</dd>
-                </div>
-                <div className="flex items-center justify-between border-b border-ink-900/10 pb-2">
-                  <dt className="text-ink-900/50">{dict.auth.email}</dt>
-                  <dd className="font-semibold">{details.email}</dd>
-                </div>
-                <div className="flex items-center justify-between border-b border-ink-900/10 pb-2">
-                  <dt className="text-ink-900/50">{dict.auth.address}</dt>
-                  <dd className="font-semibold">{details.address}</dd>
                 </div>
                 <div className="flex items-center justify-between border-b border-ink-900/10 pb-2">
                   <dt className="text-ink-900/50">{dict.auth.confirmPasswordLabel}</dt>

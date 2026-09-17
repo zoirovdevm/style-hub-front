@@ -46,7 +46,13 @@ export default async function ShopPage({ params, searchParams }: ShopPageProps) 
     minPrice: searchParams.minPrice ? Number(searchParams.minPrice) : undefined,
     maxPrice: searchParams.maxPrice ? Number(searchParams.maxPrice) : undefined,
     genderSlug: searchParams.gender || undefined,
-    sort: searchParams.sort || 'NEWEST',
+    // Do'konda sukut bo'yicha ARALASH (tasodifiy) tartib — xaridor har
+    // safar bir xil ro'yxatni emas, turli tovarlarni ko'radi. Xaridor
+    // saralashni o'zgartirsa (`?sort=`) o'sha tanlov ustun turadi.
+    // Sahifalash buzilmaydi: backend aralashtirishni soatlik "urug'"dan
+    // hisoblaydi, ya'ni 2-sahifada ro'yxat qaytadan aralashib ketmaydi
+    // (product.service.ts, seededRandom izohiga qarang).
+    sort: searchParams.sort || 'RANDOM',
     page,
     limit: LIMIT,
   };
