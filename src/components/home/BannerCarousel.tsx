@@ -21,8 +21,8 @@ interface BannerCarouselProps {
   locale: Locale;
 }
 
-// Avtomatik almashinish oralig'i.
-const AUTOPLAY_MS = 5000;
+// Avtomatik almashinish oralig'i — 3 soniya.
+const AUTOPLAY_MS = 3000;
 
 // Bosh sahifadagi reklama karuseli.
 //
