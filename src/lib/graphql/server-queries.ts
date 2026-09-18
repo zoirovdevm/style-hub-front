@@ -72,7 +72,18 @@ export const GET_GENDERS_STR = `
 
 export const GET_SITE_SETTINGS_STR = `
   query SiteSettings {
-    siteSettings { heroImage contactAddress contactPhone contactTelegram contactEmail }
+    siteSettings {
+      heroImage
+      contactAddress
+      contactPhone
+      contactTelegram
+      contactEmail
+      socialTelegram
+      socialInstagram
+      socialTiktok
+      paymentCardNumber
+      paymentCardHolder
+    }
   }
 `;
 

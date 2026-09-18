@@ -8,6 +8,7 @@ import { GET_MY_CART, GET_MY_WISHLIST } from '@/lib/graphql/queries';
 import { useAuthStore } from '@/lib/store/auth-store';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { ThemeToggle } from './ThemeToggle';
+import { MobileSearchBar } from './MobileSearchBar';
 import type { Locale } from '@/i18n/config';
 import type { Dictionary } from '@/i18n/get-dictionary';
 
@@ -189,6 +190,14 @@ export function Header({ locale, dict }: HeaderProps) {
         </div>
         </div>
       </div>
+
+      {/* Qidiruv + sevimlilar qatori — header'ning IKKINCHI qatori, faqat
+          kichik ekranlarda. <header> `fixed` bo'lgani uchun u ham shu
+          bilan birga joyida qotib turadi: sahifa qanchalik surilmasin,
+          qidiruv va yurakcha doim ko'rinib turadi (avval bu qator
+          <main> ichida edi va mazmun bilan birga tepaga surilib
+          ketardi). <main>'dagi bo'shliq uchun — MobileSearchBarSpacer. */}
+      <MobileSearchBar locale={locale} dict={dict} />
     </header>
   );
 }

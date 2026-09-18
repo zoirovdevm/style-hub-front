@@ -5,9 +5,11 @@ import { Providers } from '@/components/providers/Providers';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { MobileBottomNav } from '@/components/layout/MobileBottomNav';
-import { MobileSearchBar } from '@/components/layout/MobileSearchBar';
+import { MobileSearchBarSpacer } from '@/components/layout/MobileSearchBar';
 import { locales, type Locale } from '@/i18n/config';
 import { getDictionary } from '@/i18n/get-dictionary';
+import { serverFetchGraphQL } from '@/lib/graphql/server-fetch';
+import { GET_SITE_SETTINGS_STR } from '@/lib/graphql/server-queries';
 import { SITE_URL, SITE_NAME, BRAND_ALTERNATE_NAMES, BRAND_SOCIAL_LINKS, SITE_DESCRIPTION } from '@/lib/seo/site';
 
 const inter = Inter({ subsets: ['latin', 'cyrillic'], variable: '--font-sans', display: 'swap' });
@@ -118,6 +120,20 @@ export default async function LocaleLayout({
 }) {
   const dict = await getDictionary(params.locale);
 
+  // Footer'dagi Telegram/Instagram havolalari admin panelning
+  // "Sozlamalar" bo'limidan keladi. Serverda o'qiladi (brauzerdan
+  // qo'shimcha so'rov yubormaslik uchun); backend javob bermasa —
+  // footer o'zining standart havolalariga qaytadi, sahifa buzilmaydi.
+  const siteSettings = await serverFetchGraphQL<{
+    siteSettings: {
+      socialTelegram?: string | null;
+      socialInstagram?: string | null;
+      socialTiktok?: string | null;
+    } | null;
+  }>(GET_SITE_SETTINGS_STR, undefined, 300)
+    .then((r) => r.siteSettings)
+    .catch(() => null);
+
   // Structured data (JSON-LD) — Google qidiruv natijasida sayt nomini,
   // logotipini va ichki qidiruv maydonini to'g'ri ko'rsatishi uchun.
   // Organization: "bu qanday tashkilot"; WebSite + SearchAction: Google
@@ -207,17 +223,24 @@ export default async function LocaleLayout({
               space, sized to match the header's own gap + pill height
               exactly (pt-3 + h-14 = 68px on mobile, pt-4 + h-[68px] = 84px
               from sm: up).
-              MobileSearchBar — header ostidagi qidiruv qatori (chapda
-              qidiruv, o'ngda sevimlilar), faqat kichik ekranlarda
-              (`lg:hidden`). U <main> ICHIDA, hamma sahifa mazmunidan
-              oldin turadi — shunda har bir sahifada aynan headerdan keyin
-              ko'rinadi va layout'ning tepa bo'shlig'i bilan to'g'ri
-              joylashadi. */}
+              Qidiruv qatorining O'ZI endi Header ichida (u ham `fixed`,
+              shuning uchun scroll qilinganda header bilan birga joyida
+              turadi); bu yerda faqat uning o'rnini egallaydigan bo'shliq
+              chiziladi, aks holda sahifaning birinchi bloki o'sha
+              qatorning ostiga kirib ketardi. Bo'shliq ham, qatorning
+              o'zi ham bir xil qoida bilan yashirinadi (admin panelda
+              ko'rsatilmaydi) — MobileSearchBar.tsx izohiga qarang. */}
           <main className="min-h-[70vh] pt-[68px] sm:pt-[84px]">
-            <MobileSearchBar locale={params.locale} dict={dict} />
+            <MobileSearchBarSpacer locale={params.locale} />
             {children}
           </main>
-          <Footer locale={params.locale} dict={dict} />
+          <Footer
+            locale={params.locale}
+            dict={dict}
+            telegramUrl={siteSettings?.socialTelegram}
+            instagramUrl={siteSettings?.socialInstagram}
+            tiktokUrl={siteSettings?.socialTiktok}
+          />
           {/* Clears the fixed MobileBottomNav below on small screens so the
               end of the Footer isn't hidden behind it; not needed on lg+
               where that nav is hidden. Taller than the nav's own height

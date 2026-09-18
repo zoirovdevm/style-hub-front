@@ -420,6 +420,13 @@ export const CAN_REVIEW_PRODUCT = gql`
 export const GET_SITE_SETTINGS = gql`
   query SiteSettings {
     siteSettings {
+      # Footer ikonkalari (Telegram/Instagram) va to'lov kartasi —
+      # ikkalasi ham admin panelning "Sozlamalar" bo'limidan boshqariladi.
+      socialTelegram
+      socialInstagram
+      socialTiktok
+      paymentCardNumber
+      paymentCardHolder
       id
       heroImage
       contactAddress

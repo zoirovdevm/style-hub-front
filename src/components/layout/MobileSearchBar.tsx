@@ -19,6 +19,17 @@ interface MobileSearchBarProps {
 // (`lg:hidden`). Uzum Market'dagi kabi: chapda keng qidiruv maydoni,
 // o'ng chetida sevimlilar (yurakcha) tugmasi.
 //
+// JOYLASHUVI: bu komponent Header.tsx ICHIDA, suzib turuvchi (`fixed`)
+// <header> tegining ikkinchi qatori sifatida chiziladi. Ilgari u
+// layout.tsx da, <main> boshida turardi va sahifa bilan birga tepaga
+// surilib ketardi; endi esa header bilan BIRGA joyida qotib turadi —
+// xaridor qayerga scroll qilmasin, qidiruv va yurakcha doim ko'rinadi,
+// hamma sahifada.
+//
+// Sahifa mazmuni uning ostidan boshlanishi uchun <main> ichiga xuddi
+// shunday balandlikdagi bo'shliq qo'yiladi — pastdagi
+// MobileSearchBarSpacer'ga qarang.
+//
 // Sevimlilar aynan shu yerga ko'chirildi va pastki navigatsiyadan olib
 // tashlandi (MobileBottomNav.tsx ga qarang) — pastda uning o'rniga
 // "Kategoriyalar" turadi.
@@ -63,8 +74,13 @@ export function MobileSearchBar({ locale, dict }: MobileSearchBarProps) {
   if (pathname?.startsWith(`/${locale}/admin`)) return null;
 
   return (
-    <div className="container-app pb-1 pt-3 lg:hidden">
-      <div className="flex items-center gap-2">
+    // Header'ning o'zi kabi suzib turuvchi "tabletka" (pill): qidiruv va
+    // yurakcha bitta oq/qora yuzada turadi. Bu shart — element endi
+    // `fixed` header ichida bo'lgani uchun sahifa mazmuni uning ORTIDAN
+    // surilib o'tadi; o'z foni bo'lmasa, harflar bir-birining ustiga
+    // tushib o'qib bo'lmas holga kelardi.
+    <div className="container-app mt-2 lg:hidden">
+      <div className="transform-gpu flex items-center gap-2 rounded-full border border-black/10 bg-white px-2 py-2 shadow-lg dark:border-white/10 dark:bg-[rgba(10,10,12,0.92)] dark:backdrop-blur-[8px]">
         <form onSubmit={handleSubmit} className="relative min-w-0 flex-1">
           <Search
             size={17}
@@ -79,7 +95,7 @@ export function MobileSearchBar({ locale, dict }: MobileSearchBarProps) {
             // `w-full` + ota `min-w-0` — 320px kenglikdagi ekranda ham
             // maydon qisilib, yurakcha tugmasini tashqariga itarib
             // yubormaydi (gorizontal scroll chiqmasligi shundan).
-            className="h-11 w-full rounded-full border border-ink-900/10 bg-white pl-10 pr-4 text-sm text-ink-950 outline-none transition-colors placeholder:text-ink-900/40 focus:border-gold-500 dark:border-cream/12 dark:bg-ink-900/70 dark:text-cream dark:placeholder:text-cream/40 dark:focus:border-gold-400"
+            className="h-10 w-full rounded-full border border-ink-900/10 bg-ink-900/[0.04] pl-10 pr-4 text-sm text-ink-950 outline-none transition-colors placeholder:text-ink-900/40 focus:border-gold-500 dark:border-cream/12 dark:bg-cream/[0.06] dark:text-cream dark:placeholder:text-cream/40 dark:focus:border-gold-400"
           />
         </form>
 
@@ -87,7 +103,7 @@ export function MobileSearchBar({ locale, dict }: MobileSearchBarProps) {
           href={`/${locale}/wishlist`}
           prefetch={false}
           aria-label={dict.nav.wishlist}
-          className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-ink-900/10 bg-white text-ink-900 transition-colors active:bg-ink-900/5 dark:border-cream/12 dark:bg-ink-900/70 dark:text-cream"
+          className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-ink-900/10 bg-ink-900/[0.04] text-ink-900 transition-colors active:bg-ink-900/10 dark:border-cream/12 dark:bg-cream/[0.06] dark:text-cream"
         >
           <Heart size={19} />
           {wishlistCount > 0 && (
@@ -99,4 +115,21 @@ export function MobileSearchBar({ locale, dict }: MobileSearchBarProps) {
       </div>
     </div>
   );
+}
+
+// <main> ichidagi bo'shliq — yuqoridagi qatorning o'rnini egallaydi.
+//
+// NEGA ALOHIDA KOMPONENT: qidiruv qatori `fixed` header ichida, ya'ni
+// hujjat oqimidan tashqarida — u o'zidan keyingi mazmunni pastga
+// itarmaydi. Bo'shliqni layout.tsx dagi <main>'ning doimiy paddingiga
+// qo'shib qo'yish esa noto'g'ri bo'lardi: admin panelda qidiruv qatori
+// umuman chizilmaydi (pastdagi bir xil tekshiruv), shunda tepada
+// sababsiz bo'sh joy qolib ketardi. Ikkalasi ham bitta qoidaga
+// bo'ysungani uchun bo'shliq doim qatorning haqiqiy holatiga mos keladi.
+//
+// Balandligi: mt-2 (8px) + py-2 (16px) + h-10 (40px) = 64px = h-16.
+export function MobileSearchBarSpacer({ locale }: { locale: Locale }) {
+  const pathname = usePathname();
+  if (pathname?.startsWith(`/${locale}/admin`)) return null;
+  return <div aria-hidden="true" className="h-16 lg:hidden" />;
 }

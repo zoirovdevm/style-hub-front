@@ -1,12 +1,69 @@
 'use client';
 
 import Link from 'next/link';
-import { Facebook, Instagram, Send } from 'lucide-react';
+import { Instagram, Send } from 'lucide-react';
 import type { Locale } from '@/i18n/config';
 import type { Dictionary } from '@/i18n/get-dictionary';
+import { BRAND_SOCIAL_LINKS } from '@/lib/seo/site';
 
-export function Footer({ locale, dict }: { locale: Locale; dict: Dictionary }) {
+// BRAND_SOCIAL_LINKS — JSON-LD (`sameAs`) uchun ham ishlatiladigan bitta
+// manba: [Instagram, Telegram]. Admin sozlamada boshqa havola yozmaguncha
+// footer ham aynan shularni ko'rsatadi.
+const DEFAULT_INSTAGRAM_URL = BRAND_SOCIAL_LINKS[0];
+const DEFAULT_TELEGRAM_URL = BRAND_SOCIAL_LINKS[1];
+
+// TikTok ikonkasi lucide-react'da yo'q (u brend logotiplarini saqlamaydi),
+// shuning uchun shu yerda oddiy SVG sifatida chizilgan. `currentColor` —
+// qolgan ikonkalar bilan bir xil rangda bo'lishi va hover'da birga
+// o'zgarishi uchun; `size` propi ham lucide'nikiga o'xshab ishlaydi,
+// shunda pastdagi ro'yxatda uchalasi bir xil chaqiriladi.
+function TiktokIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M16.5 3c.4 2.2 1.8 3.7 4 4v2.8c-1.4.1-2.8-.3-4-1v6.6c0 3.6-2.6 6.1-6 6.1a5.9 5.9 0 0 1 0-11.8c.3 0 .6 0 .9.1v2.9a3.1 3.1 0 1 0 2.2 2.9V3h2.9Z" />
+    </svg>
+  );
+}
+
+// Ijtimoiy tarmoq havolalari admin panelning "Sozlamalar" bo'limidan
+// keladi (layout.tsx ularni serverda o'qib, shu yerga uzatadi).
+// Bo'sh bo'lsa — lib/seo/site.ts dagi standart havolalar ishlatiladi,
+// shunda footer hech qachon "#" (hech qayerga olib bormaydigan) havola
+// ko'rsatmaydi.
+//
+// Facebook ATAYLAB olib tashlandi — do'konning Facebook sahifasi yo'q,
+// ikonka esa "#" ga ishora qilib turardi.
+export function Footer({
+  locale,
+  dict,
+  telegramUrl,
+  instagramUrl,
+  tiktokUrl,
+}: {
+  locale: Locale;
+  dict: Dictionary;
+  telegramUrl?: string | null;
+  instagramUrl?: string | null;
+  tiktokUrl?: string | null;
+}) {
   const year = new Date().getFullYear();
+
+  // TikTok'da standart havola YO'Q — Telegram/Instagram'dan farqli
+  // o'laroq, u faqat admin sozlamada manzil yozgandan keyin paydo
+  // bo'ladi. Aks holda footer'da hech qayerga olib bormaydigan ikonka
+  // turib qolardi (aynan Facebook bilan shunday bo'lgan edi).
+  const socials = [
+    { Icon: Send, href: telegramUrl || DEFAULT_TELEGRAM_URL, label: 'Telegram' },
+    { Icon: Instagram, href: instagramUrl || DEFAULT_INSTAGRAM_URL, label: 'Instagram' },
+    ...(tiktokUrl ? [{ Icon: TiktokIcon, href: tiktokUrl, label: 'TikTok' }] : []),
+  ];
 
   return (
     <footer className="border-t border-ink-900/5 bg-ink-950 text-cream ">
@@ -20,10 +77,14 @@ export function Footer({ locale, dict }: { locale: Locale; dict: Dictionary }) {
           </div>
           <p className="mt-4 max-w-xs text-sm text-cream/60">{dict.home.heroSubtitle}</p>
           <div className="mt-6 flex gap-3">
-            {[Facebook, Instagram, Send].map((Icon, i) => (
+            {socials.map(({ Icon, href, label }) => (
               <a
-                key={i}
-                href="#"
+                key={label}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={label}
+                title={label}
                 className="flex h-9 w-9 items-center justify-center rounded-full border border-cream/15 transition-colors hover:border-gold-400 hover:text-gold-400"
               >
                 <Icon size={16} />

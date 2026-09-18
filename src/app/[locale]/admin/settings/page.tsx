@@ -40,7 +40,19 @@ export default function AdminSettingsPage({ params }: { params: { locale: Locale
     contactPhone: '',
     contactTelegram: '',
     contactEmail: '',
+    // Footer ikonkalari uchun to'liq havola. contactTelegram'dan farqi:
+    // u "Yordam" sahifasidagi @username, bu esa bosiladigan manzil.
+    socialTelegram: '',
+    socialInstagram: '',
+    socialTiktok: '',
   });
+
+  // To'lov kartasi — alohida forma va alohida "Saqlash" tugmasi:
+  // kontakt ma'lumoti bilan aloqasi yo'q va noto'g'ri tegib ketish
+  // xavfi bo'lmasligi kerak (bu pul boradigan joy).
+  const [cardForm, setCardForm] = useState({ paymentCardNumber: '', paymentCardHolder: '' });
+  const [savingCard, setSavingCard] = useState(false);
+  const [cardSaved, setCardSaved] = useState(false);
   const [contactSeeded, setContactSeeded] = useState(false);
   const [savingContact, setSavingContact] = useState(false);
   const [contactSaved, setContactSaved] = useState(false);
@@ -52,6 +64,13 @@ export default function AdminSettingsPage({ params }: { params: { locale: Locale
         contactPhone: data.siteSettings.contactPhone ?? '',
         contactTelegram: data.siteSettings.contactTelegram ?? '',
         contactEmail: data.siteSettings.contactEmail ?? '',
+        socialTelegram: data.siteSettings.socialTelegram ?? '',
+        socialInstagram: data.siteSettings.socialInstagram ?? '',
+        socialTiktok: data.siteSettings.socialTiktok ?? '',
+      });
+      setCardForm({
+        paymentCardNumber: data.siteSettings.paymentCardNumber ?? '',
+        paymentCardHolder: data.siteSettings.paymentCardHolder ?? '',
       });
       setContactSeeded(true);
     }
@@ -69,6 +88,24 @@ export default function AdminSettingsPage({ params }: { params: { locale: Locale
       setTimeout(() => setContactSaved(false), 3000);
     } finally {
       setSavingContact(false);
+    }
+  }
+
+  async function handleSaveCard() {
+    setSavingCard(true);
+    setCardSaved(false);
+    try {
+      await updateSiteSettings({
+        variables: { input: cardForm },
+        // Refetch — to'lov ekrani (OrderPaymentPanel) xuddi shu so'rovni
+        // `cache-first` bilan o'qiydi, shuning uchun kesh yangilanmasa
+        // eski karta ko'rinib turardi.
+        refetchQueries: [{ query: GET_SITE_SETTINGS }],
+      });
+      setCardSaved(true);
+      setTimeout(() => setCardSaved(false), 3000);
+    } finally {
+      setSavingCard(false);
     }
   }
 
@@ -192,6 +229,41 @@ export default function AdminSettingsPage({ params }: { params: { locale: Locale
               className="w-full rounded-xl border border-ink-900/15 px-4 py-3 text-sm outline-none focus:border-ink-950"
             />
           </div>
+
+          {/* Saytning eng pastidagi (footer) ikonkalar. Facebook olib
+              tashlangan — faqat Telegram va Instagram qoldi. To'liq
+              havola yoziladi; bo'sh qoldirilsa standart havola
+              ishlatiladi. */}
+          <div className="border-t border-ink-900/10 pt-3">
+            <label className="mb-1.5 block text-xs font-semibold text-ink-900/60">{dict.admin.socialTelegramLabel}</label>
+            <input
+              value={contactForm.socialTelegram}
+              onChange={(e) => setContactForm((f) => ({ ...f, socialTelegram: e.target.value }))}
+              placeholder="https://t.me/wardrobestore"
+              className="w-full rounded-xl border border-ink-900/15 px-4 py-3 text-sm outline-none focus:border-ink-950"
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-ink-900/60">{dict.admin.socialInstagramLabel}</label>
+            <input
+              value={contactForm.socialInstagram}
+              onChange={(e) => setContactForm((f) => ({ ...f, socialInstagram: e.target.value }))}
+              placeholder="https://www.instagram.com/wardrobe.uzbekistan/"
+              className="w-full rounded-xl border border-ink-900/15 px-4 py-3 text-sm outline-none focus:border-ink-950"
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-ink-900/60">{dict.admin.socialTiktokLabel}</label>
+            <input
+              value={contactForm.socialTiktok}
+              onChange={(e) => setContactForm((f) => ({ ...f, socialTiktok: e.target.value }))}
+              placeholder="https://www.tiktok.com/@wardrobestore"
+              className="w-full rounded-xl border border-ink-900/15 px-4 py-3 text-sm outline-none focus:border-ink-950"
+            />
+            {/* TikTok ikonkasi footer'da faqat shu maydon to'ldirilgandan
+                keyin paydo bo'ladi — bo'sh bo'lsa umuman chizilmaydi. */}
+            <p className="mt-1 text-xs text-ink-900/40">{dict.admin.socialTiktokHint}</p>
+          </div>
         </div>
 
         <button onClick={handleSaveContact} disabled={savingContact} className="btn-primary disabled:opacity-50">
@@ -199,6 +271,46 @@ export default function AdminSettingsPage({ params }: { params: { locale: Locale
         </button>
 
         {contactSaved && (
+          <p className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
+            <Check size={14} /> {dict.admin.savedSuccess}
+          </p>
+        )}
+      </div>
+
+      {/* ── To'lov kartasi ── */}
+      <div className="card-surface max-w-xl space-y-4 p-6">
+        <div>
+          <h2 className="text-sm font-bold uppercase tracking-wider">{dict.admin.paymentCardTitle}</h2>
+          <p className="mt-1 text-xs text-ink-900/50">{dict.admin.paymentCardHint}</p>
+        </div>
+
+        <div className="space-y-3">
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-ink-900/60">{dict.admin.paymentCardNumberLabel}</label>
+            <input
+              value={cardForm.paymentCardNumber}
+              onChange={(e) => setCardForm((f) => ({ ...f, paymentCardNumber: e.target.value }))}
+              inputMode="numeric"
+              placeholder="8600 1234 5678 9012"
+              className="w-full rounded-xl border border-ink-900/15 px-4 py-3 text-sm tracking-wider outline-none focus:border-ink-950"
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-ink-900/60">{dict.admin.paymentCardHolderLabel}</label>
+            <input
+              value={cardForm.paymentCardHolder}
+              onChange={(e) => setCardForm((f) => ({ ...f, paymentCardHolder: e.target.value }))}
+              placeholder="Muhammadjon Zoirov"
+              className="w-full rounded-xl border border-ink-900/15 px-4 py-3 text-sm outline-none focus:border-ink-950"
+            />
+          </div>
+        </div>
+
+        <button onClick={handleSaveCard} disabled={savingCard} className="btn-primary disabled:opacity-50">
+          {savingCard ? dict.admin.saving : dict.admin.save}
+        </button>
+
+        {cardSaved && (
           <p className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
             <Check size={14} /> {dict.admin.savedSuccess}
           </p>
