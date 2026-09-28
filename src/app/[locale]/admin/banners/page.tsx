@@ -28,9 +28,17 @@ const TEXT = {
     linkTitle: 'Bosilganda qayerga o’tsin?',
     linkNone: "Hech qayerga (oddiy rasm)",
     linkProduct: 'Mahsulot sahifasiga',
+    linkProducts: 'Bir nechta mahsulotga',
     linkCategory: 'Kategoriya sahifasiga',
     selectProduct: '— Mahsulotni tanlang —',
     selectCategory: '— Kategoriyani tanlang —',
+    productsHint:
+      "Kerakli tovarlarni belgilang (masalan krossovka + ko'ylak + futbolka). Banner bosilganda do'kon sahifasi faqat shu tovarlarni ko'rsatadi.",
+    productsSearch: 'Tovar nomi bo’yicha qidirish…',
+    productsSelected: 'Tanlangan',
+    productsNotFound: 'Tovar topilmadi',
+    productsClear: 'Tanlovni tozalash',
+    selectProductsError: 'Kamida bitta mahsulotni tanlang',
     order: 'Tartib raqami',
     orderHint: 'Kichik raqam oldinroq turadi',
     active: 'Faol (saytda ko’rinsin)',
@@ -60,9 +68,17 @@ const TEXT = {
     linkTitle: 'Куда вести при нажатии?',
     linkNone: 'Никуда (просто картинка)',
     linkProduct: 'На страницу товара',
+    linkProducts: 'На несколько товаров',
     linkCategory: 'На страницу категории',
     selectProduct: '— Выберите товар —',
     selectCategory: '— Выберите категорию —',
+    productsHint:
+      'Отметьте нужные товары (например кроссовки + рубашка + футболка). При нажатии на баннер в магазине покажутся только они.',
+    productsSearch: 'Поиск по названию товара…',
+    productsSelected: 'Выбрано',
+    productsNotFound: 'Товары не найдены',
+    productsClear: 'Очистить выбор',
+    selectProductsError: 'Выберите хотя бы один товар',
     order: 'Порядок',
     orderHint: 'Меньше число — раньше в списке',
     active: 'Активен (показывать на сайте)',
@@ -79,7 +95,9 @@ const TEXT = {
   },
 } as const;
 
-type LinkType = 'NONE' | 'PRODUCT' | 'CATEGORY';
+// "PRODUCTS" — bitta bannerga bir nechta tovar biriktiriladi
+// (backenddagi ro'yxat bilan bir xil: banner.input.ts, BANNER_LINK_TYPES).
+type LinkType = 'NONE' | 'PRODUCT' | 'PRODUCTS' | 'CATEGORY';
 
 const EMPTY_FORM = {
   image: '',
@@ -87,10 +105,21 @@ const EMPTY_FORM = {
   titleRu: '',
   linkType: 'NONE' as LinkType,
   productId: '',
+  // Tanlangan tovarlar tartibi saqlanadi — shu tartibda bazaga yoziladi.
+  productIds: [] as string[],
   categoryId: '',
   isActive: true,
   sortOrder: 0,
 };
+
+// Qidiruv uchun oddiy normallashtirish: katta-kichik harf va o'zbekcha
+// apostrof variantlari ("o'" / "o‘" / "o’") farq qilmasligi uchun.
+function normalize(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[’‘`´]/g, "'")
+    .trim();
+}
 
 export default function AdminBannersPage({ params }: { params: { locale: Locale } }) {
   const { locale } = params;
@@ -114,16 +143,35 @@ export default function AdminBannersPage({ params }: { params: { locale: Locale 
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Ko'p tovarli banner uchun ro'yxat ichidagi qidiruv maydoni.
+  const [productQuery, setProductQuery] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const banners = data?.adminBanners ?? [];
   const categories = categoriesData?.categories ?? [];
   const products = productsData?.productsAdmin?.list ?? [];
 
+  // Qidiruv bo'sh bo'lsa — hamma tovar. Ro'yxat balandligi cheklangan
+  // (scroll), shuning uchun yuzlab tovar ham sahifani cho'zib yubormaydi.
+  const productSearch = normalize(productQuery);
+  const visibleProducts = productSearch
+    ? products.filter((p: any) => normalize(String(p.title ?? '')).includes(productSearch))
+    : products;
+
+  function toggleProduct(id: string) {
+    setForm((f) => ({
+      ...f,
+      productIds: f.productIds.includes(id)
+        ? f.productIds.filter((x) => x !== id)
+        : [...f.productIds, id],
+    }));
+  }
+
   function resetForm() {
-    setForm({ ...EMPTY_FORM });
+    setForm({ ...EMPTY_FORM, productIds: [] });
     setEditingId(null);
     setError(null);
+    setProductQuery('');
   }
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -148,12 +196,15 @@ export default function AdminBannersPage({ params }: { params: { locale: Locale 
   function startEdit(banner: any) {
     setEditingId(banner.id);
     setError(null);
+    setProductQuery('');
     setForm({
       image: banner.image,
       title: banner.title ?? '',
       titleRu: banner.titleRu ?? '',
       linkType: (banner.linkType ?? 'NONE') as LinkType,
       productId: banner.productId ?? '',
+      // Avval tanlangan tovarlar belgilangan holda ochiladi.
+      productIds: (banner.products ?? []).map((p: any) => p.id),
       categoryId: banner.categoryId ?? '',
       isActive: banner.isActive,
       sortOrder: banner.sortOrder ?? 0,
@@ -170,6 +221,10 @@ export default function AdminBannersPage({ params }: { params: { locale: Locale 
       setError(t.selectProductError);
       return;
     }
+    if (form.linkType === 'PRODUCTS' && form.productIds.length === 0) {
+      setError(t.selectProductsError);
+      return;
+    }
     if (form.linkType === 'CATEGORY' && !form.categoryId) {
       setError(t.selectCategoryError);
       return;
@@ -184,6 +239,7 @@ export default function AdminBannersPage({ params }: { params: { locale: Locale 
       // linkType bo'yicha keraksizini o'zi tozalaydi (banner.service.ts,
       // normalizeLink).
       productId: form.linkType === 'PRODUCT' ? form.productId : undefined,
+      productIds: form.linkType === 'PRODUCTS' ? form.productIds : undefined,
       categoryId: form.linkType === 'CATEGORY' ? form.categoryId : undefined,
       isActive: form.isActive,
       sortOrder: Number(form.sortOrder) || 0,
@@ -288,6 +344,7 @@ export default function AdminBannersPage({ params }: { params: { locale: Locale 
               [
                 ['NONE', t.linkNone],
                 ['PRODUCT', t.linkProduct],
+                ['PRODUCTS', t.linkProducts],
                 ['CATEGORY', t.linkCategory],
               ] as [LinkType, string][]
             ).map(([value, label]) => (
@@ -319,6 +376,66 @@ export default function AdminBannersPage({ params }: { params: { locale: Locale 
                 </option>
               ))}
             </select>
+          )}
+
+          {/* ── Bir nechta tovar tanlash ──
+              Bitta bannerga bir NECHTA tovar biriktiriladi. Ro'yxat
+              belgilash (checkbox) usulida: "select multiple" bo'lsa admin
+              Ctrl tugmasini bosib turishi kerak bo'lardi va bitta
+              noto'g'ri bosishda butun tanlov yo'qolardi. */}
+          {form.linkType === 'PRODUCTS' && (
+            <div className="space-y-2">
+              <p className="text-xs text-ink-900/45 dark:text-cream/45">{t.productsHint}</p>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  value={productQuery}
+                  onChange={(e) => setProductQuery(e.target.value)}
+                  placeholder={t.productsSearch}
+                  className={`${inputClass} sm:max-w-sm`}
+                />
+                <span className="text-xs font-semibold text-ink-900/50 dark:text-cream/50">
+                  {t.productsSelected}: {form.productIds.length}
+                </span>
+                {form.productIds.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, productIds: [] }))}
+                    className="text-xs font-semibold text-ink-900/45 underline-offset-2 hover:underline dark:text-cream/45"
+                  >
+                    {t.productsClear}
+                  </button>
+                )}
+              </div>
+
+              {/* Balandligi cheklangan — tovar ko'p bo'lsa ichida
+                  aylantiriladi, sahifa esa cho'zilib ketmaydi. */}
+              <div className="max-h-72 space-y-1 overflow-y-auto rounded-xl border border-ink-900/12 p-2 dark:border-cream/12">
+                {visibleProducts.length === 0 ? (
+                  <p className="px-2 py-3 text-sm text-ink-900/45 dark:text-cream/45">{t.productsNotFound}</p>
+                ) : (
+                  visibleProducts.map((p: any) => {
+                    const checked = form.productIds.includes(p.id);
+                    return (
+                      <label
+                        key={p.id}
+                        className={`flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 transition-colors ${
+                          checked ? 'bg-gold-500/10' : 'hover:bg-ink-900/5 dark:hover:bg-cream/5'
+                        }`}
+                      >
+                        <Checkbox checked={checked} onChange={() => toggleProduct(p.id)} />
+                        {p.images?.[0] && (
+                          <span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md bg-ink-900/5">
+                            <Image src={p.images[0]} alt="" fill className="object-cover" unoptimized />
+                          </span>
+                        )}
+                        <span className="min-w-0 flex-1 truncate text-sm">{p.title}</span>
+                      </label>
+                    );
+                  })
+                )}
+              </div>
+            </div>
           )}
 
           {form.linkType === 'CATEGORY' && (
@@ -401,9 +518,13 @@ export default function AdminBannersPage({ params }: { params: { locale: Locale 
                   <p className="mt-0.5 truncate text-xs text-ink-900/45 dark:text-cream/45">
                     {banner.linkType === 'PRODUCT'
                       ? `${t.linkProduct}: ${banner.productTitle ?? '—'}`
-                      : banner.linkType === 'CATEGORY'
-                        ? `${t.linkCategory}: ${banner.categoryName ?? '—'}`
-                        : t.linkNone}
+                      : banner.linkType === 'PRODUCTS'
+                        ? `${t.linkProducts}: ${(banner.products ?? [])
+                            .map((p: any) => p.title)
+                            .join(', ')}`
+                        : banner.linkType === 'CATEGORY'
+                          ? `${t.linkCategory}: ${banner.categoryName ?? '—'}`
+                          : t.linkNone}
                   </p>
                   {!banner.isActive && (
                     <span className="mt-1 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-700">

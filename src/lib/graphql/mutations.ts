@@ -417,3 +417,41 @@ export const REMOVE_BANNER = gql`
     removeBanner(id: $id)
   }
 `;
+
+// ── PROMOKODLAR ───────────────────────────────────────────────────────
+export const CREATE_PROMO_CODE = gql`
+  mutation CreatePromoCode($input: CreatePromoCodeInput!) {
+    createPromoCode(input: $input) {
+      id
+    }
+  }
+`;
+
+export const UPDATE_PROMO_CODE = gql`
+  mutation UpdatePromoCode($id: ID!, $input: UpdatePromoCodeInput!) {
+    updatePromoCode(id: $id, input: $input) {
+      id
+    }
+  }
+`;
+
+export const REMOVE_PROMO_CODE = gql`
+  mutation RemovePromoCode($id: ID!) {
+    removePromoCode(id: $id)
+  }
+`;
+
+// Xaridor kiritgan kodni to'lovdan OLDIN tekshirish. Xatolik otilmaydi —
+// javobdagi `valid` va `message` ga qaraladi.
+export const CHECK_PROMO_CODE = gql`
+  mutation CheckPromoCode($input: PromoCodeCheckInput!) {
+    checkPromoCode(input: $input) {
+      valid
+      code
+      message
+      eligibleAmount
+      discount
+      total
+    }
+  }
+`;

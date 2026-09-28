@@ -70,7 +70,7 @@ export function Footer({
       <div className="container-app grid gap-10 py-16 sm:grid-cols-2 lg:grid-cols-4">
         <div>
           <div
-            className="font-display text-xl font-semibold uppercase"
+            className="brand-wordmark text-xl font-semibold uppercase"
             style={{ letterSpacing: '0.25em' }}
           >
             Wardrobe

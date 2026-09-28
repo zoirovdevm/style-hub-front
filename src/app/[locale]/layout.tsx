@@ -2,10 +2,12 @@ import type { Metadata, Viewport } from 'next';
 import { Inter, Playfair_Display } from 'next/font/google';
 import '../globals.css';
 import { Providers } from '@/components/providers/Providers';
-import { Header } from '@/components/layout/Header';
+// Header endi to'g'ridan-to'g'ri emas, HeaderGate orqali chiziladi —
+// u profil sahifasida telefonda headerni yashiradi (izohi shu
+// faylning o'zida).
+import { HeaderGate } from '@/components/layout/HeaderGate';
 import { Footer } from '@/components/layout/Footer';
 import { MobileBottomNav } from '@/components/layout/MobileBottomNav';
-import { MobileSearchBarSpacer } from '@/components/layout/MobileSearchBar';
 import { locales, type Locale } from '@/i18n/config';
 import { getDictionary } from '@/i18n/get-dictionary';
 import { serverFetchGraphQL } from '@/lib/graphql/server-fetch';
@@ -213,27 +215,16 @@ export default async function LocaleLayout({
       </head>
       <body>
         <Providers>
-          <Header locale={params.locale} dict={dict} />
-          {/* Header is `fixed`, not `sticky` — it floats over the page
-              instead of reserving its own space in the flow (that's what
-              lets its top gap show real page content, e.g. the homepage
-              hero, blurred through instead of a mismatched plain
-              background — see Header.tsx). Since fixed elements don't push
-              content down on their own, this padding replaces that lost
-              space, sized to match the header's own gap + pill height
-              exactly (pt-3 + h-14 = 68px on mobile, pt-4 + h-[68px] = 84px
-              from sm: up).
-              Qidiruv qatorining O'ZI endi Header ichida (u ham `fixed`,
-              shuning uchun scroll qilinganda header bilan birga joyida
-              turadi); bu yerda faqat uning o'rnini egallaydigan bo'shliq
-              chiziladi, aks holda sahifaning birinchi bloki o'sha
-              qatorning ostiga kirib ketardi. Bo'shliq ham, qatorning
-              o'zi ham bir xil qoida bilan yashirinadi (admin panelda
-              ko'rsatilmaydi) — MobileSearchBar.tsx izohiga qarang. */}
-          <main className="min-h-[70vh] pt-[68px] sm:pt-[84px]">
-            <MobileSearchBarSpacer locale={params.locale} />
-            {children}
-          </main>
+          <HeaderGate locale={params.locale} dict={dict} />
+          {/* Header endi `fixed` EMAS: yuqori qator oddiy oqimda
+              (scroll qilinganda sahifa bilan ketadi), asosiy qator esa
+              `sticky top-0` (Header.tsx). Sticky element hujjat oqimida
+              o'z joyini egallaydi, shuning uchun bu yerda avvalgidek
+              sun'iy `pt-[68px] sm:pt-[84px]` berish SHART EMAS — aksincha,
+              u endi tepada bo'sh joy qoldirib ketardi. Shu sababli
+              MobileSearchBarSpacer ham olib tashlandi: qidiruv qatori
+              sticky blok ichida, ya'ni o'z joyini o'zi egallaydi. */}
+          <main className="min-h-[70vh]">{children}</main>
           <Footer
             locale={params.locale}
             dict={dict}

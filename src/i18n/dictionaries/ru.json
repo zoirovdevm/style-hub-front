@@ -13,7 +13,15 @@
     "contact": "Поддержка",
     "about": "О нас",
     "admin": "Админ-панель",
-    "searchPlaceholder": "Поиск товара или категории"
+    "searchPlaceholder": "Поиск товаров...",
+    "category": "Категории",
+    "allCategories": "Все категории",
+    "brandTagline": "Style lives here",
+    "searchResults": "Результаты поиска",
+    "searchNoResults": "Товар не найден",
+    "searchAllResults": "Все результаты",
+    "searchHistory": "Недавние запросы",
+    "searchHistoryClear": "Очистить"
   },
   "home": {
     "heroEyebrow": "Новая сезонная коллекция",
@@ -131,6 +139,17 @@
     "empty": "Список избранного пуст"
   },
   "checkout": {
+    "region": "Область",
+    "regionPlaceholder": "— Выберите область —",
+    "district": "Район / город",
+    "districtPlaceholder": "— Выберите район —",
+    "addressPlaceholder": "Улица, дом, квартира, ориентир",
+    "promoTitle": "Промокод",
+    "promoPlaceholder": "Введите код",
+    "promoApply": "Применить",
+    "promoTotal": "К оплате",
+    "promoInvalid": "Промокод не применён",
+    "promoNeedPhone": "Сначала введите номер телефона",
     "title": "Оформление заказа",
     "deliveryInfo": "Информация о доставке",
     "address": "Адрес",
@@ -256,6 +275,9 @@
     "myOrders": "Мои заказы",
     "ordersTab": "Заказы",
     "infoTab": "Мои данные",
+    "themeTab": "Тема",
+    "languageTab": "Язык",
+    "back": "Назад",
     "allOrders": "Все заказы",
     "paidOrders": "Оплаченные",
     "unpaidOrders": "Неоплаченные",
@@ -312,6 +334,7 @@
     "followUs": "Мы в соцсетях"
   },
   "admin": {
+    "promoCodes": "Промокоды",
     "dashboard": "Панель управления",
     "refresh": "Обновить",
     "users": "Пользователи",

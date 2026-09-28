@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useRef, useState } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { Heart, Search } from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import { Heart } from 'lucide-react';
 import { useQuery } from '@apollo/client';
 import { GET_MY_WISHLIST } from '@/lib/graphql/queries';
 import { useAuthStore } from '@/lib/store/auth-store';
+import { HeaderSearch } from './HeaderSearch';
 import type { Locale } from '@/i18n/config';
 import type { Dictionary } from '@/i18n/get-dictionary';
 
@@ -16,57 +17,47 @@ interface MobileSearchBarProps {
 }
 
 // Header ostidagi qidiruv qatori — FAQAT kichik ekranlar uchun
-// (`lg:hidden`). Uzum Market'dagi kabi: chapda keng qidiruv maydoni,
-// o'ng chetida sevimlilar (yurakcha) tugmasi.
+// (`lg:hidden`). Chapda qidiruv maydoni, o'ng chetida sevimlilar
+// (yurakcha) tugmasi; maydonga bosilganda yurakcha "Bekor qilish"
+// tugmasiga almashadi.
 //
-// JOYLASHUVI: bu komponent Header.tsx ICHIDA, suzib turuvchi (`fixed`)
-// <header> tegining ikkinchi qatori sifatida chiziladi. Ilgari u
-// layout.tsx da, <main> boshida turardi va sahifa bilan birga tepaga
-// surilib ketardi; endi esa header bilan BIRGA joyida qotib turadi —
-// xaridor qayerga scroll qilmasin, qidiruv va yurakcha doim ko'rinadi,
-// hamma sahifada.
+// QIDIRUV MANTIG'I — DESKTOP BILAN AYNAN BIR XIL: bu yerda alohida
+// qidiruv yozilmagan, kompyuterdagi headerda ishlatiladigan
+// `HeaderSearch` komponentining O'ZI chiziladi. Ya'ni yozilgan harf
+// bo'yicha darhol chiqadigan natijalar paneli (tovarlar, kategoriyalar),
+// oxirgi qidiruvlar tarixi, klaviatura bilan boshqarish va Enter
+// bosilganda do'kon sahifasiga o'tish — hammasi bir xil ishlaydi.
+// Avval bu yerda oddiy `form` turardi: u faqat Enter bosilganda
+// /shop?search=... ga yuborardi, natijalar paneli esa umuman yo'q edi.
 //
-// Sahifa mazmuni uning ostidan boshlanishi uchun <main> ichiga xuddi
-// shunday balandlikdagi bo'shliq qo'yiladi — pastdagi
-// MobileSearchBarSpacer'ga qarang.
-//
-// Sevimlilar aynan shu yerga ko'chirildi va pastki navigatsiyadan olib
-// tashlandi (MobileBottomNav.tsx ga qarang) — pastda uning o'rniga
-// "Kategoriyalar" turadi.
-//
-// Qidiruv mavjud /shop sahifasining `search` parametriga yuboradi, ya'ni
-// hech qanday yangi qidiruv mantig'i yozilmagan: filtrlar, saralash va
-// sahifalash avvalgidek ishlayveradi.
+// JOYLASHUVI: komponent headerdan TASHQARIDA, HeaderGate ichida
+// `sticky` holatda chiziladi — shuning uchun sahifa scroll qilinganda
+// headerning yuqori qismi tepaga chiqib ketadi, bu qator esa ekran
+// tepasida yopishib qoladi.
 export function MobileSearchBar({ locale, dict }: MobileSearchBarProps) {
-  const router = useRouter();
   const pathname = usePathname();
   const user = useAuthStore((s) => s.user);
 
   const { data: wishlistData } = useQuery(GET_MY_WISHLIST, { skip: !user, fetchPolicy: 'cache-first' });
   const wishlistCount = wishlistData?.myWishlist?.length ?? 0;
 
-  // Do'kon sahifasida turganda maydon URL'dagi joriy qidiruvni ko'rsatib
-  // turadi (xaridor nima qidirganini unutmasligi uchun); boshqa
-  // sahifalarda bo'sh bo'ladi.
-  //
-  // DIQQAT: bu yerda ataylab `useSearchParams()` ishlatilmadi. Bu komponent
-  // layout.tsx orqali HAR BIR sahifada chiziladi, `useSearchParams` esa
-  // butun sahifani dinamik render qilishga majburlaydi (build paytida
-  // "should be wrapped in a suspense boundary" xatosi) — ya'ni statik
-  // sahifalar (about, terms va h.k.) sekinlashardi. O'rniga qiymat
-  // brauzerdagi manzildan o'qiladi: natija bir xil, lekin render
-  // strategiyasiga tegmaydi.
-  const [value, setValue] = useState('');
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const q = new URLSearchParams(window.location.search).get('search') ?? '';
-    setValue(q);
-  }, [pathname]);
+  // Qidiruv maydoniga bosilganda (fokus) yurakcha tugmasi "Bekor qilish"
+  // tugmasiga almashadi.
+  const [focused, setFocused] = useState(false);
+  // Har bosilganda 1 ga oshadi — HeaderSearch shu o'zgarishni ko'rib
+  // natijalar panelini yopadi (uning `closeToken` izohiga qarang).
+  const [closeToken, setCloseToken] = useState(0);
+  const rowRef = useRef<HTMLDivElement>(null);
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const q = value.trim();
-    router.push(q ? `/${locale}/shop?search=${encodeURIComponent(q)}` : `/${locale}/shop`);
+  function handleCancel() {
+    // `blur()` — telefonda klaviaturani yopadigan yagona ishonchli yo'l.
+    // Fokus qidiruv maydonida bo'lgani uchun uni shu yerdan olib
+    // tashlaymiz.
+    const active = typeof document !== 'undefined' ? (document.activeElement as HTMLElement | null) : null;
+    active?.blur();
+    setFocused(false);
+    // Pastdagi natijalar oynasi ham yopiladi.
+    setCloseToken((t) => t + 1);
   }
 
   // Admin panelda xaridorga mo'ljallangan qidiruv qatori keraksiz —
@@ -74,62 +65,90 @@ export function MobileSearchBar({ locale, dict }: MobileSearchBarProps) {
   if (pathname?.startsWith(`/${locale}/admin`)) return null;
 
   return (
-    // Header'ning o'zi kabi suzib turuvchi "tabletka" (pill): qidiruv va
-    // yurakcha bitta oq/qora yuzada turadi. Bu shart — element endi
-    // `fixed` header ichida bo'lgani uchun sahifa mazmuni uning ORTIDAN
-    // surilib o'tadi; o'z foni bo'lmasa, harflar bir-birining ustiga
-    // tushib o'qib bo'lmas holga kelardi.
-    <div className="container-app mt-2 lg:hidden">
-      <div className="transform-gpu flex items-center gap-2 rounded-full border border-black/10 bg-white px-2 py-2 shadow-lg dark:border-white/10 dark:bg-[rgba(10,10,12,0.92)] dark:backdrop-blur-[8px]">
-        <form onSubmit={handleSubmit} className="relative min-w-0 flex-1">
-          <Search
-            size={17}
-            className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-900/35 dark:text-cream/35"
-          />
-          <input
-            type="search"
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            placeholder={dict.nav.searchPlaceholder}
-            aria-label={dict.nav.searchPlaceholder}
-            // `w-full` + ota `min-w-0` — 320px kenglikdagi ekranda ham
-            // maydon qisilib, yurakcha tugmasini tashqariga itarib
-            // yubormaydi (gorizontal scroll chiqmasligi shundan).
-            className="h-10 w-full rounded-full border border-ink-900/10 bg-ink-900/[0.04] pl-10 pr-4 text-sm text-ink-950 outline-none transition-colors placeholder:text-ink-900/40 focus:border-gold-500 dark:border-cream/12 dark:bg-cream/[0.06] dark:text-cream dark:placeholder:text-cream/40 dark:focus:border-gold-400"
-          />
-        </form>
+    <div className="container-app py-2 lg:hidden">
+      {/* Fokusni QATOR darajasida kuzatamiz: fokus maydondan natijalar
+          panelidagi tugmaga o'tganda ham "Bekor qilish" joyida qolishi
+          kerak. `relatedTarget` shu qator ichida bo'lsa — holat
+          o'zgarmaydi. */}
+      <div
+        ref={rowRef}
+        className="flex items-center gap-2"
+        onFocusCapture={() => setFocused(true)}
+        onBlurCapture={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node)) setFocused(false);
+        }}
+      >
+        {/* "Bekor qilish" tugmasi maydonning ICHIDA turadi (tozalash ×
+            tugmasining o'ng tomonida), fon rangi — saytning asosiy ko'k
+            aksenti. Qator ichida alohida joy egallamaydi, shuning uchun
+            maydon to'liq kenglikda qoladi.
 
-        <Link
-          href={`/${locale}/wishlist`}
-          prefetch={false}
-          aria-label={dict.nav.wishlist}
-          className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-ink-900/10 bg-ink-900/[0.04] text-ink-900 transition-colors active:bg-ink-900/10 dark:border-cream/12 dark:bg-cream/[0.06] dark:text-cream"
+            Yopiq holatda `max-w-0` + `-ml-2.5`: nol kenglikdagi element
+            ham ota `gap-2.5` tufayli bo'shliq qoldirar edi — manfiy
+            chekka aynan shu bo'shliqni so'ndiradi. */}
+        <HeaderSearch
+          locale={locale}
+          dict={dict}
+          closeToken={closeToken}
+          trailing={
+            <button
+              type="button"
+              // `onPointerDown` da `preventDefault` — busiz tugmaga
+              // tegilishi bilan maydon fokusni yo'qotib, tugma
+              // bosilishidan OLDIN g'oyib bo'lardi. Amal ham shu yerda
+              // bajariladi: `touchstart` ni to'xtatish ba'zi
+              // brauzerlarda keyingi `click` hodisasini butunlay bekor
+              // qiladi, ya'ni faqat `onClick` ga tayanib bo'lmaydi.
+              onPointerDown={(e) => {
+                e.preventDefault();
+                handleCancel();
+              }}
+              onClick={handleCancel}
+              tabIndex={focused ? undefined : -1}
+              className={`flex h-8 shrink-0 items-center justify-center overflow-hidden whitespace-nowrap bg-gold-500 text-[13px] font-semibold transition-all duration-300 ease-[cubic-bezier(.33,1,.68,1)] motion-reduce:transition-none ${
+                focused ? 'max-w-[140px] px-3 opacity-100' : 'pointer-events-none -ml-2.5 max-w-0 px-0 opacity-0'
+              }`}
+            >
+              {dict.profile.cancel}
+            </button>
+          }
+        />
+
+        {/* Yurakcha va "Bekor qilish" — bitta joyda almashadigan juftlik.
+            Ikkalasi ham doim DOM'da turadi: fokusda yurakchaning kengligi
+            0 ga tushadi, tugmaniki esa ochiladi (va aksincha). Shuning
+            uchun o'tish silliq — element paydo bo'lib/yo'qolib
+            sakramaydi.
+
+            `overflow-hidden` ATAYLAB tashqi TO'RTBURCHAK o'ramda, dumaloq
+            tugmaning o'zida emas: `rounded-full` + `overflow-hidden`
+            kesishni DOIRA bo'ylab bajaradi va burchakdagi sanoq
+            doirachasi (badge) qirqilib qolardi — aynan shu nosozlik
+            kuzatilgan edi. */}
+        <div
+          className={`relative h-11 shrink-0 overflow-hidden transition-all duration-300 ease-[cubic-bezier(.33,1,.68,1)] motion-reduce:transition-none ${
+            focused ? 'w-0 opacity-0' : 'w-11 opacity-100'
+          }`}
         >
-          <Heart size={19} />
+          <Link
+            href={`/${locale}/wishlist`}
+            prefetch={false}
+            aria-label={dict.nav.wishlist}
+            tabIndex={focused ? -1 : undefined}
+            className="flex h-11 w-11 items-center justify-center rounded-[10px] border border-[color:var(--surface-border)] bg-[color:var(--surface-input)] text-ink-900 transition-colors active:bg-ink-900/10 dark:text-cream"
+          >
+            <Heart size={19} strokeWidth={1.75} />
+          </Link>
           {wishlistCount > 0 && (
-            <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-gold-500 text-[9px] font-bold text-ink-950">
+            // Sanoq o'ramning ICHIDA (right-0/top-0) — shuning uchun u
+            // hech qachon kesilmaydi.
+            <span className="pointer-events-none absolute right-0 top-0 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-gold-500 px-1 text-[9px] font-bold leading-none text-white">
               {wishlistCount}
             </span>
           )}
-        </Link>
+        </div>
+
       </div>
     </div>
   );
-}
-
-// <main> ichidagi bo'shliq — yuqoridagi qatorning o'rnini egallaydi.
-//
-// NEGA ALOHIDA KOMPONENT: qidiruv qatori `fixed` header ichida, ya'ni
-// hujjat oqimidan tashqarida — u o'zidan keyingi mazmunni pastga
-// itarmaydi. Bo'shliqni layout.tsx dagi <main>'ning doimiy paddingiga
-// qo'shib qo'yish esa noto'g'ri bo'lardi: admin panelda qidiruv qatori
-// umuman chizilmaydi (pastdagi bir xil tekshiruv), shunda tepada
-// sababsiz bo'sh joy qolib ketardi. Ikkalasi ham bitta qoidaga
-// bo'ysungani uchun bo'shliq doim qatorning haqiqiy holatiga mos keladi.
-//
-// Balandligi: mt-2 (8px) + py-2 (16px) + h-10 (40px) = 64px = h-16.
-export function MobileSearchBarSpacer({ locale }: { locale: Locale }) {
-  const pathname = usePathname();
-  if (pathname?.startsWith(`/${locale}/admin`)) return null;
-  return <div aria-hidden="true" className="h-16 lg:hidden" />;
 }

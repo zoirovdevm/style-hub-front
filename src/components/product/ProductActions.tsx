@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQuery } from '@apollo/client';
-import { AlertCircle, Heart, Minus, Plus, ShoppingBag } from 'lucide-react';
+import { AlertCircle, Heart, Minus, Plus, ShoppingCart } from 'lucide-react';
 import { ADD_TO_CART, TOGGLE_WISHLIST } from '@/lib/graphql/mutations';
 import { GET_MY_CART, GET_MY_WISHLIST } from '@/lib/graphql/queries';
 import { useAuthStore } from '@/lib/store/auth-store';
@@ -323,14 +323,14 @@ export function ProductActions({ productId, title, price, sizes, colors, stock, 
           disabled={outOfStock || addingToCart}
           className="btn-outline flex-1 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {/* Same ShoppingBag icon as the quick-buy button/modal now use,
+          {/* Same ShoppingCart icon as the quick-buy button/modal now use,
               per request — every "add to cart" button site-wide gets it
               before the label instead of text alone. */}
           {outOfStock ? (
             dict.product.outOfStock
           ) : (
             <>
-              <ShoppingBag size={16} />
+              <ShoppingCart size={16} />
               {dict.product.addToCart}
             </>
           )}

@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQuery } from '@apollo/client';
-import { AlertCircle, Heart, Minus, Plus, ShoppingBag, X } from 'lucide-react';
+import { AlertCircle, Heart, Minus, Plus, ShoppingCart, X } from 'lucide-react';
 import { TOGGLE_WISHLIST } from '@/lib/graphql/mutations';
 import { GET_MY_WISHLIST } from '@/lib/graphql/queries';
 import { useAuthStore } from '@/lib/store/auth-store';
@@ -323,7 +323,7 @@ export function QuickBuyModal({ product, locale, dict, onClose }: QuickBuyModalP
                         !available
                           ? 'cursor-not-allowed border-ink-900/10 text-ink-900/30 line-through dark:border-cream/10 dark:text-cream/25'
                           : size === s
-                            ? 'border-gold-500 bg-gold-500 text-white shadow-[0_4px_14px_rgba(16,185,129,0.35)]'
+                            ? 'border-gold-500 bg-gold-500 text-white shadow-[0_4px_14px_rgba(70,95,255,0.3)]'
                             : 'border-ink-900/15 hover:border-gold-500 dark:border-cream/20 dark:text-cream dark:hover:border-gold-400'
                       }`}
                     >
@@ -415,7 +415,7 @@ export function QuickBuyModal({ product, locale, dict, onClose }: QuickBuyModalP
                 dict.product.outOfStock
               ) : (
                 <>
-                  <ShoppingBag size={16} />
+                  <ShoppingCart size={16} />
                   {dict.product.addToCart}
                 </>
               )}

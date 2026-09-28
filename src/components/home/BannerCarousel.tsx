@@ -14,6 +14,8 @@ export interface BannerItem {
   linkType: string;
   productSlug?: string | null;
   categorySlug?: string | null;
+  // linkType = "PRODUCTS" — bannerga biriktirilgan bir nechta tovar.
+  products?: { id: string }[] | null;
 }
 
 interface BannerCarouselProps {
@@ -100,12 +102,19 @@ export function BannerCarousel({ banners, locale }: BannerCarouselProps) {
           >
             {banners.map((banner, i) => {
               const title = locale === 'ru' && banner.titleRu ? banner.titleRu : banner.title;
+              // Bir nechta tovar biriktirilgan bo'lsa — do'kon sahifasi
+              // FAQAT o'sha tovarlarni ko'rsatadi (`?products=id1,id2`).
+              // Alohida sahifa yasalmadi: mavjud do'kon sahifasi
+              // to'rlari, saralashi va sahifalashi shundoq ishlayveradi.
+              const bannerProductIds = (banner.products ?? []).map((p) => p.id);
               const href =
                 banner.linkType === 'PRODUCT' && banner.productSlug
                   ? `/${locale}/product/${banner.productSlug}`
-                  : banner.linkType === 'CATEGORY' && banner.categorySlug
-                    ? `/${locale}/shop?category=${encodeURIComponent(banner.categorySlug)}`
-                    : null;
+                  : banner.linkType === 'PRODUCTS' && bannerProductIds.length > 0
+                    ? `/${locale}/shop?products=${bannerProductIds.join(',')}`
+                    : banner.linkType === 'CATEGORY' && banner.categorySlug
+                      ? `/${locale}/shop?category=${encodeURIComponent(banner.categorySlug)}`
+                      : null;
 
               const inner = (
                 <div className="relative h-full w-full">

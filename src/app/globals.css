@@ -2,8 +2,140 @@
 @tailwind components;
 @tailwind utilities;
 :root {
-  --font-display: "Playfair Display", serif;
-  --font-sans: "Inter", sans-serif;
+  /* next/font (layout.tsx) shu ikkala o'zgaruvchini <html> da o'zi
+     belgilaydi — Inter va Playfair Display lokal WOFF2 sifatida,
+     `font-display: swap` bilan. Quyidagilar faqat zaxira: agar next/font
+     biror sababga ko'ra ulanmasa ham sayt tanish shriftda qolsin. */
+  --font-display: "Playfair Display", Georgia, "Times New Roman", serif;
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+
+  /* Yuzalarning (kartochka, panel, menyu, header) chegara rangi.
+     Bitta joyda turgani uchun mavzu almashganda hamma joyda birdek
+     o'zgaradi; Tailwind ichida `border-[color:var(--surface-border)]`
+     ko'rinishida ishlatiladi. */
+  --surface-border: #e2e8f0;
+  /* Header, panel (katalog/qidiruv natijalari) va input yuzalari —
+     bitta joyda turgani uchun mavzu almashganda hamma joyda birdek
+     o'zgaradi. Tailwind ichida `bg-[color:var(--surface-panel)]`
+     ko'rinishida ishlatiladi. */
+  --surface-header: #ffffff;
+  --surface-panel: #ffffff;
+  --surface-input: #f1f5f9;
+}
+
+.dark {
+  --surface-border: rgba(148, 163, 184, 0.18);
+  --surface-header: #07111c;
+  --surface-panel: #0d1826;
+  --surface-input: #101c2a;
+}
+
+/*
+ * Asosiy headerning scroll animatsiyasi.
+ *
+ * `transition: all` ATAYLAB ishlatilmagan — faqat kerakli uchta
+ * xususiyat sanab o'tilgan. `all` bo'lganda barning kengligi,
+ * paddingi, rangi va boshqa o'nlab xususiyatlari ham animatsiyaga
+ * tushib qolardi (masalan ekran o'lchami o'zgarganda kenglik "suzib"
+ * o'zgarardi).
+ *
+ * Chegara boshidanoq `1px` joy egallaydi (faqat rangi shaffof), shuning
+ * uchun `is-fixed` holatida chegara paydo bo'lganda barning o'lchami
+ * umuman o'zgarmaydi va ichidagilar siljimaydi.
+ */
+.header-bar {
+  border-radius: 0;
+  border-color: transparent;
+  border-bottom-color: var(--surface-border);
+  box-shadow: none;
+  /* Yumshoqroq: davomiylik 300 -> 420ms, egri chiziq esa
+     `0.22,1,0.36,1` (quint — tez boshlanib keskin to'xtaydi)
+     o'rniga `0.33,1,0.68,1` (cubic). Header.tsx dagi FLIP
+     animatsiyasi ham AYNAN shu qiymatlar bilan ishlaydi —
+     ikkalasi bir vaqtda, bir maromda tugashi uchun. */
+  transition:
+    border-radius 420ms cubic-bezier(0.33, 1, 0.68, 1),
+    box-shadow 420ms cubic-bezier(0.33, 1, 0.68, 1),
+    padding 420ms cubic-bezier(0.33, 1, 0.68, 1),
+    border-color 300ms cubic-bezier(0.33, 1, 0.68, 1);
+  transition-delay: 0ms;
+}
+.header-bar.is-fixed {
+  /* Scroll qilingandan keyingi (qotib turgan) header — oval emas,
+     10px burchakli. Avval 999px (to'liq oval) edi. Animatsiya
+     avvalgidek: 0 dan 10px gacha 420ms ichida silliq o'tadi. */
+  border-radius: 10px;
+  border-color: var(--surface-border);
+  border-bottom-color: var(--surface-border);
+  /* Soya yengillashtirildi: avval `0 8px 24px rgba(0,0,0,0.14)` edi —
+     juda quyuq va keng tarqalgan bo'lib, header sahifadan ancha
+     "ko'tarilib" turardi. Endi pastga siljishi ham, yoyilishi ham,
+     quyuqligi ham kamaytirildi. */
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.07);
+  /* Ixcham (fixed) holatda ichki bo'shliq kengayadi — oddiy holatdagi
+     12/20px o'rniga 20/32px. */
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+}
+@media (min-width: 1024px) {
+  .header-bar.is-fixed {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Davomiylik 0ms — lekin `fixed` ishlashi va ko'rinishi saqlanadi. */
+  .header-bar {
+    transition-duration: 0ms;
+  }
+}
+
+/*
+ * Katalog "mega-menu" panelining ochilish/yopilish animatsiyasi.
+ *
+ * `clip-path: inset(...)` — panel yuqoridan pastga qarab ochiladi va
+ * teskari yig'iladi. Ataylab `scaleY` EMAS: scaleY matn va ikonkalarni
+ * cho'zib yuborardi, clip-path esa mazmunga umuman tegmaydi — shunchaki
+ * ko'rinadigan qismini kesadi, ya'ni proporsiyalar saqlanadi.
+ *
+ * `visibility` uchun alohida kechikish (0s linear 280ms) — yopilganda
+ * panel animatsiya TUGAGANDAN keyingina ko'rinmas holatga o'tadi,
+ * shuning uchun yopilish harakati to'liq ko'rinadi (panel React
+ * tomonidan ham DOM'dan olinmaydi — doim chizilgan turadi). Ochilishda
+ * esa `transition-delay: 0s` — darhol ko'rinadi.
+ *
+ * Yopiq holatda `pointer-events: none` — panel inert: kliklarni
+ * to'smaydi va klaviatura fokusini ushlamaydi.
+ */
+.catalog-panel {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(-16px);
+  clip-path: inset(0 0 100% 0 round 16px);
+  transition:
+    transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    clip-path 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 200ms ease,
+    visibility 0s linear 280ms;
+}
+.catalog-panel.is-open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0);
+  clip-path: inset(0 0 0 0 round 16px);
+  transition-delay: 0s;
+}
+@media (prefers-reduced-motion: reduce) {
+  .catalog-panel {
+    transition: opacity 120ms ease, visibility 0s linear 120ms;
+    transform: none;
+    clip-path: none;
+  }
+  .catalog-panel.is-open {
+    transition-delay: 0s;
+  }
 }
 /* Removed a dead `@import url("https://fonts.googleapis.com/...")` that
    used to sit here. It was CSS-invalid in this position (an @import must
@@ -22,7 +154,17 @@
 
 html {
   scroll-behavior: smooth;
-  font-family: Arial, Helvetica, sans-serif !important;
+  /* SAYTNING ASOSIY SHRIFTI.
+     Avval bu yerda `Arial, Helvetica, sans-serif !important` turardi —
+     `!important` tufayli u Tailwind'ning `font-sans`/`font-display`
+     klasslarini ham bosib ketardi, ya'ni next/font orqali yuklanayotgan
+     Inter amalda HECH QAYERDA ishlatilmasdi va butun sayt Arial'da
+     ko'rinardi. Endi Inter steki, `!important`siz: shunda logotipga
+     berilgan serif klassi (.brand-wordmark) ham ishlay oladi.
+     Kirill (ruscha) va lotin (o'zbekcha, `O‘`/`G‘` belgilari bilan)
+     yozuvlari — layout.tsx da Inter `subsets: ['latin', 'cyrillic']`
+     bilan ulangani uchun ikkalasi ham to'g'ri ko'rinadi. */
+  font-family: var(--font-sans), "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
   /* iOS Safari has a "font boosting"/text-autosizing heuristic that can
      inflate rendered text size on a real device even though the layout
      viewport (device-width, initialScale 1 — see [locale]/layout.tsx) is
@@ -39,7 +181,23 @@ html {
 body {
   @apply bg-cream text-ink-900 antialiased transition-colors duration-300 dark:bg-ink-950 dark:text-cream;
 }
-h1 {
+
+/* Tugma va forma elementlari brauzerning o'z shriftiga (Arial/system UI)
+   qaytib ketmasligi uchun — ular `font-family`ni MEROS QILIB OLMAYDI,
+   shuni aniq berish kerak. */
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
+}
+
+/* WARDROBE logotipi — yagona serif element. Sarlavhalar Inter'da
+   qolaveradi (tailwind.config.ts dagi `display` oilasi izohiga qarang),
+   bu klass esa faqat logotip yozuvlariga qo'yilgan (Header, Footer,
+   Admin yon menyusi). */
+.brand-wordmark {
+  font-family: var(--font-display), Georgia, "Times New Roman", serif;
 }
 
 ::selection {
@@ -52,11 +210,9 @@ h1 {
 
 /* Every primary button site-wide (cart/checkout, product "buy now", the
    quick-buy modal, admin forms, homepage CTA, etc.) shares this one style
-   now — a fixed green gradient rather than the old ink-950/cream flip that
-   swapped with light/dark theme. Matches the requested spec exactly:
-   linear-gradient(135deg, #10b981 0%, #059669 100%), white text, no
-   border, a soft green box-shadow, and a brightness lift on hover instead
-   of swapping to a different color (which would fight the gradient).
+   now — bitta tekis primary ko'k (#465FFF), oq matn, chegarasiz va
+   yumshoq ko'k soya bilan; hover'da to'qroq ko'kka (#354DE6) o'tadi.
+   Avval bu yerda yashil gradient turardi.
 
    .btn-primary/.btn-outline are now wrapped in @layer components (they
    weren't before) so Tailwind always emits them BEFORE the utilities layer
@@ -75,12 +231,20 @@ h1 {
 @layer components {
   .btn-primary {
     @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-full border-0 px-6 py-3 text-sm font-semibold text-white transition-all duration-200 ease-out active:scale-95;
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-    box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3);
+    /* Gradient emas, bitta tekis primary rang — minimalistik uslub
+       talabi. Shakl (pill), o'lcham va bo'shliqlar o'zgarmadi. */
+    background: #465fff;
+    box-shadow: 0 4px 14px rgba(70, 95, 255, 0.24);
   }
   .btn-primary:hover {
-    filter: brightness(1.08);
-    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+    background: #354de6;
+    box-shadow: 0 6px 18px rgba(70, 95, 255, 0.3);
+  }
+  .btn-primary:disabled,
+  .btn-primary[disabled] {
+    /* Sustroq, lekin baribir o'qiladigan holat. */
+    background: #8f9dff;
+    box-shadow: none;
   }
 
   .btn-outline {
@@ -88,12 +252,22 @@ h1 {
   }
 }
 
+/* Kartochka/panel: 16px burchak (rounded-2xl — avvalgidek), 1px nozik
+   chegara va yumshoq soya. Chegara rangi endi aniq belgilangan
+   (#E2E8F0), avvalgi `ink-900/5` deyarli ko'rinmasdi. */
 .card-surface {
-  @apply rounded-2xl border border-ink-900/5 bg-white shadow-soft dark:border-cream/10 dark:bg-ink-800;
+  @apply rounded-2xl border bg-white shadow-soft dark:bg-ink-800;
+  border-color: #e2e8f0;
+}
+.dark .card-surface {
+  border-color: rgba(148, 163, 184, 0.18);
+  /* Qorong'i rejimda yuzalar soya bilan emas, fon va chegara farqi bilan
+     ajraladi — talab shunday. */
+  box-shadow: none;
 }
 
 .section-title {
-  @apply font-display text-3xl font-medium tracking-tight text-ink-950 sm:text-4xl dark:text-cream;
+  @apply text-3xl font-semibold tracking-tight text-ink-950 sm:text-4xl dark:text-cream;
 }
 
 /* custom scrollbar for admin tables etc. */
@@ -137,16 +311,42 @@ h1 {
   [class*="text-ink-900"]:not([class*="bg-gold"]):not([class*="bg-cream"]):not(
     [class*="bg-white"]
   ) {
-  color: #f7f5f2 !important;
+  color: #f8fafc !important;
 }
 .dark
   [class*="text-ink-950"]:not([class*="bg-gold"]):not([class*="bg-cream"]):not(
     [class*="bg-white"]
   ) {
-  color: #f7f5f2 !important;
+  color: #f8fafc !important;
 }
 .dark [class*="border-ink-900"] {
-  border-color: rgba(247, 245, 242, 0.12) !important;
+  border-color: rgba(148, 163, 184, 0.18) !important;
+}
+
+/*
+ * Aksent fonli chiplar (chegirma badge'lari, savat/sevimlilar sonini
+ * ko'rsatadigan doirachalar, tanlangan o'lcham tugmasi va h.k.) —
+ * HAR DOIM oq matn.
+ *
+ * NEGA global qoida: bu joylar kodda `bg-gold-500 text-ink-950` deb
+ * yozilgan (7 xil faylda). Aksent yashil bo'lganda to'q matn o'qilardi,
+ * ko'k fonda esa o'qilmay qoladi. Har bir faylni qo'lda tahrirlash
+ * o'rniga bitta qoida hammasini qamrab oladi va kelajakda qo'shiladigan
+ * yangi badge ham avtomatik to'g'ri bo'ladi.
+ *
+ * MUHIM — `:not([class*="bg-gold-500/"])` NIMA UCHUN KERAK:
+ * bu selektor klass nomining BIR QISMI bo'yicha moslashadi, shuning
+ * uchun u SHAFFOF variantlarni ham — `bg-gold-500/10`, `/5`, `/20` —
+ * ushlab olardi. Natijada tanlangan menyu bandi, filtr tugmasi va
+ * profildagi avatar kabi "och ko'k fon + ko'k matn" joylarda matn
+ * OPPOQ bo'lib qolar va kunduzgi rejimda deyarli ko'rinmasdi.
+ * Endi qoida faqat TO'LA to'ldirilgan fonga (`bg-gold-500`,
+ * `bg-gold-600`) tegadi; shaffof variantlar o'zining
+ * `text-gold-600` rangini saqlab qoladi.
+ */
+[class*="bg-gold-500"]:not([class*="bg-gold-500/"]),
+[class*="bg-gold-600"]:not([class*="bg-gold-600/"]) {
+  color: #ffffff !important;
 }
 
 /*
@@ -166,15 +366,39 @@ h1 {
  * profile page, styled with `bg-ink-900/5`) — those keep their intentional
  * styling instead of being forced dark too.
  */
+/* Yorug' rejim: saytdagi inputlarning ko'pchiligida umuman fon klassi
+   yo'q, ya'ni brauzerning sof oq foni qolardi va oq kartochka ustida
+   input ko'rinmay ketardi. Endi ular nozik kulrang yuzaga ega. */
+input:not([class*="bg-"]),
+textarea:not([class*="bg-"]),
+select:not([class*="bg-"]) {
+  background-color: #f1f5f9;
+  color: #111827;
+}
+input:not([class*="bg-"])::placeholder,
+textarea:not([class*="bg-"])::placeholder {
+  color: #94a3b8;
+}
+
 .dark input:not([class*="bg-"]),
 .dark textarea:not([class*="bg-"]),
 .dark select:not([class*="bg-"]) {
-  background-color: #1a1a1f !important;
-  color: #f7f5f2 !important;
+  background-color: #101c2a !important;
+  color: #f8fafc !important;
 }
 .dark input:not([class*="bg-"])::placeholder,
 .dark textarea:not([class*="bg-"])::placeholder {
-  color: rgba(247, 245, 242, 0.35) !important;
+  color: #93a2b6 !important;
+}
+
+/* Fokus — butun sayt bo'ylab bitta aksent rang. Kodda turli joylarda
+   `focus:border-ink-950` kabi yozuvlar bor edi (ya'ni fokus qora
+   chegara bilan ko'rsatilardi); bu qoida ularning ustidan yozadi.
+   Chegaraning QALINLIGI o'zgarmaydi — faqat rangi. */
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: #465fff !important;
 }
 
 /*
@@ -238,10 +462,10 @@ select:focus-visible {
  */
 .navbar-on-dark [class*="text-ink-900"]:not([class*="bg-gold"]),
 .navbar-on-dark [class*="text-ink-950"]:not([class*="bg-gold"]) {
-  color: #f7f5f2 !important;
+  color: #f8fafc !important;
 }
 .navbar-on-dark [class*="border-ink-900"] {
-  border-color: rgba(247, 245, 242, 0.2) !important;
+  border-color: rgba(148, 163, 184, 0.25) !important;
 }
 
 /*
@@ -333,5 +557,82 @@ select:focus-visible {
 @media (prefers-reduced-motion: reduce) {
   .skeleton-shimmer {
     animation: none;
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   BARCHA TUGMALAR — 5px BURCHAK RADIUSI.
+
+   Sayt bo'ylab tugmalar turlicha yozilgan: `.btn-primary`/`.btn-outline`
+   (pill — 999px), `rounded-xl` (12px), `rounded-lg` (8px),
+   `rounded-full` (dumaloq ikonka tugmalari) va h.k. Ularning har birini
+   fayllar bo'ylab qo'lda tuzatish o'rniga shu bitta qoida qo'yildi:
+   har qanday <button>, tugma ko'rinishidagi <input> va `.btn-*`
+   klassli havola (Link) — hammasi 5px.
+
+   `!important` bu yerda ataylab: Tailwind'ning `rounded-full` kabi
+   utility klasslari aynan shu xususiyatni belgilaydi va klass selektori
+   element selektoridan kuchliroq bo'lgani uchun, `!important`siz bu
+   qoida ularning ostida ko'milib ketardi.
+
+   `button[class]` / `[class]` qo'shimchasi esa — ba'zi joylarda
+   tugmaga `!rounded-lg` kabi O'ZI HAM `!important` bo'lgan klass
+   yozilgan. Ikkalasi `!important` bo'lganda g'olibni selektor kuchi
+   aniqlaydi, klass esa oddiy element nomidan kuchli. Atribut
+   ([class]) qo'shilishi shu qoidani kuchliroq qilib, bunday
+   joylarni ham qamrab oladi.
+
+   Kichkina dumaloq tugmalar (masalan reklama karuselining nuqtalari,
+   6px) shaklini yo'qotmaydi: CSS radiusni elementning yarmidan
+   oshirmaydi — ular baribir dumaloq bo'lib qolaveradi.
+   ────────────────────────────────────────────────────────────────────── */
+button,
+button[class],
+a.btn-primary[class],
+a.btn-outline[class],
+.btn-primary,
+.btn-outline,
+input[type='button'],
+input[type='submit'],
+input[type='reset'] {
+  border-radius: 5px !important;
+}
+
+/* ISTISNO: HEADER ICHIDAGI TUGMALAR — 10px.
+   Headerdagi tugmalar (Kategoriya, til, mavzu, qidiruv paneli
+   ichidagilar) yonidagi havolalar bilan — Do'kon, Profil, savat,
+   sevimlilar — bitta qatorda yonma-yon turadi. O'sha havolalar
+   `rounded-[10px]` bilan yozilgan, shuning uchun tugmalar ham
+   aynan 10px bo'lishi kerak, aks holda qator ichida ikki xil
+   burchak ko'rinib qolardi.
+
+   Selektor yuqoridagidan kuchliroq (`header` qo'shilgani uchun),
+   shuning uchun faqat header ichida shu qiymat ishlaydi. */
+header button[class],
+.mobile-search-row button[class] {
+  border-radius: 10px !important;
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   iPhone: MAYDONGA BOSILGANDA SAHIFA KATTALASHIB KETMASIN.
+
+   iOS Safari'da shrifti 16px dan KICHIK bo'lgan maydonga fokuslansa,
+   brauzer matnni o'qish oson bo'lsin deb butun sahifani avtomatik
+   yaqinlashtiradi (zoom) — foydalanuvchi esa buni "sayt buzildi" deb
+   qabul qiladi, chunki fokus tugagach ham ko'rinish kattalashgancha
+   qolib ketadi.
+
+   Yagona ishonchli yechim — maydon shriftini 16px qilish. `user-scalable=no`
+   / `maximum-scale=1` YO'LI ATAYLAB TANLANMADI: iOS 10 dan beri Safari
+   ularni e'tiborsiz qoldiradi va ular ko'rish qobiliyati past
+   foydalanuvchilarga sahifani qo'lda kattalashtirishni ham taqiqlardi.
+
+   Faqat kichik ekranlar uchun — kompyuterda o'lchamlar o'zgarmaydi.
+   ────────────────────────────────────────────────────────────────────── */
+@media (max-width: 1023px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
   }
 }

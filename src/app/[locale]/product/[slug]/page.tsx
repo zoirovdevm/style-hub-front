@@ -233,8 +233,6 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
               {product.reviewsCount} {dict.product.reviews}
             </p>
 
-            {description && <p className="mt-6 text-sm leading-relaxed text-ink-900/70">{description}</p>}
-
             <div className="mt-8 border-t border-ink-900/10 pt-8">
               <ProductActions
                 productId={product.id}
@@ -248,6 +246,27 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
                 locale={locale}
               />
             </div>
+
+            {/* Tavsif — o'lcham va rang tanlovidan KEYIN. Avval u
+                yuqorida, narx bilan tanlov tugmalari orasida turardi:
+                uzun tavsifda xaridor asosiy amalni (o'lcham/rang tanlab
+                savatga qo'shish) ko'rish uchun pastga surishga majbur
+                bo'lardi. */}
+            {description && (
+              <div className="mt-8 border-t border-ink-900/10 pt-8">
+                {/* `whitespace-pre-line` — admin yozgan matndagi qator
+                    tashlashlar (Enter) va bo'sh qatorlar aynan
+                    saqlanadi. Busiz HTML barcha qator tashlashni oddiy
+                    bo'shliqqa aylantirib, butun tavsifni bitta uzun
+                    xatboshi qilib ko'rsatardi — ro'yxatlar ham bir
+                    qatorga yopishib qolardi. Ortiqcha bo'shliqlar esa
+                    avvalgidek yig'iladi, ya'ni tasodifan qo'sh probel
+                    qo'yilsa matn buzilmaydi. */}
+                <p className="whitespace-pre-line text-sm leading-relaxed text-ink-900/70 dark:text-cream/70">
+                  {description}
+                </p>
+              </div>
+            )}
 
             <div className="mt-8 grid grid-cols-2 gap-4 border-t border-ink-900/10 pt-8 text-sm">
               <div>

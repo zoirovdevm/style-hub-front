@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Heart, ShoppingBag, Star } from 'lucide-react';
+import { Heart, ShoppingCart, Star } from 'lucide-react';
 import { useMutation, useQuery } from '@apollo/client';
 import { TOGGLE_WISHLIST } from '@/lib/graphql/mutations';
 import { GET_MY_WISHLIST } from '@/lib/graphql/queries';
@@ -75,18 +75,12 @@ export function ProductCard({
   // to the backend either way, so this works without any .env switching.
   const images = product.images?.length ? product.images : ['/placeholder-product.svg'];
   const hasMultipleImages = images.length > 1;
+  const hasDiscount = product.oldPrice && product.oldPrice > product.price;
   // Narxi hajmga qarab o'zgaradigan mahsulotlarda (duxi) kartochkada
   // eng arzon variant narxi "dan" izohi bilan ko'rsatiladi — aks holda
   // ro'yxatdagi narx xaridor ichkarida ko'radigan narxga mos kelmasdi.
-  // Duxida bu eng kichik hajm (masalan 10ml) narxi bo'ladi.
   const variantPricing = hasVariantPricing(product);
   const displayPrice = variantPricing ? resolveMinPrice(product) : product.price;
-  // Chegirma KO'RSATILAYOTGAN narxga nisbatan hisoblanadi, mahsulotning
-  // umumiy narxiga emas — aks holda duxida "1 350 000 so'm dan" yozuvi
-  // ustida undan KICHIK chizilgan "550 000 so'm" va ma'nosiz "-50%"
-  // turib qolgan edi. Eski narx ko'rsatilayotgan narxdan katta bo'lmasa,
-  // chegirma umuman chizilmaydi.
-  const hasDiscount = !!product.oldPrice && product.oldPrice > displayPrice;
 
   // Card image strip: right on the card, without opening the product —
   // scrolling the mouse wheel (or a laptop trackpad's two-finger swipe)
@@ -328,7 +322,7 @@ export function ProductCard({
 
             {hasDiscount && (
               <span className="absolute left-3 top-3 rounded-full bg-gold-500 px-2.5 py-1 text-[11px] font-bold text-ink-950">
-                -{Math.round(100 - (displayPrice / product.oldPrice!) * 100)}%
+                -{Math.round(100 - (product.price / product.oldPrice!) * 100)}%
               </span>
             )}
 
@@ -430,27 +424,31 @@ export function ProductCard({
           </div>
 
           <div className="space-y-1 px-4 pt-3">
-            {/* Category gets its OWN full-width row instead of sharing one
-                with the price — sharing a row used to leave category only
-                whatever leftover width the price didn't need, which on a
-                narrow 2-column mobile card was sometimes almost nothing: a
-                category name would truncate down to 2-3 letters and an
-                ellipsis sitting right up against the price, reading as
-                garbled clutter rather than a label. */}
+            {/* Category now gets its OWN full-width row instead of sharing
+                one with the price — sharing a row used to leave category
+                only whatever leftover width the price (plus, when
+                discounted, the stacked strikethrough old price above/below
+                it) didn't need, which on a narrow 2-column mobile card was
+                sometimes almost nothing: a category name would truncate
+                down to 2-3 letters and an ellipsis sitting right up against
+                the price, reading as garbled clutter rather than a label. */}
             {categoryName && (
               <p className="truncate text-[11px] uppercase tracking-wider text-ink-900/40 dark:text-cream/40">
                 {categoryName}
               </p>
             )}
-            {/* NARX — nomdan bitta TEPADA, alohida qatorda (Uzum/Wildberries
-                uslubi: xaridor avval narxni ko'radi). Avval narx nom bilan
-                yonma-yon turardi va tor mobil kartada ikkalasi joy uchun
-                kurashib, nom 2-3 harfgacha qisqarib ketardi.
-                Chegirmali eski narx joriy narxning yoniga, kichikroq va
-                chizilgan holda qo'yiladi; joy yetmasa `flex-wrap` uni
+
+            {/* NARX — kartochkaning tepasida, mahsulot NOMIDAN OLDIN va
+                o'z qatorida. Avval u nom bilan bitta qatorni bo'lishib,
+                o'ng chekkada turardi. Endi ikkalasiga ham butun kenglik
+                tegadi: narx qisqartirilmaydi, nom esa o'z qatorida
+                bemalol joylashadi.
+
+                Chegirma bo'lsa eski (chizilgan) narx shu yerda, joriy
+                narxning yonida turadi; joy tor bo'lsa `flex-wrap` uni
                 pastki qatorga tushiradi — kartadan tashqariga chiqib
                 ketmaydi. */}
-            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 leading-tight">
               <span className="whitespace-nowrap text-[15px] font-bold text-gold-600 dark:text-gold-400 sm:text-[17px]">
                 {formatPrice(displayPrice, locale)}
                 {variantPricing && (
@@ -465,16 +463,8 @@ export function ProductCard({
                 </span>
               )}
             </div>
-            {/* Tovar nomi — narxdan keyin, IKKI QATORgacha. Uzundan uzun
-                nom endi bir qatorga sig'may "Louis …" bo'lib qolmaydi:
-                line-clamp-2 ikkinchi qator oxirida "…" qo'yadi.
-                min-h-[2.25rem]: nomi bitta qatorlik mahsulot bilan ikki
-                qatorlik mahsulot yonma-yon turganda, ularning ostidagi
-                qoldiq/reyting satrlari bir tekisda qolishi uchun joy
-                doim ikki qatorga band qilinadi. */}
-            <h3 className="line-clamp-2 min-h-[2.25rem] text-sm font-semibold leading-tight text-ink-950 dark:text-cream">
-              {title}
-            </h3>
+
+            <h3 className="truncate text-sm font-semibold text-ink-950 dark:text-cream">{title}</h3>
             {/* Total stock, visible right on the card — same "N dona qoldi"
                 wording used on the product detail page, so a shopper can
                 gauge availability before even opening the product. Out of
@@ -542,14 +532,16 @@ export function ProductCard({
             // belt-and-suspenders guarantee. whitespace-nowrap forces a
             // single line outright instead of relying on the text simply
             // fitting.
-            className="btn-primary mt-1.5 flex w-full items-center justify-center whitespace-nowrap !gap-1 !rounded-lg !px-2 !py-1 !text-[10px] disabled:cursor-not-allowed disabled:opacity-40 sm:mt-2 sm:!gap-1.5 sm:!rounded-xl sm:!px-4 sm:!py-1.5 sm:!text-xs"
+            // Burchak radiusi bu yerda yozilmaydi — u sayt bo'ylab yagona
+            // qoidadan keladi (globals.css, "BARCHA TUGMALAR — 5px").
+            className="btn-primary mt-1.5 flex w-full items-center justify-center whitespace-nowrap !gap-1 !px-2 !py-1 !text-[10px] disabled:cursor-not-allowed disabled:opacity-40 sm:mt-2 sm:!gap-1.5 sm:!px-4 sm:!py-1.5 sm:!text-xs"
           >
-            {/* ShoppingBag instead of the lightning bolt, per request — same
+            {/* ShoppingCart instead of the lightning bolt, per request — same
                 icon the navbar already uses for the cart, so "buy"/"cart"
                 actions read as one consistent glyph across the site rather
                 than two different icons for the same idea. Left as a plain
                 outline (no fill) to match how the navbar renders it. */}
-            <ShoppingBag className="h-2.5 w-2.5 shrink-0 sm:h-3.5 sm:w-3.5" />
+            <ShoppingCart className="h-2.5 w-2.5 shrink-0 sm:h-3.5 sm:w-3.5" />
             {dict.product.quickBuy}
           </button>
         </div>

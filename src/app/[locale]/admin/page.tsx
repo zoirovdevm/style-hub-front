@@ -28,7 +28,9 @@ import type { Locale } from '@/i18n/config';
 import uzDict from '@/i18n/dictionaries/uz.json';
 import ruDict from '@/i18n/dictionaries/ru.json';
 
-const COLORS = ['#f59e0b', '#3b82f6', '#8b5cf6', '#10b981', '#ef4444'];
+// Diagramma ranglari — bitta ko'k oiladan, to'yinganligi bo'yicha
+// farqlanadi (avval besh xil tasodifiy rang edi).
+const COLORS = ['#465FFF', '#6B82FF', '#8F9DFF', '#B3BDFF', '#61C4FF'];
 
 export default function AdminDashboardPage({ params }: { params: { locale: Locale } }) {
   const { locale } = params;
@@ -168,22 +170,22 @@ export default function AdminDashboardPage({ params }: { params: { locale: Local
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label={dict.admin.totalUsers} value={stats.totalUsers} icon={Users} accent="#111114" />
+        <StatCard label={dict.admin.totalUsers} value={stats.totalUsers} icon={Users} accent="#111827" />
         <StatCard
           label={dict.admin.onlineUsers}
           value={liveOnline ?? stats.onlineUsers}
           icon={Wifi}
-          accent="#10b981"
+          accent="#465FFF"
           live
         />
-        <StatCard label={dict.admin.totalProducts} value={stats.totalProducts} icon={ShoppingBag} accent="#3b82f6" />
-        <StatCard label={dict.admin.totalOrders} value={stats.totalOrders} icon={ClipboardList} accent="#8b5cf6" />
-        <StatCard label={dict.admin.pendingOrders} value={stats.pendingOrders} icon={Clock} accent="#f59e0b" />
-        <StatCard label={dict.admin.processingOrders} value={stats.processingOrders} icon={Truck} accent="#3b82f6" />
-        <StatCard label={dict.admin.cancelledOrders} value={stats.cancelledOrders} icon={XCircle} accent="#ef4444" />
-        <StatCard label={dict.admin.revenueToday} value={formatPrice(stats.revenueToday, locale)} icon={Wallet} accent="#10b981" />
-        <StatCard label={dict.admin.revenueThisMonth} value={formatPrice(stats.revenueThisMonth, locale)} icon={Wallet} accent="#1f7a4d" />
-        <StatCard label={dict.admin.revenueTotal} value={formatPrice(stats.revenueTotal, locale)} icon={Wallet} accent="#059669" />
+        <StatCard label={dict.admin.totalProducts} value={stats.totalProducts} icon={ShoppingBag} accent="#465FFF" />
+        <StatCard label={dict.admin.totalOrders} value={stats.totalOrders} icon={ClipboardList} accent="#6B82FF" />
+        <StatCard label={dict.admin.pendingOrders} value={stats.pendingOrders} icon={Clock} accent="#A64B00" />
+        <StatCard label={dict.admin.processingOrders} value={stats.processingOrders} icon={Truck} accent="#61C4FF" />
+        <StatCard label={dict.admin.cancelledOrders} value={stats.cancelledOrders} icon={XCircle} accent="#BD243B" />
+        <StatCard label={dict.admin.revenueToday} value={formatPrice(stats.revenueToday, locale)} icon={Wallet} accent="#465FFF" />
+        <StatCard label={dict.admin.revenueThisMonth} value={formatPrice(stats.revenueThisMonth, locale)} icon={Wallet} accent="#147B4A" />
+        <StatCard label={dict.admin.revenueTotal} value={formatPrice(stats.revenueTotal, locale)} icon={Wallet} accent="#354DE6" />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -208,7 +210,7 @@ export default function AdminDashboardPage({ params }: { params: { locale: Local
               <XAxis dataKey="name" fontSize={12} />
               <YAxis fontSize={12} />
               <Tooltip formatter={(v: number) => formatPrice(v, locale)} />
-              <Bar dataKey="value" fill="#10b981" radius={[8, 8, 0, 0]} />
+              <Bar dataKey="value" fill="#465FFF" radius={[8, 8, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

@@ -99,6 +99,9 @@ export const GET_BANNERS_STR = `
       linkType
       productSlug
       categorySlug
+      products {
+        id
+      }
     }
   }
 `;

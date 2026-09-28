@@ -13,7 +13,15 @@
     "contact": "Yordam",
     "about": "Biz haqimizda",
     "admin": "Admin panel",
-    "searchPlaceholder": "Mahsulot yoki kategoriya qidirish"
+    "searchPlaceholder": "Mahsulotlarni qidirish...",
+    "category": "Kategoriya",
+    "allCategories": "Barcha kategoriyalar",
+    "brandTagline": "Style lives here",
+    "searchResults": "Qidiruv natijalari",
+    "searchNoResults": "Mahsulot topilmadi",
+    "searchAllResults": "Barcha natijalar",
+    "searchHistory": "Oxirgi qidiruvlar",
+    "searchHistoryClear": "Tozalash"
   },
   "home": {
     "heroEyebrow": "Yangi mavsum kolleksiyasi",
@@ -131,6 +139,17 @@
     "empty": "Sevimlilar ro'yxati bo'sh"
   },
   "checkout": {
+    "region": "Viloyat",
+    "regionPlaceholder": "— Viloyatni tanlang —",
+    "district": "Tuman / shahar",
+    "districtPlaceholder": "— Tumanni tanlang —",
+    "addressPlaceholder": "Ko'cha, uy, xonadon, mo'ljal",
+    "promoTitle": "Promokod",
+    "promoPlaceholder": "Kodni kiriting",
+    "promoApply": "Qo'llash",
+    "promoTotal": "To'lanadigan summa",
+    "promoInvalid": "Promokod amal qilmadi",
+    "promoNeedPhone": "Avval telefon raqamini kiriting",
     "title": "Buyurtmani rasmiylashtirish",
     "deliveryInfo": "Yetkazib berish ma'lumotlari",
     "address": "Manzil",
@@ -256,6 +275,9 @@
     "myOrders": "Buyurtmalarim",
     "ordersTab": "Buyurtmalar",
     "infoTab": "Ma'lumotlarim",
+    "themeTab": "Mavzu",
+    "languageTab": "Til",
+    "back": "Orqaga",
     "allOrders": "Barcha buyurtmalar",
     "paidOrders": "To'langan",
     "unpaidOrders": "To'lov qilinmagan",
@@ -312,6 +334,7 @@
     "followUs": "Ijtimoiy tarmoqlarda"
   },
   "admin": {
+    "promoCodes": "Promokodlar",
     "dashboard": "Boshqaruv paneli",
     "refresh": "Yangilash",
     "users": "Foydalanuvchilar",

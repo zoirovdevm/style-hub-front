@@ -40,6 +40,10 @@ export default async function ShopPage({ params, searchParams }: ShopPageProps) 
   const page = Number(searchParams.page ?? '1') || 1;
   const filter = {
     search: searchParams.search || undefined,
+    // `?products=id1,id2` — bannerga bir nechta tovar biriktirilganda
+    // (BannerCarousel) shu manzil ochiladi va sahifa faqat o'sha
+    // tovarlarni ko'rsatadi. Qolgan filtrlar avvalgidek ishlayveradi.
+    ids: searchParams.products ? searchParams.products.split(',').filter(Boolean) : undefined,
     categorySlug: searchParams.category || undefined,
     sizes: searchParams.sizes ? searchParams.sizes.split(',') : undefined,
     colors: searchParams.colors ? searchParams.colors.split(',') : undefined,

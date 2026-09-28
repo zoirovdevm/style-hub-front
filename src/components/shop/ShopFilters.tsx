@@ -31,7 +31,6 @@ export function ShopFilters({ dict, categories, genders, locale }: ShopFiltersPr
 
   const [minPrice, setMinPrice] = useState(searchParams.get('minPrice') ?? '');
   const [maxPrice, setMaxPrice] = useState(searchParams.get('maxPrice') ?? '');
-  const [search, setSearch] = useState(searchParams.get('search') ?? '');
   // Mobile-only accordion state: on phones the filter panel used to render
   // fully expanded and pushed the product grid way down below the fold.
   // Collapsed by default on mobile; the `lg:block` override below keeps it
@@ -105,19 +104,11 @@ export function ShopFilters({ dict, categories, genders, locale }: ShopFiltersPr
       </div>
 
       <div className={`${expanded ? 'mt-6 block' : 'hidden'} space-y-8 lg:mt-0 lg:block`}>
-      <div>
-        <input
-          type="search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          onBlur={() => updateParams((p) => (search.trim() ? p.set('search', search.trim()) : p.delete('search')))}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
-          }}
-          placeholder={dict.product.searchPlaceholder}
-          className="w-full rounded-lg border border-ink-900/15 px-3 py-2 text-sm outline-none focus:border-ink-950 dark:border-cream/15 dark:bg-ink-800 dark:text-cream"
-        />
-      </div>
+      {/* Filtrlar ichidagi qidiruv maydoni OLIB TASHLANDI — qidiruv
+          saytning yuqorisida, headerda (va telefonda uning ostidagi
+          qatorda) turadi, ikkita qidiruv bir sahifada chalkashtirardi.
+          Manzildagi `?search=...` parametri esa avvalgidek ishlayveradi:
+          headerdan qidirilganda do'kon sahifasi uni o'qiydi. */}
 
       {/* Kategoriya bo'limi bilan bir xil naqsh: ro'yxat to'liq admin
           tomonidan yaratiladi (Brend kabi — admin/categories sahifasi),

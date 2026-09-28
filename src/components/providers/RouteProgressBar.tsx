@@ -142,7 +142,7 @@ function RouteProgressBarInner() {
   return (
     <div className="pointer-events-none fixed left-0 top-0 z-[200] h-[3px] w-full">
       <div
-        className="h-full bg-gold-500 shadow-[0_0_8px_rgba(16,185,129,0.6)] transition-all duration-300 ease-out"
+        className="h-full bg-gold-500 shadow-[0_0_8px_rgba(70,95,255,0.55)] transition-all duration-300 ease-out"
         style={{ width: `${width}%` }}
       />
     </div>

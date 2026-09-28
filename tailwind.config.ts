@@ -5,33 +5,89 @@ const config: Config = {
   content: ['./src/**/*.{js,ts,jsx,tsx,mdx}'],
   theme: {
     extend: {
+      // ── RANG TIZIMI ──────────────────────────────────────────────────
+      //
+      // MUHIM: klass NOMLARI ataylab o'zgarmadi (`ink`, `cream`, `gold`).
+      // Butun sayt bo'ylab ~yuzlab joyda `bg-white dark:bg-ink-950`,
+      // `text-gold-600`, `border-ink-900/10` kabi yozuvlar bor — faqat shu
+      // yerdagi QIYMATLARNI almashtirish bilan hamma sahifa va komponent
+      // yangi uslubga o'tadi, birorta ham joylashuv/o'lcham/funksiyaga
+      // tegmasdan.
+      //
+      // Har bir token qaysi rolni bajarishi (sayt kodida qanday
+      // ishlatilishi) pastda yozilgan — kelajakda qiymat almashtirilganda
+      // nimaga ta'sir qilishi shundan ko'rinadi.
       colors: {
         ink: {
-          950: '#0a0a0c',
-          900: '#111114',
-          800: '#1a1a1f',
-          700: '#26262d',
+          // Qorong'i rejimdagi SAHIFA/bo'lim foni (`dark:bg-ink-950`) va
+          // yorug' rejimdagi sarlavha matni (`text-ink-950`). Bitta token
+          // ikki rolda, lekin ular hech qachon bir vaqtda uchramaydi.
+          950: '#07111C',
+          // Yorug' rejimdagi asosiy matn; shuningdek `border-ink-900/10`,
+          // `bg-ink-900/5` kabi nozik chegara va yuzalar shu rangning
+          // shaffof ulushlaridan hosil bo'ladi.
+          900: '#111827',
+          // Qorong'i rejimdagi KARTOCHKA/panel yuzasi (`.card-surface`
+          // dark holati).
+          800: '#0D1826',
+          // Qorong'i rejimdagi input va qo'shimcha yuzalar.
+          700: '#101C2A',
         },
-        cream: '#f7f5f2',
-        // The site's one accent color — used everywhere from CTA buttons
-        // and badges to star ratings and the hero glow. Went warm gold →
-        // neutral gray (black-and-white pass) → now green, per request
-        // (linear-gradient(135deg, #10b981 0%, #059669 100%)). 500/600 are
-        // that gradient's exact two stops (emerald-500/600); 400 is a
-        // lighter emerald for accents that need to pop on a dark
-        // background (hero eyebrow text, icons). The class names ("gold")
-        // stay the same on purpose — every existing `bg-gold-500` /
-        // `text-gold-400` / etc. across the whole codebase just picks up
-        // the new color with no other files touched.
+        // Yorug' rejimdagi sahifa foni VA qorong'i rejimdagi asosiy matn —
+        // #F8FAFC ikkala rolga ham mos (deyarli oq, lekin sof oq emas).
+        cream: '#F8FAFC',
+        // Saytning yagona aksent rangi. Avval yashil edi; endi ko'k
+        // tizimi. Nom ("gold") tarixiy — o'zgartirilsa yuzlab faylga
+        // tegishga to'g'ri kelardi, shuning uchun faqat qiymati yangilandi.
+        //   600 — yorug' rejimdagi aksent matn/narx va hover holati
+        //   500 — asosiy (primary): tugma, badge, faol nuqta
+        //   400 — qorong'i rejimdagi aksent matn/narx (to'q fonda yorqin)
         gold: {
-          400: '#34d399',
-          500: '#10b981',
-          600: '#059669',
+          400: '#61C4FF',
+          500: '#465FFF',
+          600: '#354DE6',
+        },
+        // ── Holat ranglari ─────────────────────────────────────────────
+        // Tailwind'ning tayyor `emerald`/`amber`/`red` shkalalari saytda
+        // allaqachon ishlatilgan (muvaffaqiyat, ogohlantirish, xato).
+        // `extend` chuqur birlashtirgani uchun quyida faqat AYNAN
+        // ishlatilayotgan darajalar qayta belgilanadi — qolganlari
+        // Tailwind'nikicha qolaveradi (masalan `bg-amber-50` kabi och
+        // fonlar).
+        //   *-600/700 → yorug' rejim uchun (to'qroq, oq fonda o'qiladi)
+        //   *-400/300 → qorong'i rejim uchun (ochroq, to'q fonda o'qiladi)
+        emerald: {
+          300: '#7CE7BA',
+          400: '#56DBA2',
+          500: '#147B4A',
+          600: '#147B4A',
+          700: '#0F5F39',
+        },
+        amber: {
+          300: '#FFC583',
+          400: '#FFAE56',
+          500: '#A64B00',
+          600: '#A64B00',
+          700: '#8A3E00',
+        },
+        red: {
+          300: '#FFB0B6',
+          400: '#FF8C94',
+          500: '#BD243B',
+          600: '#BD243B',
+          700: '#9C1B2F',
         },
       },
       fontFamily: {
-        display: ['var(--font-display)', 'serif'],
-        sans: ['var(--font-sans)', 'sans-serif'],
+        // `font-display` sayt bo'ylab SARLAVHALARDA ishlatiladi (20+ fayl),
+        // faqat logotipda emas. Talabga ko'ra sarlavhalar ham Inter
+        // bo'lishi kerak, shuning uchun bu ham Inter stekiga qaratildi.
+        // WARDROBE logotipining serif ko'rinishi esa globals.css dagi
+        // `.brand-wordmark` klassi orqali beriladi — o'sha yerda
+        // `var(--font-display)` (Playfair Display, next/font orqali lokal
+        // WOFF2 + font-display: swap) va Georgia zaxirasi turadi.
+        display: ['var(--font-sans)', 'Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Arial', 'sans-serif'],
+        sans: ['var(--font-sans)', 'Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Arial', 'sans-serif'],
       },
       animation: {
         'fade-up': 'fadeUp 0.6s ease forwards',
@@ -66,7 +122,10 @@ const config: Config = {
         },
       },
       boxShadow: {
-        soft: '0 20px 60px -20px rgba(0,0,0,0.25)',
+        // Yumshoq, yengil soya — avval `0 20px 60px -20px rgba(0,0,0,0.25)`
+        // edi (ancha kuchli va uzun). Yangi uslubda soya yuzani ajratish
+        // uchun emas, faqat nozik ko'tarilish hissi uchun.
+        soft: '0 8px 30px rgba(0, 0, 0, 0.08)',
       },
     },
   },

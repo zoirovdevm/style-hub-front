@@ -6,9 +6,10 @@ import { useForm } from 'react-hook-form';
 import { useMutation, useQuery } from '@apollo/client';
 import { Check, Pencil } from 'lucide-react';
 import { GET_MY_CART, GET_ME } from '@/lib/graphql/queries';
-import { CREATE_ORDER, UPDATE_PROFILE } from '@/lib/graphql/mutations';
+import { CHECK_PROMO_CODE, CREATE_ORDER, UPDATE_PROFILE } from '@/lib/graphql/mutations';
 import { useAuthStore } from '@/lib/store/auth-store';
 import { formatPrice } from '@/lib/utils/format';
+import { UZBEKISTAN_REGIONS, districtsOf } from '@/lib/data/uzbekistan-regions';
 import { resolveUnitPrice } from '@/lib/utils/variantPrice';
 import { translateColorName } from '@/lib/utils/colorNames';
 import { Reveal } from '@/components/ui/Reveal';
@@ -18,7 +19,14 @@ import uzDict from '@/i18n/dictionaries/uz.json';
 import ruDict from '@/i18n/dictionaries/ru.json';
 
 interface CheckoutForm {
+  // Aniq manzil — ko'cha, uy, xonadon, mo'ljal (qo'lda yoziladi).
   deliveryAddress: string;
+  // Viloyat va tuman/shahar ro'yxatdan tanlanadi. Buyurtmaga esa ikkalasi
+  // birlashtirilib, avvalgi `deliveryCity` maydoniga yoziladi ("Jizzax
+  // viloyati, Sharof Rashidov") — shuning uchun backendda, admin panelda
+  // va eski buyurtmalarda hech narsa o'zgarmaydi.
+  region: string;
+  district: string;
   deliveryCity: string;
   phone: string;
   note: string;
@@ -41,6 +49,16 @@ const PLACED_ORDER_STORAGE_KEY = 'checkout:lastPlacedOrder';
 // "buy now" of 1 unit used to silently become "3" whenever 2 of that exact
 // same size/color were already sitting in the cart for later.
 const BUY_NOW_ITEM_STORAGE_KEY = 'checkout:buyNowItem';
+
+// Viloyat + tuman => bitta matn ("Jizzax viloyati, Sharof Rashidov").
+// Buyurtmada avvalgidek bitta `deliveryCity` maydoni saqlanadi, shuning
+// uchun backend, admin panel va eski buyurtmalarga umuman tegilmadi.
+function cityOf(values: { region?: string; district?: string; deliveryCity?: string }) {
+  const parts = [values.region, values.district].filter(Boolean);
+  // Ro'yxatdan tanlanmagan (masalan eski saqlangan qiymat) holat uchun
+  // zaxira — avvalgi erkin matn.
+  return parts.length ? parts.join(', ') : (values.deliveryCity ?? '');
+}
 // Faqat "Shahar" (deliveryCity) uchun eslatma sifatida ishlatiladi —
 // muvaffaqiyatli buyurtmadan keyin shu kalit bilan saqlanadi (pastdagi
 // onSubmit'ga qarang). Manzil va telefon ENDI bu yerdan o'qilmaydi — ular
@@ -168,6 +186,17 @@ function CheckoutPageInner({ params }: { params: { locale: Locale } }) {
     refetchQueries: [{ query: GET_MY_CART }],
     awaitRefetchQueries: true,
   });
+
+  // ── PROMOKOD ──────────────────────────────────────────────────────
+  // Kod SERVERDA tekshiriladi va chegirma ham SERVERDA hisoblanadi —
+  // bu yerdagi qiymatlar faqat KO'RSATISH uchun. Buyurtma yaratilganda
+  // server kodni qaytadan tekshiradi, ya'ni brauzerda ko'rsatilgan
+  // chegirmani "tahrirlab" yuborishning foydasi yo'q.
+  const [promoInput, setPromoInput] = useState('');
+  const [promoChecking, setPromoChecking] = useState(false);
+  const [promoError, setPromoError] = useState<string | null>(null);
+  const [appliedPromo, setAppliedPromo] = useState<{ code: string; discount: number } | null>(null);
+  const [checkPromoCode] = useMutation(CHECK_PROMO_CODE);
   // Buyurtmadan keyin manzil/telefonni PROFILGA saqlab qo'yish uchun.
   // GET_ME qayta so'raladi, shunda keyingi safar checkout ochilganda
   // (va profil sahifasida) yangi qiymat darhol ko'rinadi.
@@ -179,8 +208,10 @@ function CheckoutPageInner({ params }: { params: { locale: Locale } }) {
     handleSubmit,
     reset,
     watch,
+    // Viloyat almashtirilganda tumanni tozalash uchun.
+    setValue,
     formState: { errors },
-  } = useForm<CheckoutForm>({ defaultValues: { phone: '+998 ' } });
+  } = useForm<CheckoutForm>({ defaultValues: { phone: '+998 ', region: '', district: '' } });
 
   // Yetkazib berish ma'lumotlari topilgach forma "ko'rish" (read-only
   // xulosa + qalam tugmasi) rejimida ochiladi — xaridor har safar bo'sh
@@ -211,11 +242,25 @@ function CheckoutPageInner({ params }: { params: { locale: Locale } }) {
     const profile = meData?.me;
 
     let cachedCity: string | undefined;
+    let cachedRegion: string | undefined;
+    let cachedDistrict: string | undefined;
     try {
       const raw = localStorage.getItem(SAVED_DELIVERY_INFO_KEY);
       if (raw) {
         const saved = JSON.parse(raw) as Partial<CheckoutForm>;
         cachedCity = saved.deliveryCity || undefined;
+        cachedRegion = saved.region || undefined;
+        cachedDistrict = saved.district || undefined;
+        // Eski (viloyat/tuman ajratilmagan) yozuvlar uchun: saqlangan
+        // matn "Viloyat, Tuman" ko'rinishida bo'lsa qaytadan bo'lib
+        // olamiz, shunda ro'yxatlar to'ldirilgan holda ochiladi.
+        if (!cachedRegion && cachedCity?.includes(',')) {
+          const [maybeRegion, ...rest] = cachedCity.split(',').map((p) => p.trim());
+          if (UZBEKISTAN_REGIONS.some((r) => r.name === maybeRegion)) {
+            cachedRegion = maybeRegion;
+            cachedDistrict = rest.join(', ') || undefined;
+          }
+        }
       }
     } catch {
       // localStorage o'qishda xato bo'lsa (masalan maxfiy rejim) — shahar
@@ -227,6 +272,8 @@ function CheckoutPageInner({ params }: { params: { locale: Locale } }) {
       ...(profile?.address ? { deliveryAddress: profile.address } : {}),
       ...(profile?.phone ? { phone: profile.phone } : {}),
       ...(cachedCity ? { deliveryCity: cachedCity } : {}),
+      ...(cachedRegion ? { region: cachedRegion } : {}),
+      ...(cachedDistrict ? { district: cachedDistrict } : {}),
     }));
     setDeliveryPrefillReady(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -246,6 +293,52 @@ function CheckoutPageInner({ params }: { params: { locale: Locale } }) {
   // payment selection is hidden — every order goes through as "to be
   // arranged", and payment itself is coordinated manually via Telegram
   // (see the contact note rendered below).
+  async function applyPromo() {
+    const code = promoInput.trim();
+    if (!code) return;
+    const phone = watch('phone');
+    if (!phone || phone.replace(/\D/g, '').length < 9) {
+      setPromoError(dict.checkout.promoNeedPhone);
+      return;
+    }
+    setPromoChecking(true);
+    setPromoError(null);
+    try {
+      const { data } = await checkPromoCode({
+        variables: {
+          input: {
+            code,
+            phone,
+            // Buyurtma yaratishda nima yuborilsa — tekshiruvda ham
+            // AYNAN o'sha, shuning uchun ko'rsatilgan chegirma bilan
+            // yoziladigani farq qilmaydi.
+            ...(buyNowRequested && buyNowItem
+              ? {
+                  buyNowProductId: buyNowItem.productId,
+                  buyNowSize: buyNowItem.size,
+                  buyNowColor: buyNowItem.color,
+                  buyNowQuantity: buyNowItem.quantity,
+                }
+              : { itemIds: selectedItemIds ?? undefined }),
+          },
+        },
+      });
+      const result = data?.checkPromoCode;
+      if (result?.valid) {
+        setAppliedPromo({ code: result.code, discount: result.discount });
+        setPromoError(null);
+      } else {
+        setAppliedPromo(null);
+        setPromoError(result?.message ?? dict.checkout.promoInvalid);
+      }
+    } catch {
+      setAppliedPromo(null);
+      setPromoError(dict.checkout.promoInvalid);
+    } finally {
+      setPromoChecking(false);
+    }
+  }
+
   async function onSubmit(values: CheckoutForm) {
     if (buyNowRequested && !buyNowItem) {
       // Sessionstorage read failed or was cleared (private-browsing mode,
@@ -264,10 +357,14 @@ function CheckoutPageInner({ params }: { params: { locale: Locale } }) {
           input: buyNowRequested
             ? {
                 deliveryAddress: values.deliveryAddress,
-                deliveryCity: values.deliveryCity,
+                // Viloyat + tuman bitta matnga birlashtiriladi — backend
+                // va admin panel uchun bu avvalgi "shahar" maydonining
+                // o'zi.
+                deliveryCity: cityOf(values),
                 phone: values.phone,
                 note: values.note,
                 paymentMethod: 'CASH',
+                promoCode: appliedPromo?.code,
                 buyNowProductId: buyNowItem!.productId,
                 buyNowSize: buyNowItem!.size,
                 buyNowColor: buyNowItem!.color,
@@ -275,10 +372,11 @@ function CheckoutPageInner({ params }: { params: { locale: Locale } }) {
               }
             : {
                 deliveryAddress: values.deliveryAddress,
-                deliveryCity: values.deliveryCity,
+                deliveryCity: cityOf(values),
                 phone: values.phone,
                 note: values.note,
                 paymentMethod: 'CASH',
+                promoCode: appliedPromo?.code,
                 // undefined (not []) when nothing was pre-selected, so the
                 // backend's own "omitted = whole cart" fallback applies.
                 itemIds: selectedItemIds ?? undefined,
@@ -336,7 +434,9 @@ function CheckoutPageInner({ params }: { params: { locale: Locale } }) {
         localStorage.setItem(
           SAVED_DELIVERY_INFO_KEY,
           JSON.stringify({
-            deliveryCity: values.deliveryCity,
+            deliveryCity: cityOf(values),
+            region: values.region,
+            district: values.district,
           }),
         );
       } catch {
@@ -495,22 +595,47 @@ function CheckoutPageInner({ params }: { params: { locale: Locale } }) {
 
               {editingDelivery ? (
                 <>
-                  <div>
-                    <label className="mb-1.5 block text-xs font-semibold text-ink-900/60">{dict.checkout.address}</label>
-                    <input
-                      {...register('deliveryAddress', { required: true, minLength: 5 })}
-                      className="w-full rounded-xl border border-ink-900/15 px-4 py-3 text-sm outline-none focus:border-ink-950"
-                    />
-                    {errors.deliveryAddress && <p className="mt-1 text-xs text-red-500">Majburiy maydon</p>}
-                  </div>
-
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
-                      <label className="mb-1.5 block text-xs font-semibold text-ink-900/60">{dict.checkout.city}</label>
-                      <input
-                        {...register('deliveryCity')}
+                      {/* Viloyat — O'zbekiston bo'yicha to'liq ro'yxat
+                          (lib/data/uzbekistan-regions.ts). Tanlanganda
+                          pastdagi tuman ro'yxati o'sha viloyatniki bilan
+                          to'ladi. */}
+                      <label className="mb-1.5 block text-xs font-semibold text-ink-900/60">{dict.checkout.region}</label>
+                      <select
+                        {...register('region', {
+                          required: true,
+                          // Viloyat almashtirilsa, eski tuman qolib
+                          // ketmasligi kerak — boshqa viloyatning tumani
+                          // ro'yxatda umuman yo'q.
+                          onChange: () => setValue('district', ''),
+                        })}
                         className="w-full rounded-xl border border-ink-900/15 px-4 py-3 text-sm outline-none focus:border-ink-950"
-                      />
+                      >
+                        <option value="">{dict.checkout.regionPlaceholder}</option>
+                        {UZBEKISTAN_REGIONS.map((r) => (
+                          <option key={r.name} value={r.name}>
+                            {r.name}
+                          </option>
+                        ))}
+                      </select>
+                      {errors.region && <p className="mt-1 text-xs text-red-500">Majburiy maydon</p>}
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-xs font-semibold text-ink-900/60">{dict.checkout.district}</label>
+                      <select
+                        {...register('district', { required: true })}
+                        disabled={!watch('region')}
+                        className="w-full rounded-xl border border-ink-900/15 px-4 py-3 text-sm outline-none focus:border-ink-950 disabled:opacity-50"
+                      >
+                        <option value="">{dict.checkout.districtPlaceholder}</option>
+                        {districtsOf(watch('region')).map((d) => (
+                          <option key={d} value={d}>
+                            {d}
+                          </option>
+                        ))}
+                      </select>
+                      {errors.district && <p className="mt-1 text-xs text-red-500">Majburiy maydon</p>}
                     </div>
                     <div>
                       <label className="mb-1.5 block text-xs font-semibold text-ink-900/60">{dict.checkout.phone}</label>
@@ -521,6 +646,19 @@ function CheckoutPageInner({ params }: { params: { locale: Locale } }) {
                       />
                       {errors.phone && <p className="mt-1 text-xs text-red-500">Majburiy maydon</p>}
                     </div>
+                  </div>
+
+                  {/* Aniq manzil — ko'cha, uy/xonadon, mo'ljal. Viloyat va
+                      tuman ro'yxatdan tanlangani uchun bu yerga faqat
+                      qolgan qismi qo'lda yoziladi. */}
+                  <div>
+                    <label className="mb-1.5 block text-xs font-semibold text-ink-900/60">{dict.checkout.address}</label>
+                    <input
+                      {...register('deliveryAddress', { required: true, minLength: 5 })}
+                      placeholder={dict.checkout.addressPlaceholder}
+                      className="w-full rounded-xl border border-ink-900/15 px-4 py-3 text-sm outline-none focus:border-ink-950"
+                    />
+                    {errors.deliveryAddress && <p className="mt-1 text-xs text-red-500">Majburiy maydon</p>}
                   </div>
 
                   <div>
@@ -596,6 +734,53 @@ function CheckoutPageInner({ params }: { params: { locale: Locale } }) {
               <span>{dict.cart.total}</span>
               <span>{formatPrice(subtotal, locale)}</span>
             </div>
+
+            {/* ── PROMOKOD ──────────────────────────────────────────
+                Kod serverda tekshiriladi: mavjudmi, muddati o'tmaganmi,
+                shu RAQAMDA allaqachon ishlatilmaganmi va savatdagi
+                tovarlarga amal qiladimi. Bu yerdagi summa faqat
+                ko'rsatish uchun — buyurtma yaratilganda server kodni
+                qaytadan tekshirib, chegirmani o'zi hisoblaydi. */}
+            <div className="mt-4 border-t border-ink-900/10 pt-4 dark:border-cream/10">
+              <label className="mb-1.5 block text-xs font-semibold text-ink-900/60 dark:text-cream/60">
+                {dict.checkout.promoTitle}
+              </label>
+              <div className="flex gap-2">
+                <input
+                  value={promoInput}
+                  onChange={(e) => {
+                    setPromoInput(e.target.value);
+                    // Kod o'zgartirilsa avvalgi tasdiq bekor bo'ladi —
+                    // aks holda ekranda eski chegirma qolib ketardi.
+                    setAppliedPromo(null);
+                    setPromoError(null);
+                  }}
+                  placeholder={dict.checkout.promoPlaceholder}
+                  className="min-w-0 flex-1 rounded-xl border border-ink-900/15 px-4 py-2.5 text-sm uppercase outline-none focus:border-ink-950 dark:border-cream/15"
+                />
+                <button
+                  type="button"
+                  onClick={applyPromo}
+                  disabled={promoChecking || !promoInput.trim()}
+                  className="btn-outline shrink-0 !px-4 !py-2.5 text-xs disabled:opacity-50"
+                >
+                  {promoChecking ? '…' : dict.checkout.promoApply}
+                </button>
+              </div>
+              {promoError && <p className="mt-1.5 text-xs font-medium text-red-500">{promoError}</p>}
+              {appliedPromo && (
+                <p className="mt-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                  {appliedPromo.code} · −{formatPrice(appliedPromo.discount, locale)}
+                </p>
+              )}
+            </div>
+
+            {appliedPromo && (
+              <div className="mt-4 flex items-center justify-between border-t border-ink-900/10 pt-4 text-base font-bold dark:border-cream/10">
+                <span>{dict.checkout.promoTotal}</span>
+                <span>{formatPrice(Math.max(0, subtotal - appliedPromo.discount), locale)}</span>
+              </div>
+            )}
             <button type="submit" disabled={submitting || items.length === 0} className="btn-primary w-full disabled:opacity-50">
               {submitting ? '…' : dict.checkout.placeOrder}
             </button>

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation } from '@apollo/client';
-import { AlertCircle, Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react';
+import { AlertCircle, Minus, Plus, ShoppingCart, Trash2 } from 'lucide-react';
 import { GET_MY_CART } from '@/lib/graphql/queries';
 import { UPDATE_CART_ITEM, REMOVE_CART_ITEM } from '@/lib/graphql/mutations';
 import { useAuthStore } from '@/lib/store/auth-store';
@@ -136,7 +136,7 @@ export default function CartPage({ params }: { params: { locale: Locale } }) {
   if (!user || (!loading && items.length === 0)) {
     return (
       <div className="container-app flex flex-col items-center py-32 text-center">
-        <ShoppingBag size={40} className="text-ink-900/20" />
+        <ShoppingCart size={40} className="text-ink-900/20" />
         <p className="mt-4 text-sm text-ink-900/50">{dict.cart.empty}</p>
         <p className="text-xs text-ink-900/40">{dict.cart.emptySubtitle}</p>
         <Link href={`/${locale}/shop`} className="btn-primary mt-6">

@@ -24,11 +24,15 @@ type HomeCategory = {
 // payment) — a soft tinted square in light mode, the same hue at low
 // opacity on a dark card in dark mode, so the row reads as four distinct
 // colors instead of one repeated brand tone.
+// Ikonka fonlari avval to'rt xil rangda edi (yashil/ko'k/binafsha/sariq)
+// — yangi uslub talabi bo'yicha barchasi bitta aksent rangda, ya'ni
+// qator yaxlit ko'rinadi. Ikonkalarning o'zi, o'lchami va tartibi
+// o'zgarmadi.
 const WHY_ITEMS = [
-  { icon: CheckCircle2, ring: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400' },
-  { icon: Truck, ring: 'bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400' },
-  { icon: ShieldCheck, ring: 'bg-violet-50 text-violet-600 dark:bg-violet-500/10 dark:text-violet-400' },
-  { icon: CreditCard, ring: 'bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400' },
+  { icon: CheckCircle2, ring: 'bg-gold-500/10 text-gold-600 dark:bg-gold-500/15 dark:text-gold-400' },
+  { icon: Truck, ring: 'bg-gold-500/10 text-gold-600 dark:bg-gold-500/15 dark:text-gold-400' },
+  { icon: ShieldCheck, ring: 'bg-gold-500/10 text-gold-600 dark:bg-gold-500/15 dark:text-gold-400' },
+  { icon: CreditCard, ring: 'bg-gold-500/10 text-gold-600 dark:bg-gold-500/15 dark:text-gold-400' },
 ];
 
 // Bosh sahifa uchun canonical (https://wardrobestore.uz/uz) + hreflang
@@ -171,7 +175,7 @@ export default async function HomePage({ params }: { params: { locale: Locale } 
         <div
           className="pointer-events-none absolute inset-0"
           style={{
-            background: 'linear-gradient(135deg, rgba(16,185,129,0.05) 0%, rgba(5,150,105,0.03) 100%)',
+            background: 'linear-gradient(135deg, rgba(70,95,255,0.04) 0%, rgba(70,95,255,0.02) 100%)',
           }}
         />
         {/* ROOT-CAUSE FIX — the 3 glow-orb divs (blur-[140-170px]) that used
@@ -223,7 +227,7 @@ export default async function HomePage({ params }: { params: { locale: Locale } 
           darhol Footer boshlanadi). Gradient ham teskari yo'nalishga
           (to-b -> to-t) o'girildi, shunda och yashil tus yuqoridagi oq
           fon bilan emas, pastdagi Footer bilan tutashadi. */}
-      <section className="relative overflow-hidden border-t border-ink-900/5 bg-gradient-to-t from-emerald-50/60 via-white to-white py-16 dark:border-cream/5 dark:from-ink-950 dark:via-ink-950 dark:to-ink-950">
+      <section className="relative overflow-hidden border-t border-ink-900/8 bg-white py-16 dark:border-cream/10 dark:bg-ink-950">
         <div className="container-app grid grid-cols-2 gap-5 lg:grid-cols-4">
           {dict.home.whyUsItems.map((item, i) => {
             const { icon: Icon, ring } = WHY_ITEMS[i % WHY_ITEMS.length];

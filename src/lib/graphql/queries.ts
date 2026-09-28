@@ -207,6 +207,9 @@ export const GET_PRODUCTS_ADMIN = gql`
         price
         stock
         isActive
+        # Reklamalar sahifasidagi tovar tanlash ro'yxati kichik rasm
+        # ko'rsatadi — shu sababli birinchi rasm ham olinadi.
+        images
         category {
           id
           name
@@ -491,6 +494,13 @@ export const BANNER_FIELDS = gql`
     categoryId
     categorySlug
     categoryName
+    # linkType = "PRODUCTS" bo'lganda — bannerga biriktirilgan tovarlar.
+    products {
+      id
+      slug
+      title
+      image
+    }
   }
 `;
 
@@ -505,5 +515,66 @@ export const GET_ADMIN_BANNERS = gql`
   ${BANNER_FIELDS}
   query GetAdminBanners {
     adminBanners { ...BannerFields }
+  }
+`;
+
+// ── Header qidiruvi uchun yengil so'rov ───────────────────────────────
+// Faqat natijalar panelida kerak bo'ladigan maydonlar (to'liq
+// ProductFields emas — u tavsif, sharhlar, rang-rasmlar va h.k.ni ham
+// tortib kelardi, har bir harf kiritilganda esa bu ortiqcha yuk).
+//
+// DIQQAT — API CHEKLOVI: backenddagi `search` filtri SQL `LIKE %q%`
+// asosida ishlaydi, ya'ni "ichida bor" (contains) bo'yicha qidiradi;
+// "nomi shu harf bilan BOSHLANADI" (prefix) rejimi API'da yo'q.
+// Shuning uchun bu so'rov kengroq to'plamni oladi va "boshlanishi"
+// bo'yicha yakuniy saralash brauzerda bajariladi. Bu to'g'ri natija
+// beradi, chunki "boshlanadi" to'plami har doim "ichida bor"
+// to'plamining ichki qismi — birorta mos mahsulot tushib qolmaydi.
+export const SEARCH_PRODUCTS = gql`
+  query SearchProducts($filter: ProductFilterInput!) {
+    products(filter: $filter) {
+      total
+      list {
+        id
+        title
+        titleRu
+        slug
+        price
+        images
+        sizes
+        variants {
+          size
+          color
+          price
+        }
+      }
+    }
+  }
+`;
+
+// ── PROMOKODLAR (admin) ───────────────────────────────────────────────
+export const GET_ADMIN_PROMO_CODES = gql`
+  query GetAdminPromoCodes {
+    adminPromoCodes {
+      id
+      code
+      discountType
+      discountValue
+      maxDiscount
+      minOrderAmount
+      startsAt
+      endsAt
+      isActive
+      scope
+      usedCount
+      categories {
+        id
+        name
+      }
+      products {
+        id
+        name
+      }
+    }
   }
 `;

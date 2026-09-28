@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, ShoppingBag, Megaphone, ClipboardList, Tag, Store, Users, Settings, LogOut, X } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Megaphone, ClipboardList, Tag, Store, Users, Settings, Ticket, LogOut, X } from 'lucide-react';
 import { useAuthStore } from '@/lib/store/auth-store';
 import { useScrollLock } from '@/lib/hooks/use-scroll-lock';
 import type { Dictionary } from '@/i18n/get-dictionary';
@@ -46,6 +46,7 @@ export function AdminSidebar({ locale, dict, open, onClose }: AdminSidebarProps)
     // Bosh sahifadagi reklama karuseli — mahsulotlar bo'limidan keyin
     // turadi, chunki banner ko'pincha aynan bir tovarga bog'lanadi.
     { href: `/${locale}/admin/banners`, label: dict.admin.banners, icon: Megaphone },
+    { href: `/${locale}/admin/promo-codes`, label: dict.admin.promoCodes, icon: Ticket },
     { href: `/${locale}/admin/orders`, label: dict.admin.orders, icon: ClipboardList },
     { href: `/${locale}/admin/categories`, label: dict.admin.categories, icon: Tag },
     { href: `/${locale}/admin/stores`, label: dict.admin.stores, icon: Store },
@@ -66,7 +67,7 @@ export function AdminSidebar({ locale, dict, open, onClose }: AdminSidebarProps)
         <div className="flex items-center justify-between px-6 py-8">
           <Link href={`/${locale}`} className="flex items-baseline gap-2" onClick={onClose}>
             <span
-              className="font-display text-base font-semibold uppercase"
+              className="brand-wordmark text-base font-semibold uppercase"
               style={{ letterSpacing: '0.18em' }}
             >
               Wardrobe
