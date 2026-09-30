@@ -4,7 +4,7 @@ import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { translateColorName } from '@/lib/utils/colorNames';
-import { PRESET_COLORS } from '@/lib/utils/colorSwatch';
+import { swatchColor } from '@/lib/utils/colorSwatch';
 import { useNavLoadingStore } from '@/lib/store/shop-loading-store';
 // Toifaga qarab o'lcham ro'yxati — admin panelning mahsulot formasi
 // (components/admin/ProductForm.tsx) bilan BITTA umumiy manbadan o'qiladi
@@ -21,10 +21,15 @@ interface ShopFiltersProps {
   // Brend kabi — admin panelda o'zi yaratgan ro'yxat (masalan "Erkaklar",
   // "Ayollar"), Category kabi ixtiyoriy ruscha nom bilan.
   genders: { slug: string; name: string; nameRu?: string }[];
+  // FAQAT tovarlarda haqiqatda ishlatilgan ranglar (do'kon sahifasi
+  // backenddan olib beradi — `productColors`). Avval bu yerda tayyor
+  // ro'yxatning HAMMASI (30 ta rang) ko'rsatilardi va ularning
+  // ko'pchiligini bosganda hech qanday tovar chiqmasdi.
+  colors: string[];
   locale: 'uz' | 'ru';
 }
 
-export function ShopFilters({ dict, categories, genders, locale }: ShopFiltersProps) {
+export function ShopFilters({ dict, categories, genders, colors, locale }: ShopFiltersProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -207,17 +212,23 @@ export function ShopFilters({ dict, categories, genders, locale }: ShopFiltersPr
       </div>
       )}
 
+      {/* Bironta tovarda rang ko'rsatilmagan bo'lsa — bo'lim umuman
+          chizilmaydi (bo'sh sarlavha osilib qolmasligi uchun). */}
+      {colors.length > 0 && (
       <div>
         <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-ink-900/50 dark:text-cream/50">{dict.product.color}</h4>
         <div className="flex flex-wrap gap-2">
-          {PRESET_COLORS.map((color) => (
+          {colors.map((name) => (
             <button
-              key={color.name}
-              title={translateColorName(color.name, locale)}
-              onClick={() => toggleListParam('colors', color.name, activeColors)}
-              style={{ backgroundColor: color.hex }}
+              key={name}
+              title={translateColorName(name, locale)}
+              onClick={() => toggleListParam('colors', name, activeColors)}
+              // Tus nomdan olinadi (lib/utils/colorSwatch.ts) — admin
+              // qo'lda yozgan, ro'yxatda yo'q rang ham neytral doiracha
+              // bo'lib ko'rinadi, ya'ni hech narsa sinmaydi.
+              style={{ backgroundColor: swatchColor(name) }}
               className={`h-8 w-8 rounded-full border-2 transition-transform hover:scale-110 ${
-                activeColors.includes(color.name)
+                activeColors.includes(name)
                   ? 'border-gold-500 ring-2 ring-gold-500/40'
                   : 'border-ink-900/10 dark:border-cream/20'
               }`}
@@ -225,6 +236,7 @@ export function ShopFilters({ dict, categories, genders, locale }: ShopFiltersPr
           ))}
         </div>
       </div>
+      )}
 
       <div>
         <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-ink-900/50 dark:text-cream/50">{dict.product.priceRange}</h4>

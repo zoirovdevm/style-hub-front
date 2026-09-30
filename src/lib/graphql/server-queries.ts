@@ -105,3 +105,11 @@ export const GET_BANNERS_STR = `
     }
   }
 `;
+
+// Do'kon filtri uchun — faqat tovarlarda haqiqatda ishlatilgan ranglar
+// (backend: product.service.ts, usedColors()).
+export const GET_PRODUCT_COLORS_STR = `
+  query GetProductColors {
+    productColors
+  }
+`;
