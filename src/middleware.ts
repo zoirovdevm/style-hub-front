@@ -46,6 +46,13 @@ export function middleware(request: NextRequest) {
     pathname.startsWith('/graphql') ||
     pathname.startsWith('/upload') ||
     pathname.startsWith('/presence') ||
+    // Wardrobe Ombor Telegram Mini App (/ombor) va uning API'si
+    // (/ombor-api/*, next.config.js rewrite orqali backendga) — til
+    // prefiksisiz ishlaydi; aks holda /ombor → /uz/ombor ga yo'naltirilib,
+    // 404 bo'lardi.
+    pathname === '/ombor' ||
+    pathname.startsWith('/ombor/') ||
+    pathname.startsWith('/ombor-api') ||
     pathname.includes('.')
   ) {
     return NextResponse.next();
@@ -63,5 +70,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next|api|graphql|upload|presence|.*\\..*).*)'],
+  matcher: ['/((?!_next|api|graphql|upload|presence|ombor|.*\\..*).*)'],
 };

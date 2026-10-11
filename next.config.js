@@ -81,6 +81,8 @@ const nextConfig = {
       { source: '/uploads/:path*', destination: `${backend}/uploads/:path*` },
       { source: '/upload/:path*', destination: `${backend}/upload/:path*` },
       { source: '/presence/:path*', destination: `${backend}/presence/:path*` },
+      // Wardrobe Ombor Telegram Mini App API'si (backend: modules/ombor).
+      { source: '/ombor-api/:path*', destination: `${backend}/ombor-api/:path*` },
       // Google Search Console'ning "HTML-fayl" usuli bilan sayt egaligini
       // tasdiqlash uchun. Fayl public/ papkasida turadi va odatda faqat
       // ildizdan ochiladi (/googleXXXX.html). Lekin Search Console'da

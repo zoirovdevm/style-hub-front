@@ -1,0 +1,123 @@
+// Wardrobe Ombor Mini App — barcha ko'rinadigan matnlar (UZ / RU).
+//
+// Saytning lug'at fayllaridan (i18n/dictionaries) ATAYLAB alohida: Mini App
+// mustaqil sahifa, sayt sarlavhalari/menyulari unga kerak emas, va bu
+// matnlarni o'zgartirish saytga hech qanday ta'sir qilmasligi kerak.
+
+export type OmborLang = 'uz' | 'ru';
+
+export const OMBOR_T = {
+  uz: {
+    appName: 'Wardrobe Ombor',
+    // Kirish
+    loginTitle: 'Magazinga kirish',
+    loginDesc: 'Magaziningizga berilgan maxsus kodni kiriting.',
+    codePlaceholder: 'Magazin kodi',
+    loginButton: 'Kirish',
+    invalidCode: 'Noto‘g‘ri magazin kodi.',
+    tooManyAttempts: 'Juda ko‘p urinish. 15 daqiqadan so‘ng qayta urinib ko‘ring.',
+    openInTelegram: 'Ombor faqat Telegram orqali ochiladi. @WardrobeOmborBot ga kirib, «Omborga kirish» tugmasini bosing.',
+    sessionError: 'Ulanib bo‘lmadi. Mini App’ni yopib, qayta oching.',
+    // Navigatsiya
+    home: 'Bosh sahifa',
+    categories: 'Kategoriya',
+    profile: 'Profil',
+    back: 'Orqaga',
+    // Qidiruv / ro'yxat
+    searchProducts: 'Tovar nomi yoki kodi bo‘yicha qidirish',
+    searchCategories: 'Kategoriyani qidirish',
+    noProducts: 'Tovar topilmadi',
+    noCategories: 'Kategoriya topilmadi',
+    productsCount: 'ta tovar',
+    loading: 'Yuklanmoqda…',
+    retry: 'Qayta urinish',
+    loadError: 'Ma’lumotni yuklab bo‘lmadi.',
+    // Qoldiq
+    inStock: 'Omborda',
+    pcs: 'dona',
+    lowStock: 'Kam qoldi',
+    outOfStock: 'Tugagan',
+    // Tovar sahifasi
+    color: 'Rang',
+    size: 'O‘lcham',
+    quantity: 'Soni',
+    chooseVariant: 'Rang va o‘lchamni tanlang',
+    removeButton: 'Tovarni olib tashlash',
+    removing: 'Olib tashlanmoqda…',
+    confirmTitle: 'Tovarni olib tashlaysizmi?',
+    confirmYes: 'Ha, olib tashlash',
+    cancel: 'Bekor qilish',
+    successTitle: 'Tovar olib tashlandi!',
+    deducted: 'Olib tashlandi',
+    remaining: 'Qolgan qoldiq',
+    done: 'Yaxshi',
+    insufficient: 'Omborda buncha tovar yo‘q. Qoldiq yangilandi.',
+    deductError: 'Olib tashlab bo‘lmadi. Qayta urinib ko‘ring.',
+    // Profil
+    store: 'Magazin',
+    employee: 'Xodim',
+    language: 'Til',
+    theme: 'Mavzu',
+    light: 'Yorug‘',
+    dark: 'Tungi',
+    logout: 'Chiqish',
+    logoutConfirm: 'Ombordan chiqasizmi? Keyingi safar magazin kodi qayta so‘raladi.',
+    logoutYes: 'Ha, chiqish',
+  },
+  ru: {
+    appName: 'Wardrobe Ombor',
+    loginTitle: 'Вход в магазин',
+    loginDesc: 'Введите уникальный код вашего магазина.',
+    codePlaceholder: 'Код магазина',
+    loginButton: 'Войти',
+    invalidCode: 'Неверный код магазина.',
+    tooManyAttempts: 'Слишком много попыток. Попробуйте через 15 минут.',
+    openInTelegram: 'Склад открывается только через Telegram. Откройте @WardrobeOmborBot и нажмите «Открыть склад».',
+    sessionError: 'Не удалось подключиться. Закройте и снова откройте Mini App.',
+    home: 'Главная',
+    categories: 'Категории',
+    profile: 'Профиль',
+    back: 'Назад',
+    searchProducts: 'Поиск по названию или коду товара',
+    searchCategories: 'Поиск категории',
+    noProducts: 'Товары не найдены',
+    noCategories: 'Категории не найдены',
+    productsCount: 'товаров',
+    loading: 'Загрузка…',
+    retry: 'Повторить',
+    loadError: 'Не удалось загрузить данные.',
+    inStock: 'На складе',
+    pcs: 'шт',
+    lowStock: 'Мало',
+    outOfStock: 'Нет в наличии',
+    color: 'Цвет',
+    size: 'Размер',
+    quantity: 'Количество',
+    chooseVariant: 'Выберите цвет и размер',
+    removeButton: 'Списать товар',
+    removing: 'Списание…',
+    confirmTitle: 'Списать товар?',
+    confirmYes: 'Да, списать',
+    cancel: 'Отмена',
+    successTitle: 'Товар списан!',
+    deducted: 'Списано',
+    remaining: 'Остаток',
+    done: 'Хорошо',
+    insufficient: 'На складе недостаточно товара. Остаток обновлён.',
+    deductError: 'Не удалось списать. Попробуйте ещё раз.',
+    store: 'Магазин',
+    employee: 'Сотрудник',
+    language: 'Язык',
+    theme: 'Тема',
+    light: 'Светлая',
+    dark: 'Тёмная',
+    logout: 'Выйти',
+    logoutConfirm: 'Выйти из склада? В следующий раз потребуется код магазина.',
+    logoutYes: 'Да, выйти',
+  },
+} as const;
+
+export type OmborDict = { [K in keyof (typeof OMBOR_T)['uz']]: string };
+
+// Shu sondan kam qolsa — "Kam qoldi" ogohlantirishi.
+export const LOW_STOCK_THRESHOLD = 3;
