@@ -575,6 +575,10 @@ export const GET_ADMIN_PROMO_CODES = gql`
         id
         name
       }
+      stores {
+        id
+        name
+      }
     }
   }
 `;

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery } from '@apollo/client';
 import { Check, Pencil, Trash2, X } from 'lucide-react';
-import { GET_ADMIN_PROMO_CODES, GET_CATEGORIES, GET_PRODUCTS_ADMIN } from '@/lib/graphql/queries';
+import { GET_ADMIN_PROMO_CODES, GET_CATEGORIES, GET_PRODUCTS_ADMIN, GET_STORES } from '@/lib/graphql/queries';
 import { CREATE_PROMO_CODE, REMOVE_PROMO_CODE, UPDATE_PROMO_CODE } from '@/lib/graphql/mutations';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { formatPrice } from '@/lib/utils/format';
@@ -34,8 +34,13 @@ const TEXT = {
     scopeAll: 'Hamma tovarga',
     scopeCategories: 'Tanlangan kategoriyalarga',
     scopeProducts: 'Tanlangan tovarlarga',
+    scopeStores: 'Tanlangan magazinlarga',
     pickCategories: 'Kategoriyalarni belgilang',
     pickProducts: 'Tovarlarni belgilang',
+    pickStores: "Magazinlarni belgilang — promokod ularning HAMMA tovarlariga (keyin qo'shiladiganlariga ham) amal qiladi",
+    allStores: 'Hamma magazinlar',
+    noStore: 'Magazinsiz',
+    productsCount: 'ta tovar',
     search: 'Qidirish…',
     selected: 'Tanlangan',
     clear: 'Tanlovni tozalash',
@@ -74,8 +79,13 @@ const TEXT = {
     scopeAll: 'На все товары',
     scopeCategories: 'На выбранные категории',
     scopeProducts: 'На выбранные товары',
+    scopeStores: 'На выбранные магазины',
     pickCategories: 'Отметьте категории',
     pickProducts: 'Отметьте товары',
+    pickStores: 'Отметьте магазины — промокод будет действовать на ВСЕ их товары (в том числе добавленные позже)',
+    allStores: 'Все магазины',
+    noStore: 'Без магазина',
+    productsCount: 'товаров',
     search: 'Поиск…',
     selected: 'Выбрано',
     clear: 'Очистить выбор',
@@ -94,7 +104,7 @@ const TEXT = {
   },
 } as const;
 
-type Scope = 'ALL' | 'CATEGORIES' | 'PRODUCTS';
+type Scope = 'ALL' | 'CATEGORIES' | 'PRODUCTS' | 'STORES';
 type DiscountType = 'PERCENT' | 'AMOUNT';
 
 const EMPTY_FORM = {
@@ -109,6 +119,7 @@ const EMPTY_FORM = {
   scope: 'ALL' as Scope,
   categoryIds: [] as string[],
   productIds: [] as string[],
+  storeIds: [] as string[],
 };
 
 // Qidiruv uchun oddiy normallashtirish (katta-kichik harf va o'zbekcha
@@ -131,6 +142,7 @@ export default function AdminPromoCodesPage({ params }: { params: { locale: Loca
 
   const { data, loading, refetch } = useQuery(GET_ADMIN_PROMO_CODES, { fetchPolicy: 'cache-and-network' });
   const { data: categoriesData } = useQuery(GET_CATEGORIES);
+  const { data: storesData } = useQuery(GET_STORES);
   const { data: productsData } = useQuery(GET_PRODUCTS_ADMIN, {
     variables: { filter: { page: 1, limit: 200, sort: 'NEWEST' } },
   });
@@ -144,17 +156,33 @@ export default function AdminPromoCodesPage({ params }: { params: { locale: Loca
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
+  // "Tanlangan tovarlarga" ro'yxatidagi magazin filtri: '' — hammasi,
+  // '__none__' — magazinga biriktirilmagan tovarlar.
+  const [storeFilter, setStoreFilter] = useState('');
 
   const promos = data?.adminPromoCodes ?? [];
   const categories = categoriesData?.categories ?? [];
   const products = productsData?.productsAdmin?.list ?? [];
+  const stores = storesData?.stores ?? [];
+
+  // Har bir magazinda nechta tovar borligi (magazin tanlash ro'yxatida
+  // ko'rsatish uchun).
+  const productCountByStore = new Map<string, number>();
+  for (const p of products as any[]) {
+    if (p.store?.id) productCountByStore.set(p.store.id, (productCountByStore.get(p.store.id) ?? 0) + 1);
+  }
 
   const search = normalize(query);
-  const visibleProducts = search
-    ? products.filter((p: any) => normalize(String(p.title ?? '')).includes(search))
-    : products;
+  const visibleProducts = (products as any[]).filter((p) => {
+    if (storeFilter === '__none__' ? p.store?.id : storeFilter && p.store?.id !== storeFilter) return false;
+    if (!search) return true;
+    // Nom bo'yicha ham, magazin nomi bo'yicha ham qidiriladi.
+    return (
+      normalize(String(p.title ?? '')).includes(search) || normalize(String(p.store?.name ?? '')).includes(search)
+    );
+  });
 
-  function toggleId(key: 'categoryIds' | 'productIds', id: string) {
+  function toggleId(key: 'categoryIds' | 'productIds' | 'storeIds', id: string) {
     setForm((f) => ({
       ...f,
       [key]: f[key].includes(id) ? f[key].filter((x) => x !== id) : [...f[key], id],
@@ -162,16 +190,18 @@ export default function AdminPromoCodesPage({ params }: { params: { locale: Loca
   }
 
   function resetForm() {
-    setForm({ ...EMPTY_FORM, categoryIds: [], productIds: [] });
+    setForm({ ...EMPTY_FORM, categoryIds: [], productIds: [], storeIds: [] });
     setEditingId(null);
     setError(null);
     setQuery('');
+    setStoreFilter('');
   }
 
   function startEdit(promo: any) {
     setEditingId(promo.id);
     setError(null);
     setQuery('');
+    setStoreFilter('');
     setForm({
       code: promo.code,
       discountType: promo.discountType,
@@ -184,6 +214,7 @@ export default function AdminPromoCodesPage({ params }: { params: { locale: Loca
       scope: promo.scope,
       categoryIds: (promo.categories ?? []).map((c: any) => c.id),
       productIds: (promo.products ?? []).map((p: any) => p.id),
+      storeIds: (promo.stores ?? []).map((st: any) => st.id),
     });
     if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -212,6 +243,7 @@ export default function AdminPromoCodesPage({ params }: { params: { locale: Loca
       scope: form.scope,
       categoryIds: form.scope === 'CATEGORIES' ? form.categoryIds : undefined,
       productIds: form.scope === 'PRODUCTS' ? form.productIds : undefined,
+      storeIds: form.scope === 'STORES' ? form.storeIds : undefined,
     };
 
     setSaving(true);
@@ -361,6 +393,7 @@ export default function AdminPromoCodesPage({ params }: { params: { locale: Loca
                 ['ALL', t.scopeAll],
                 ['CATEGORIES', t.scopeCategories],
                 ['PRODUCTS', t.scopeProducts],
+                ['STORES', t.scopeStores],
               ] as [Scope, string][]
             ).map(([value, label]) => (
               <button
@@ -402,6 +435,35 @@ export default function AdminPromoCodesPage({ params }: { params: { locale: Loca
             </div>
           )}
 
+          {form.scope === 'STORES' && (
+            <div className="space-y-2">
+              <p className="text-xs text-ink-900/45 dark:text-cream/45">{t.pickStores}</p>
+              <div className="max-h-60 space-y-1 overflow-y-auto rounded-xl border border-ink-900/12 p-2 dark:border-cream/12">
+                {stores.length === 0 ? (
+                  <p className="px-2 py-3 text-sm text-ink-900/45 dark:text-cream/45">{t.notFound}</p>
+                ) : (
+                  stores.map((st: any) => {
+                    const checked = form.storeIds.includes(st.id);
+                    return (
+                      <label
+                        key={st.id}
+                        className={`flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 transition-colors ${
+                          checked ? 'bg-gold-500/10' : 'hover:bg-ink-900/5 dark:hover:bg-cream/5'
+                        }`}
+                      >
+                        <Checkbox checked={checked} onChange={() => toggleId('storeIds', st.id)} />
+                        <span className="min-w-0 flex-1 truncate text-sm">{st.name}</span>
+                        <span className="shrink-0 text-xs text-ink-900/45 dark:text-cream/45">
+                          {productCountByStore.get(st.id) ?? 0} {t.productsCount}
+                        </span>
+                      </label>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          )}
+
           {form.scope === 'PRODUCTS' && (
             <div className="space-y-2">
               <p className="text-xs text-ink-900/45 dark:text-cream/45">{t.pickProducts}</p>
@@ -412,6 +474,19 @@ export default function AdminPromoCodesPage({ params }: { params: { locale: Loca
                   placeholder={t.search}
                   className={`${inputClass} sm:max-w-sm`}
                 />
+                <select
+                  value={storeFilter}
+                  onChange={(e) => setStoreFilter(e.target.value)}
+                  className={`${inputClass} sm:w-56`}
+                >
+                  <option value="">{t.allStores}</option>
+                  {stores.map((st: any) => (
+                    <option key={st.id} value={st.id}>
+                      {st.name}
+                    </option>
+                  ))}
+                  <option value="__none__">{t.noStore}</option>
+                </select>
                 <span className="text-xs font-semibold text-ink-900/50 dark:text-cream/50">
                   {t.selected}: {form.productIds.length}
                 </span>
@@ -439,7 +514,13 @@ export default function AdminPromoCodesPage({ params }: { params: { locale: Loca
                         }`}
                       >
                         <Checkbox checked={checked} onChange={() => toggleId('productIds', p.id)} />
-                        <span className="min-w-0 flex-1 truncate text-sm">{p.title}</span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm">{p.title}</span>
+                          <span className="block truncate text-xs text-ink-900/50 dark:text-cream/50">
+                            {p.store?.name ?? t.noStore}
+                          </span>
+                        </span>
+                        <span className="shrink-0 text-sm font-semibold tabular-nums">{formatPrice(p.price, locale)}</span>
                       </label>
                     );
                   })
@@ -496,7 +577,9 @@ export default function AdminPromoCodesPage({ params }: { params: { locale: Loca
                       ? t.scopeAll
                       : promo.scope === 'CATEGORIES'
                         ? `${t.scopeCategories}: ${(promo.categories ?? []).map((c: any) => c.name).join(', ')}`
-                        : `${t.scopeProducts}: ${(promo.products ?? []).map((p: any) => p.name).join(', ')}`}
+                        : promo.scope === 'STORES'
+                          ? `${t.scopeStores}: ${(promo.stores ?? []).map((st: any) => st.name).join(', ')}`
+                          : `${t.scopeProducts}: ${(promo.products ?? []).map((p: any) => p.name).join(', ')}`}
                     {' · '}
                     {promo.usedCount} {t.used}
                   </p>
