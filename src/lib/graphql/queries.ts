@@ -94,6 +94,7 @@ export const GET_CATEGORIES = gql`
       slug
       description
       image
+      sizeOptions
     }
   }
 `;

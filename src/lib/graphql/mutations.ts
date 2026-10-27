@@ -222,6 +222,7 @@ export const UPDATE_CATEGORY = gql`
       name
       nameRu
       slug
+      sizeOptions
     }
   }
 `;

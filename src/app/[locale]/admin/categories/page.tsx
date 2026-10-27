@@ -2,13 +2,28 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation } from '@apollo/client';
-import { Plus, Trash2, Pencil, Check, X } from 'lucide-react';
+import { Plus, Trash2, Pencil, Check, X, Ruler } from 'lucide-react';
 import { GET_CATEGORIES, GET_BRANDS, GET_GENDERS } from '@/lib/graphql/queries';
 import { CREATE_CATEGORY, CREATE_BRAND, CREATE_GENDER, UPDATE_CATEGORY } from '@/lib/graphql/mutations';
 import { gql } from '@apollo/client';
 import type { Locale } from '@/i18n/config';
 import uzDict from '@/i18n/dictionaries/uz.json';
 import ruDict from '@/i18n/dictionaries/ru.json';
+import { CategorySizeEditor } from '@/components/admin/CategorySizeEditor';
+import { getSizeOptions, hasCustomSizes } from '@/lib/utils/categorySizes';
+
+// Kategoriya qatoridagi qisqa yozuv: qaysi o'lchamlar chiqadi.
+const SIZE_TEXT = {
+  uz: { sizes: "O'lchamlar", auto: 'avtomatik', none: "o'lchamsiz", edit: "O'lchamlarni sozlash" },
+  ru: { sizes: 'Размеры', auto: 'автоматически', none: 'без размеров', edit: 'Настроить размеры' },
+} as const;
+
+function sizeSummary(cat: any, st: (typeof SIZE_TEXT)['uz' | 'ru']) {
+  const list = getSizeOptions(cat);
+  const shown = list.length > 8 ? `${list.slice(0, 3).join(', ')} … ${list[list.length - 1]}` : list.join(', ');
+  if (!hasCustomSizes(cat)) return `${st.sizes} (${st.auto}): ${list.length ? shown : st.none}`;
+  return `${st.sizes}: ${list.length ? shown : st.none}`;
+}
 
 const REMOVE_CATEGORY = gql`
   mutation RemoveCategory($id: ID!) {
@@ -60,6 +75,15 @@ export default function AdminCategoriesPage({ params }: { params: { locale: Loca
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editNameRu, setEditNameRu] = useState('');
+  // O'lchamlar muharriri ochiq turgan kategoriya.
+  const [sizeEditId, setSizeEditId] = useState<string | null>(null);
+  const st = SIZE_TEXT[locale === 'ru' ? 'ru' : 'uz'];
+
+  async function handleSaveSizes(id: string, sizeOptions: string[] | null) {
+    await updateCategory({ variables: { id, input: { sizeOptions } } });
+    setSizeEditId(null);
+    await refetchCategories();
+  }
 
   async function handleAddCategory() {
     if (!categoryName.trim()) return;
@@ -120,8 +144,10 @@ export default function AdminCategoriesPage({ params }: { params: { locale: Loca
         {dict.admin.categories} & {dict.admin.brands} & {dict.admin.genders}
       </h1>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="card-surface space-y-4 p-6">
+      <div className="grid items-start gap-6 lg:grid-cols-3">
+        {/* Kategoriyalar kartasi kengroq: har bir qatorda o'lchamlar
+            muharriri ochiladi. Brend va jins kartalari o'ng ustunda. */}
+        <div className="card-surface space-y-4 p-6 lg:col-span-2">
           <h2 className="text-sm font-bold uppercase tracking-wider">{dict.admin.categories}</h2>
           <div className="flex flex-wrap gap-2">
             <input
@@ -169,35 +195,59 @@ export default function AdminCategoriesPage({ params }: { params: { locale: Loca
               ) : (
                 <div
                   key={cat.id}
-                  className="flex items-center justify-between rounded-xl border border-ink-900/5 px-4 py-3 text-sm dark:border-cream/10"
+                  className="space-y-3 rounded-xl border border-ink-900/5 px-4 py-3 text-sm dark:border-cream/10"
                 >
-                  <div>
-                    <span>{cat.name}</span>
-                    {cat.nameRu && <span className="ml-2 text-xs text-ink-900/40 dark:text-cream/40">({cat.nameRu})</span>}
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <span>{cat.name}</span>
+                      {cat.nameRu && <span className="ml-2 text-xs text-ink-900/40 dark:text-cream/40">({cat.nameRu})</span>}
+                      <p className="mt-0.5 truncate text-xs text-ink-900/45 dark:text-cream/45">{sizeSummary(cat, st)}</p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-3">
+                      <button
+                        onClick={() => setSizeEditId(sizeEditId === cat.id ? null : cat.id)}
+                        title={st.edit}
+                        aria-label={st.edit}
+                        className={
+                          sizeEditId === cat.id
+                            ? 'text-gold-600 dark:text-gold-400'
+                            : 'text-ink-900/30 hover:text-ink-950 dark:text-cream/30 dark:hover:text-cream'
+                        }
+                      >
+                        <Ruler size={14} />
+                      </button>
+                      <button
+                        onClick={() => startEditCategory(cat)}
+                        className="text-ink-900/30 hover:text-ink-950 dark:text-cream/30 dark:hover:text-cream"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <button
+                        onClick={async () => {
+                          await removeCategory({ variables: { id: cat.id } });
+                          refetchCategories();
+                        }}
+                        className="text-ink-900/30 hover:text-red-500 dark:text-cream/30"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => startEditCategory(cat)}
-                      className="text-ink-900/30 hover:text-ink-950 dark:text-cream/30 dark:hover:text-cream"
-                    >
-                      <Pencil size={14} />
-                    </button>
-                    <button
-                      onClick={async () => {
-                        await removeCategory({ variables: { id: cat.id } });
-                        refetchCategories();
-                      }}
-                      className="text-ink-900/30 hover:text-red-500 dark:text-cream/30"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
+                  {sizeEditId === cat.id && (
+                    <CategorySizeEditor
+                      category={cat}
+                      locale={locale === 'ru' ? 'ru' : 'uz'}
+                      onSave={(sizes) => handleSaveSizes(cat.id, sizes)}
+                      onCancel={() => setSizeEditId(null)}
+                    />
+                  )}
                 </div>
               ),
             )}
           </div>
         </div>
 
+        <div className="space-y-6">
         <div className="card-surface space-y-4 p-6">
           <h2 className="text-sm font-bold uppercase tracking-wider">{dict.admin.brands}</h2>
           <div className="flex gap-2">
@@ -273,6 +323,7 @@ export default function AdminCategoriesPage({ params }: { params: { locale: Loca
               </div>
             ))}
           </div>
+        </div>
         </div>
       </div>
     </div>

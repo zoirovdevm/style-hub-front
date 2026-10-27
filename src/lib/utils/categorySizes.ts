@@ -125,12 +125,41 @@ export const PERFUME_SIZES = [
   '100ml', '150ml', '200ml', '250ml', '300ml', '350ml', '400ml', '450ml', '500ml',
 ];
 
-export type CategorySizeKind = 'clothing' | 'shoes' | 'trousers' | 'perfume' | 'none';
+// Myach (to'p) o'lchamlari — futbol/voleybol/basketbol to'plari 1–7.
+export const BALL_SIZES = ['1', '2', '3', '4', '5', '6', '7'];
+
+// Admin panelda (Kategoriyalar → O'lchamlar) bir bosishda qo'yiladigan
+// tayyor to'plamlar.
+export const SIZE_PRESETS: { key: string; uz: string; ru: string; sizes: string[] }[] = [
+  { key: 'clothing', uz: 'Kiyim (XS–XXXL)', ru: 'Одежда (XS–XXXL)', sizes: CLOTHING_SIZES },
+  { key: 'shoes', uz: 'Poyabzal (35–45)', ru: 'Обувь (35–45)', sizes: SHOE_SIZES },
+  { key: 'trousers', uz: 'Shim (25–42)', ru: 'Брюки (25–42)', sizes: TROUSER_SIZES },
+  { key: 'ball', uz: 'Myach (1–7)', ru: 'Мяч (1–7)', sizes: BALL_SIZES },
+  { key: 'perfume', uz: 'Hajm (ml)', ru: 'Объём (мл)', sizes: PERFUME_SIZES },
+];
+
+// 'custom' — admin kategoriyaga o'z ro'yxatini qo'ygan.
+export type CategorySizeKind = 'clothing' | 'shoes' | 'trousers' | 'perfume' | 'ball' | 'none' | 'custom';
 
 export interface CategoryLike {
   name?: string | null;
   nameRu?: string | null;
   slug?: string | null;
+  // Admin belgilagan ro'yxat. null/undefined — avtomatik (nomiga qarab),
+  // [] — o'lchamsiz, ["1","2",…] — aynan shu ro'yxat.
+  sizeOptions?: string[] | null;
+}
+
+// Admin o'z ro'yxatini qo'yganmi?
+export function hasCustomSizes(cat?: CategoryLike | null): cat is CategoryLike & { sizeOptions: string[] } {
+  return !!cat && Array.isArray(cat.sizeOptions);
+}
+
+// Nomiga qarab tanlanadigan (avtomatik) o'lchamlar — admin sahifasida
+// "Avtomatik rejimda nima chiqadi" ni ko'rsatish uchun ham kerak.
+export function getAutoSizeOptions(cat?: CategoryLike | null): string[] {
+  const plain = cat ? { name: cat.name, nameRu: cat.nameRu, slug: cat.slug } : cat;
+  return getSizeOptions(plain);
 }
 
 function haystackOf(cat: CategoryLike): string {
@@ -157,6 +186,16 @@ export function isTrouserCategory(cat?: CategoryLike | null): boolean {
   return TROUSER_ROOTS.some((root) => hay.includes(root));
 }
 
+// Myach/to'p kategoriyasi — avtomatik rejimda 1–7 o'lchamlar.
+// Ildizlar normallashtirilgan ko'rinishda: "мяч" → "myach", "basketball" → "basketbal".
+const BALL_ROOTS = ['myach', 'basketbal', 'futbolbal', 'volebal'];
+
+export function isBallCategory(cat?: CategoryLike | null): boolean {
+  if (!cat) return false;
+  const hay = haystackOf(cat);
+  return BALL_ROOTS.some((root) => hay.includes(root));
+}
+
 export function isPerfumeCategory(cat?: CategoryLike | null): boolean {
   if (!cat) return false;
   const hay = haystackOf(cat);
@@ -169,15 +208,24 @@ export function isPerfumeCategory(cat?: CategoryLike | null): boolean {
 // Toifa tanlanmagan bo'lsa (do'konda "Barchasi", adminda hali
 // tanlanmagan) — avvalgi xulq-atvor saqlanadi: kiyim o'lchamlari.
 export function getCategorySizeKind(cat?: CategoryLike | null): CategorySizeKind {
+  // Admin ro'yxati har doim ustun. Hamma qiymati "ml" bilan tugasa —
+  // duxi kabi hajm deb olinadi (narxni hajmga mutanosib hisoblash ishlaydi).
+  if (hasCustomSizes(cat)) {
+    if (cat.sizeOptions.length === 0) return 'none';
+    if (cat.sizeOptions.every((v) => /^\s*\d+(?:[.,]\d+)?\s*ml\s*$/i.test(v))) return 'perfume';
+    return 'custom';
+  }
   if (isPerfumeCategory(cat)) return 'perfume';
   if (isSizelessCategory(cat)) return 'none';
   if (isFootwearCategory(cat)) return 'shoes';
   if (isTrouserCategory(cat)) return 'trousers';
+  if (isBallCategory(cat)) return 'ball';
   return 'clothing';
 }
 
 // Bo'sh massiv = o'lcham bo'limi umuman ko'rsatilmasin.
 export function getSizeOptions(cat?: CategoryLike | null): string[] {
+  if (hasCustomSizes(cat)) return cat.sizeOptions;
   switch (getCategorySizeKind(cat)) {
     case 'none':
       return [];
@@ -187,6 +235,8 @@ export function getSizeOptions(cat?: CategoryLike | null): string[] {
       return TROUSER_SIZES;
     case 'perfume':
       return PERFUME_SIZES;
+    case 'ball':
+      return BALL_SIZES;
     default:
       return CLOTHING_SIZES;
   }

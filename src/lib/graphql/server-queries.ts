@@ -54,7 +54,7 @@ export const GET_BEST_SELLERS_STR = `
 
 export const GET_CATEGORIES_STR = `
   query GetCategories {
-    categories { id name nameRu slug description image }
+    categories { id name nameRu slug description image sizeOptions }
   }
 `;
 

@@ -17,7 +17,7 @@ import type { Dictionary } from '@/i18n/get-dictionary';
 
 interface ShopFiltersProps {
   dict: Dictionary;
-  categories: { slug: string; name: string; nameRu?: string }[];
+  categories: { slug: string; name: string; nameRu?: string; sizeOptions?: string[] | null }[];
   // Brend kabi — admin panelda o'zi yaratgan ro'yxat (masalan "Erkaklar",
   // "Ayollar"), Category kabi ixtiyoriy ruscha nom bilan.
   genders: { slug: string; name: string; nameRu?: string }[];
