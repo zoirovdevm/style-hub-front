@@ -2,12 +2,18 @@
 
 import { useRef, useState } from 'react';
 import Image from 'next/image';
+import { ImageLightbox } from './ImageLightbox';
 
 export function ProductGallery({ images, title }: { images: string[]; title: string }) {
   // Relative paths — next.config.js rewrites /uploads/* through to the
   // backend, so this works on localhost and a tunnel URL without changes.
   const list = images.length ? images : ['/placeholder-product.svg'];
   const [active, setActive] = useState(0);
+  // Katta rasm bosilganda to'liq ekranli ko'rish oynasi ochiladi.
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  // Surishdan keyin brauzer "click" ham yuborishi mumkin — u rasm
+  // almashtirish o'rniga oynani ochib yubormasligi uchun belgi.
+  const swipedRef = useRef(false);
 
   const src = list[active];
 
@@ -30,6 +36,7 @@ export function ProductGallery({ images, title }: { images: string[]; title: str
   const SWIPE_MIN = 40;
 
   function handleTouchStart(e: React.TouchEvent) {
+    swipedRef.current = false;
     const t = e.touches[0];
     touchRef.current = { x: t.clientX, y: t.clientY };
   }
@@ -42,8 +49,17 @@ export function ProductGallery({ images, title }: { images: string[]; title: str
     const dx = t.clientX - start.x;
     const dy = t.clientY - start.y;
     if (Math.abs(dx) < SWIPE_MIN || Math.abs(dx) <= Math.abs(dy)) return;
+    swipedRef.current = true;
     // dx < 0 — barmoq chapga ketdi (o'ngdan chapga) → keyingi rasm.
     goTo(dx < 0 ? active + 1 : active - 1);
+  }
+
+  function openLightbox() {
+    if (swipedRef.current) {
+      swipedRef.current = false;
+      return;
+    }
+    setLightboxOpen(true);
   }
 
   return (
@@ -79,11 +95,21 @@ export function ProductGallery({ images, title }: { images: string[]; title: str
       <div
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
+        onClick={openLightbox}
+        role="button"
+        tabIndex={0}
+        aria-label={title}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            setLightboxOpen(true);
+          }
+        }}
         // `touch-pan-y` — brauzerga "bu yerda faqat tik scroll seniki,
         // gorizontal harakatni o'zim boshqaraman" deydi. Busiz ba'zi
         // brauzerlar yonlamasiga surishni sahifa scroll'i deb talqin
         // qilib, hodisani bizga umuman bermasdi.
-        className="relative aspect-[3/4] flex-1 touch-pan-y select-none overflow-hidden rounded-3xl bg-ink-900/5">
+        className="relative aspect-[3/4] flex-1 cursor-zoom-in touch-pan-y select-none overflow-hidden rounded-3xl bg-ink-900/5">
         {/* Rasmdan rasmga o'tishda animatsiya YO'Q (so'rovga ko'ra):
             avval har almashinuvda 350ms lik erish + kichik masshtab
             effekti bor edi — barmoq bilan tez surilganda u orqada
@@ -114,6 +140,16 @@ export function ProductGallery({ images, title }: { images: string[]; title: str
           </>
         )}
       </div>
+
+      {lightboxOpen && (
+        <ImageLightbox
+          images={list}
+          startIndex={active}
+          title={title}
+          onClose={() => setLightboxOpen(false)}
+          onIndexChange={setActive}
+        />
+      )}
     </div>
   );
 }
