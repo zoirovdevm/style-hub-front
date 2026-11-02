@@ -13,8 +13,10 @@ import { useScrollLock } from '@/lib/hooks/use-scroll-lock';
 //     kattalashtiradi, yana bosish — asl holiga qaytaradi;
 //   • kattalashgan holatda sichqoncha yoki barmoq qayerda bo'lsa, rasmning
 //     o'sha joyi ko'rinadi (surib ko'rish);
-//   • telefonda yonga surish — keyingi/oldingi rasm; kompyuterda ← → tugmalari
-//     va klaviaturadagi strelkalar;
+//   • telefonda yonga surish — keyingi/oldingi rasm; kompyuterda sichqoncha
+//     g'ildiragi (scroll), ← → tugmalari va klaviaturadagi strelkalar;
+//   • tovarning HAMMA rasmlari ko'rinadi — boshqa ranglarniki ham (qora
+//     futbolka ochilgan bo'lsa, surilganda ko'k rangdagisi ham chiqadi);
 //   • yopish — ✕ tugmasi, Esc yoki rasmdan tashqaridagi qora joyni bosish.
 //
 // Portal orqali to'g'ridan-to'g'ri <body> ga chiziladi — sahifadagi
@@ -72,6 +74,20 @@ export function ImageLightbox({
     return () => window.removeEventListener('keydown', onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [count, onClose]);
+
+  // Sichqoncha g'ildiragi: pastga — keyingi, tepaga — oldingi rasm.
+  // Trackpad bitta harakatda o'nlab hodisa yuboradi, shuning uchun
+  // rasm almashgandan keyin qisqa vaqt yangi hodisalar e'tiborga olinmaydi.
+  const wheelLock = useRef(0);
+  function onWheel(e: React.WheelEvent) {
+    if (zoomed || count < 2) return;
+    const delta = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+    if (Math.abs(delta) < 8) return;
+    const now = Date.now();
+    if (now - wheelLock.current < 450) return;
+    wheelLock.current = now;
+    go(delta > 0 ? 1 : -1);
+  }
 
   function originFrom(clientX: number, clientY: number) {
     const rect = imgRef.current?.getBoundingClientRect();
@@ -154,6 +170,7 @@ export function ImageLightbox({
       aria-label={title}
       className="fixed inset-0 z-[200] flex flex-col bg-black/95 text-white"
       onClick={onClose}
+      onWheel={onWheel}
     >
       {/* Yuqori qator: nechanchi rasm + yopish */}
       <div

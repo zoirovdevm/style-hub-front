@@ -26,5 +26,13 @@ export function ProductGalleryForColor({
   const entry = colorImages.find((ci) => ci.color === color);
   const galleryImages = entry && entry.images.length > 0 ? entry.images : images;
 
-  return <ProductGallery images={galleryImages} title={title} />;
+  // To'liq ekranli ko'rish uchun HAMMA rasmlar: avval tanlangan rangniki
+  // (hozir ko'rinib turganlari), keyin boshqa ranglarniki, oxirida umumiy
+  // rasmlar. Takrorlar olib tashlanadi. Shunda qora futbolka ochilganda
+  // surib borilsa, ko'k rangdagisi ham chiqadi.
+  const allImages = Array.from(
+    new Set([...galleryImages, ...colorImages.flatMap((ci) => ci.images ?? []), ...images].filter(Boolean)),
+  );
+
+  return <ProductGallery images={galleryImages} title={title} lightboxImages={allImages} />;
 }

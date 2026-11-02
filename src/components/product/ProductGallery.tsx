@@ -4,11 +4,22 @@ import { useRef, useState } from 'react';
 import Image from 'next/image';
 import { ImageLightbox } from './ImageLightbox';
 
-export function ProductGallery({ images, title }: { images: string[]; title: string }) {
+export function ProductGallery({
+  images,
+  title,
+  lightboxImages,
+}: {
+  images: string[];
+  title: string;
+  // To'liq ekranli ko'rishda ko'rsatiladigan ro'yxat — odatda tovarning
+  // HAMMA rasmlari (boshqa ranglarniki ham). Berilmasa — `images`.
+  lightboxImages?: string[];
+}) {
   // Relative paths — next.config.js rewrites /uploads/* through to the
   // backend, so this works on localhost and a tunnel URL without changes.
   const list = images.length ? images : ['/placeholder-product.svg'];
   const [active, setActive] = useState(0);
+  const viewerList = lightboxImages && lightboxImages.length ? lightboxImages : list;
   // Katta rasm bosilganda to'liq ekranli ko'rish oynasi ochiladi.
   const [lightboxOpen, setLightboxOpen] = useState(false);
   // Surishdan keyin brauzer "click" ham yuborishi mumkin — u rasm
@@ -143,11 +154,16 @@ export function ProductGallery({ images, title }: { images: string[]; title: str
 
       {lightboxOpen && (
         <ImageLightbox
-          images={list}
-          startIndex={active}
+          images={viewerList}
+          startIndex={Math.max(0, viewerList.indexOf(list[active]))}
           title={title}
           onClose={() => setLightboxOpen(false)}
-          onIndexChange={setActive}
+          // Ko'rilayotgan rasm shu rangniki bo'lsa — sahifadagi galereya ham
+          // o'sha rasmga o'tadi (boshqa rangniki bo'lsa, o'zgarmaydi).
+          onIndexChange={(i) => {
+            const j = list.indexOf(viewerList[i]);
+            if (j >= 0) setActive(j);
+          }}
         />
       )}
     </div>
