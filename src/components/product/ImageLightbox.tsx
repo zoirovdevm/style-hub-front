@@ -168,7 +168,11 @@ export function ImageLightbox({
       role="dialog"
       aria-modal="true"
       aria-label={title}
-      className="fixed inset-0 z-[200] flex flex-col bg-black/95 text-white"
+      // Eng yuqori qatlam va to'liq qora fon: saytning header'i, qidiruv
+      // qatori va pastki menyusi ko'rinmasligi kerak (ular o'zining yuqori
+      // z-index'iga ega, z-[200] ularni yopa olmasdi).
+      style={{ zIndex: 2147483647 }}
+      className="fixed inset-0 flex flex-col bg-black text-white"
       onClick={onClose}
       onWheel={onWheel}
     >
